@@ -36,14 +36,14 @@ fn largest<T: std::cmp::PartialOrd>(list: &[T]) -> &T {
 
 #[derive(Debug)]
 struct Point<T> {
-    x : T,
-    y : T,
+    x: T,
+    y: T,
 }
 
 #[derive(Debug)]
 struct Point1<T, U> {
-    x : T,
-    y : U,
+    x: T,
+    y: U,
 }
 
 impl<T> Point<T> {
@@ -53,7 +53,7 @@ impl<T> Point<T> {
 }
 impl Point<f32> {
     fn xx(&self) -> f32 {
-        2.1*self.x
+        2.1 * self.x
     }
 }
 
@@ -65,13 +65,12 @@ struct Point2<T, U> {
 
 impl<T, U> Point2<T, U> {
     fn mixup<V, W>(self, other: Point2<V, W>) -> Point2<T, W> {
-        Point2{
+        Point2 {
             x: self.x,
             y: other.y,
         }
     }
 }
-
 
 fn main() {
     let number_list = vec![34, 50, 25, 100, 65];
@@ -90,7 +89,7 @@ fn main() {
 
     let integer = Point { x: 5, y: 10 };
     let float = Point { x: 1.0, y: 4.0 };
-//    let mixed = Point { x: 1, y: 4.0 };  // fails
+    //    let mixed = Point { x: 1, y: 4.0 };  // fails
     println!("integer= {:?}", integer);
     println!("integer1= {:?}", integer.x());
     println!("float= {:#?}", float);
@@ -99,7 +98,7 @@ fn main() {
     let mixed = Point1 { x: 1, y: 4.0 };
     println!("integer= {:?}", mixed);
 
-        let p1 = Point2 { x: 5, y: 10.4 };
+    let p1 = Point2 { x: 5, y: 10.4 };
     let p2 = Point2 { x: "Hello", y: 'c' };
 
     println!("p1= {:?}  p2= {:?}", p1, p2);
