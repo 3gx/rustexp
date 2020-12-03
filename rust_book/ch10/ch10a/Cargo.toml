@@ -1,7 +1,7 @@
 [package]
-name = "ch10"
+name = "ch10a"
 version = "0.1.0"
-authors = ["Evghenii <egaburov@nvidia.com>"]
+authors = ["Evghenii <egx@egx-mbp.local>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
