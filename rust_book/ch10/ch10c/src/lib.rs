@@ -4,6 +4,7 @@ pub trait Summary {
         String::from("(Read more...)")
     }
 }
+pub trait Summary1 { }
 
 pub struct NewsArticle {
     pub headline : String,

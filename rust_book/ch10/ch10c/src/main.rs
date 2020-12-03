@@ -1,4 +1,4 @@
-use ch10c::{NewsArticle, Summary, Tweet, notify, notify1};
+use ch10c::{NewsArticle, Summary, Summary1, Tweet, notify, notify1};
 
 pub struct Tweet1 {
     pub username: String,
@@ -10,6 +10,33 @@ pub struct Tweet1 {
 impl Summary for Tweet1 {
     fn summarize(&self) -> String {
         format!("{}: {}", self.username, self.content)
+    }
+}
+
+struct MyTy<T>(T);
+impl<T: Summary> Summary1 for MyTy<T> {}
+// impl<T: Summary> Summary1 for T {} // `rustc --explain E0210`
+
+use std::fmt::Display;
+
+struct Pair<T> {
+    x: T,
+    y: T,
+}
+
+impl<T> Pair<T> {
+    fn new(x: T, y: T) -> Self {
+        Self { x, y }
+    }
+}
+
+impl<T: Display + PartialOrd> Pair<T> {
+    fn cmp_display(&self) {
+        if self.x >= self.y {
+            println!("The largest member is x = {}", self.x);
+        } else {
+            println!("The largest member is y = {}", self.y);
+        }
     }
 }
 
@@ -53,4 +80,12 @@ fn main() {
 
     notify1(&article);
     notify1(&tweet);
+
+    let pair = Pair::new(3,4);
+    pair.cmp_display();
+    let pair = Pair::new(6,4);
+    pair.cmp_display();
+
+    let s = 3.to_string();
+    println!("s is {}", s);
 }
