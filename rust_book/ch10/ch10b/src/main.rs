@@ -46,6 +46,33 @@ struct Point1<T, U> {
     y : U,
 }
 
+impl<T> Point<T> {
+    fn x(&self) -> &T {
+        &self.x
+    }
+}
+impl Point<f32> {
+    fn xx(&self) -> f32 {
+        2.1*self.x
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Point2<T, U> {
+    x: T,
+    y: U,
+}
+
+impl<T, U> Point2<T, U> {
+    fn mixup<V, W>(self, other: Point2<V, W>) -> Point2<T, W> {
+        Point2{
+            x: self.x,
+            y: other.y,
+        }
+    }
+}
+
+
 fn main() {
     let number_list = vec![34, 50, 25, 100, 65];
 
@@ -65,8 +92,21 @@ fn main() {
     let float = Point { x: 1.0, y: 4.0 };
 //    let mixed = Point { x: 1, y: 4.0 };  // fails
     println!("integer= {:?}", integer);
-    println!("integer= {:#?}", float);
+    println!("integer1= {:?}", integer.x());
+    println!("float= {:#?}", float);
+    println!("float1= {:#?}", float.xx());
 
     let mixed = Point1 { x: 1, y: 4.0 };
     println!("integer= {:?}", mixed);
+
+        let p1 = Point2 { x: 5, y: 10.4 };
+    let p2 = Point2 { x: "Hello", y: 'c' };
+
+    println!("p1= {:?}  p2= {:?}", p1, p2);
+
+    let p3 = p1.mixup(p2);
+    let p4 = p2.mixup(p1);
+
+    println!("p3.x = {}, p3.y = {}", p3.x, p3.y);
+    println!("p4.x = {}, p4.y = {}", p4.x, p4.y);
 }
