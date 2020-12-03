@@ -36,8 +36,9 @@ fn main() {
         println!("The largest number is {}", largest);
     }
     let number_list = vec![34, 50, 25, 100, 65];
+    let n1 = number_list.clone();
 
-    let result = largest(&number_list);
+    let result = largest(&n1);
 
     println!("the largest s {}", result);
 
