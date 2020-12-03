@@ -23,11 +23,35 @@ fn largest_char(list: &[char]) -> &char {
 }
 
 fn largest<T: std::cmp::PartialOrd>(list: &[T]) -> &T {
-    let mut largest = &list[0];
+    let mut largest: &T = &list[0];
 
     for item in list {
         if item > largest {
             largest = item;
+        }
+    }
+
+    largest
+}
+
+fn largest1<T: PartialOrd + Copy>(list: &[T]) -> T {
+    let mut largest: T = list[0];
+
+    for &item in list {
+        if item > largest {
+            largest = item;
+        }
+    }
+
+    largest
+}
+
+fn largest2<T: PartialOrd + Clone>(list: &[T]) -> T {
+    let mut largest: T = list[0].clone();
+
+    for item in list {
+        if item.clone() > largest {
+            largest = item.clone()
         }
     }
 
@@ -80,12 +104,16 @@ fn main() {
     let result = largest(&number_list);
     println!("The largest number is {}", result);
 
-    let char_list = vec!['y', 'm', 'a', 'q'];
+    let char_list = vec!['a', 'm', 'y', 'q'];
 
     let result = largest_char(&char_list);
     println!("The largest char is {}", result);
     let result = largest(&char_list);
-    println!("The largest char is {}", result);
+    println!("The largest char is {} : {:?}", result, char_list);
+    let result = largest1(&char_list);
+    println!("The largest1 char is {}", result);
+    let result = largest2(&char_list);
+    println!("The largest2 char is {}", result);
 
     let integer = Point { x: 5, y: 10 };
     let float = Point { x: 1.0, y: 4.0 };
