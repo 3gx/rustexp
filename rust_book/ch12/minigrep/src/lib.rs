@@ -1,5 +1,5 @@
-use std::fs;
 use std::error::Error;
+use std::fs;
 
 pub struct Config {
     pub query: String,
@@ -7,9 +7,9 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(args: &[String]) -> Result<Config , &'static str> {
+    pub fn new(args: &[String]) -> Result<Config, &'static str> {
         if args.len() < 3 {
-            return Err("not enough arguments")
+            return Err("not enough arguments");
         }
         let query = args[1].clone();
         let filename = args[2].clone();
@@ -42,6 +42,5 @@ Rust:
 safe, fast, productive.
 Pick three.";
         assert_eq!(vec!["safe, fast, productive."], search(query, contents));
-
     }
 }
