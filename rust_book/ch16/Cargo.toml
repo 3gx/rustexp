@@ -3,4 +3,5 @@
 members = [
     "threads",
     "message",
+    "shstate",
 ]
