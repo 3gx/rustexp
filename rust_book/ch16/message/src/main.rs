@@ -49,7 +49,7 @@ fn main() {
             ];
 
             for val in vals {
-                tx1.send(("1",val)).unwrap();
+                tx1.send(("1", val)).unwrap();
                 thread::sleep(Duration::from_secs(1));
             }
         });
@@ -63,7 +63,7 @@ fn main() {
             ];
 
             for val in vals {
-                tx.send(("2",val)).unwrap();
+                tx.send(("2", val)).unwrap();
                 thread::sleep(Duration::from_secs(1));
             }
         });
