@@ -1,5 +1,5 @@
 [package]
-name = "oop"
+name = "traits"
 version = "0.1.0"
 authors = ["Evghenii <egx@egx-mbp.local>"]
 edition = "2018"
