@@ -18,10 +18,13 @@ fn main() {
         let c = Cons(4, Rc::clone(&a));
         println!("c= {:?}", c);
         println!("count after create c = {}", Rc::strong_count(&a));
-    println!("weak_count after create c = {}", Rc::weak_count(&a));
+        println!("weak_count after create c = {}", Rc::weak_count(&a));
     }
     println!("count after c goes out of scope = {}", Rc::strong_count(&a));
-    println!("weak_count after c goes out of scope = {}", Rc::weak_count(&a));
+    println!(
+        "weak_count after c goes out of scope = {}",
+        Rc::weak_count(&a)
+    );
     println!("a= {:?}", a);
     println!("b= {:?}", b);
 }

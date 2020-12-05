@@ -1,5 +1,5 @@
 struct CSP {
-    data: String
+    data: String,
 }
 
 impl Drop for CSP {

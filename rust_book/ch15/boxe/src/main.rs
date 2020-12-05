@@ -4,7 +4,7 @@ enum List {
     Nil,
 }
 
-use crate::List::{Cons,Nil};
+use crate::List::{Cons, Nil};
 
 fn main() {
     let b = Box::new(5);

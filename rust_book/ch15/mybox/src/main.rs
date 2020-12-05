@@ -26,11 +26,11 @@ fn main() {
     let z = Box::new(x);
     let w = MyBox::new(x);
 
-    assert_eq!(5,x);
-    assert_eq!(5,*y);
-    assert_eq!(5,*z);
-    assert_eq!(5,w.0);
-    assert_eq!(5,*w);
+    assert_eq!(5, x);
+    assert_eq!(5, *y);
+    assert_eq!(5, *z);
+    assert_eq!(5, w.0);
+    assert_eq!(5, *w);
 
     let m = MyBox::new(String::from("Rust"));
     hello(&m);
