@@ -1,5 +1,5 @@
 [package]
-name = "shstate"
+name = "mutex"
 version = "0.1.0"
 authors = ["Evghenii <egx@egx-mbp.local>"]
 edition = "2018"
