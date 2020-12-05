@@ -3,4 +3,5 @@
 members = [
     "boxe",
     "mybox",
+    "drop",
 ]
