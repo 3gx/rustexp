@@ -50,7 +50,7 @@ fn call_with_different_values() {
 
 #[test]
 fn iterator_demonstration() {
-    let v1 = vec![1,2,3];
+    let v1 = vec![1, 2, 3];
     let mut v1_iter = v1.iter();
     assert_eq!(v1_iter.next(), Some(&1));
     assert_eq!(v1_iter.next(), Some(&2));
@@ -59,7 +59,7 @@ fn iterator_demonstration() {
 }
 #[test]
 fn iterator_demonstration_mut() {
-    let mut v1 = vec![1,2,3];
+    let mut v1 = vec![1, 2, 3];
     let mut v1_iter = v1.iter_mut();
     assert_eq!(v1_iter.next(), Some(&mut 1));
     assert_eq!(v1_iter.next(), Some(&mut 2));
@@ -68,7 +68,7 @@ fn iterator_demonstration_mut() {
 }
 #[test]
 fn iterator_demonstration_mmove() {
-    let v1 = vec![1,2,3];
+    let v1 = vec![1, 2, 3];
     let mut v1_iter = v1.into_iter();
     assert_eq!(v1_iter.next(), Some(1));
     assert_eq!(v1_iter.next(), Some(2));
@@ -83,8 +83,8 @@ fn iterator_sum() {
     let total: i32 = v1_iter.sum();
     assert_eq!(total, 6);
 
-    let v2: Vec<_> = v1.iter().map(|x| x+1).collect();
-    assert_eq!(v2, vec![2,3,4])
+    let v2: Vec<_> = v1.iter().map(|x| x + 1).collect();
+    assert_eq!(v2, vec![2, 3, 4])
 }
 
 fn main() {
@@ -114,7 +114,7 @@ fn main() {
     let y = vec![1, 2, 3];
     assert!(equal_to_x(y));
 
-    let v1 = vec![1,2,3];
+    let v1 = vec![1, 2, 3];
     let v1_iter = v1.iter();
     for val in v1_iter {
         println!("Got: {}", val);
