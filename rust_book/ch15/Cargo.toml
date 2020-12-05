@@ -6,4 +6,5 @@ members = [
     "drop",
     "refc",
     "refcell",
+    "cycles",
 ]
