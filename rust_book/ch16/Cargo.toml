@@ -2,4 +2,5 @@
 
 members = [
     "threads",
+    "message",
 ]
