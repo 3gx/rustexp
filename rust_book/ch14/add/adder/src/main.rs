@@ -3,7 +3,7 @@ use rand;
 use rand::Rng;
 
 fn main() {
-    let num = rand::thread_rng().gen_range(1,101);
+    let num = rand::thread_rng().gen_range(1, 101);
     println!(
         "Hello, world! {} plus one is {}!",
         num,
