@@ -7,4 +7,5 @@ members = [
     "funcs",
     "macros",
     "hello_macro",
+    "hello_macro_derive",
 ]
