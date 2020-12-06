@@ -3,4 +3,5 @@
 members = [
     "unsafe1",
     "traits",
+    "types",
 ]
