@@ -5,4 +5,5 @@ members = [
     "traits",
     "types",
     "funcs",
+    "macros",
 ]
