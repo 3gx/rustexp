@@ -6,4 +6,5 @@ members = [
     "types",
     "funcs",
     "macros",
+    "hello_macro",
 ]
