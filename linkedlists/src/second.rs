@@ -51,7 +51,9 @@ pub struct IterMut<'a, T> {
 
 impl<T> List<T> {
     pub fn iter_mut(&mut self) -> IterMut<'_, T> {
-        IterMut { next : self.head.as_mut().map(|node| &mut **node) }
+        IterMut {
+            next: self.head.as_mut().map(|node| &mut **node),
+        }
     }
 }
 
