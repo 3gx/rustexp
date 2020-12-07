@@ -12,3 +12,4 @@ Cargo.lock
 *.swp
 *.swo
 *.x
+*.vim
