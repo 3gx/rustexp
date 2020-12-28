@@ -225,6 +225,14 @@ fn main() {
             None => (),
         }
 
+        let num = Some(4);
+        match num {
+            _  if num == Some(3) => println!("is three: {:?}", num),
+            _  if num == Some(4) => println!("is four: {:?}", num),
+            Some(x) => println!("{}", x),
+            None => (),
+        }
+
         let x = Some(5);
         let y = 10;
 
