@@ -65,5 +65,18 @@ fn main() {
     };
 
     println!("{:?}", e5);
-}
 
+    {
+        use std::cell::RefCell;
+        use std::rc::Rc;
+
+        let num = Rc::new(RefCell::new(5));
+
+        let num_copy = num.clone();
+        let add_num = move |x: i32| *num_copy.borrow_mut() += x;
+
+        add_num(5);
+
+        assert_eq!(10, *num.borrow());
+    }
+}
