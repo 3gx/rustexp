@@ -7,3 +7,7 @@ fn works() {
     println!("res= {}" , res);
     assert_eq!(res, 42);
 }
+
+procmacro1::make_pub! {
+    static X: u32 = 42;
+}

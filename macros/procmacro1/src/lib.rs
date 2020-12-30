@@ -16,3 +16,12 @@ pub fn hello(attr: TokenStream, item: TokenStream) -> TokenStream {
     };
     result.into()
 }
+
+#[proc_macro]
+pub fn make_pub(item: TokenStream) -> TokenStream {
+    let item = syn::parse_macro_input!(item as syn::Item);
+    let result = quote! {
+        pub #item
+    };
+    result.into()
+}
