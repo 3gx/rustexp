@@ -41,6 +41,21 @@ macro_rules! visit_members {
 
         visit_members! { $callback; $($rest)* }
     };
+    (
+        $callback:ident;
+
+        $( #[$attr:meta] )*
+        fn $name:ident(&mut self $(, $arg_name:ident : $arg_ty:ty )*) $(-> $ret:ty)?;
+
+        $( $rest:tt )*
+    ) => {
+        $callback!(
+            $( #[$attr] )*
+            fn $name(&mut self $(, $arg_name : $arg_ty )*) $(-> $ret)?
+        );
+
+        visit_members! { $callback; $($rest)* }
+    };
     ($callback:ident;) => {};
 }
 
@@ -53,7 +68,16 @@ macro_rules! call_via_deref {
             (**self).$name( $($arg_name),* )
         }
     };
+    (
+        $( #[$attr:meta] )*
+        fn $name:ident(&mut self $(, $arg_name:ident : $arg_ty:ty )*) $(-> $ret:ty)?
+    ) => {
+        fn $name(&mut self $(, $arg_name : $arg_ty )*) $(-> $ret)? {
+            (**self).$name( $($arg_name),* )
+        }
+    };
 }
+
 macro_rules! impl_trait_for_boxed {
     (
         $( #[$attr:meta] )*
@@ -117,6 +141,25 @@ macro_rules! trait_with_dyn_impls {
         }
     };
 }
+
+/// Scans through a stream of tokens looking for `&mut self`. If nothing is
+/// found a callback is invoked.
+macro_rules! search_for_mut_self {
+    // if we see `&mut self`, stop and don't invoke the callback
+    ($callback:ident!($($callback_args:tt)*); &mut self $($rest:tt)*) => { };
+    ($callback:ident!($($callback_args:tt)*); (&mut self $($other_args:tt)*) $($rest:tt)*) => { };
+
+    // haven't found it yet, drop the first item and keep searching
+    ($callback:ident!($($callback_args:tt)*); $_head:tt $($tokens:tt)*) => {
+        search_for_mut_self!($callback!( $($callback_args)* ); $($tokens)*);
+
+    };
+    // we completed without hitting `&mut self`, invoke the callback and exit
+    ($callback:ident!($($callback_args:tt)*);) => {
+        $callback!( $($callback_args)* )
+    }
+}
+
 fn main() {
     visit_members1! { fn get_x(&self) -> u32; }
     visit_members1! { fn get_x(&self, x : i32) -> u32; }
@@ -186,5 +229,62 @@ fn main() {
         assert_is_foo::<u32>();
         assert_is_foo::<Box<u32>>();
         assert_is_foo::<Box<dyn Foo>>();
+    }
+
+    {
+        trait Foo {
+            fn get_x(&self) -> u32;
+            fn execute(&mut self, expression: &str);
+        }
+
+        impl_trait_for_boxed! {
+            trait Foo {
+                fn get_x(&self) -> u32;
+                fn execute(&mut self, expression: &str);
+            }
+        }
+    }
+
+    /*
+    {
+        trait_with_dyn_impls! {
+            trait Foo {
+                fn get_x(&self) -> u32;
+                fn execute(&mut self, expression: &str);
+            }
+        }
+
+        fn assert_is_foo<F: Foo>() {}
+
+        assert_is_foo::<&dyn Foo>();
+        assert_is_foo::<Box<dyn Foo>>();
+    }
+    */
+
+    {
+        search_for_mut_self! {
+            compile_error!("This callback shouldn't have been invoked");
+
+            &mut self asdf
+        }
+        search_for_mut_self! {
+            compile_error!("This callback shouldn't have been invoked");
+
+            fn foo(&mut self);
+        }
+        macro_rules! declare_struct {
+            ($name:ident) => {
+                struct $name;
+            };
+        }
+
+        search_for_mut_self! {
+            declare_struct!(Foo);
+
+            blah blah ... blah
+        }
+
+        // we should have declared Foo as a unit struct
+        let _: Foo;
     }
 }
