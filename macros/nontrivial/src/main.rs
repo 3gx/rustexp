@@ -127,10 +127,12 @@ macro_rules! trait_with_dyn_impls {
         $( #[$attr] )*
         $vis trait $name { $( $body )* }
 
-        impl_trait_for_ref! {
+        /*
+        kimpl_trait_for_ref! {
             $( #[$attr] )*
             $vis trait $name { $( $body )* }
         }
+        */
         impl_trait_for_mut_ref! {
             $( #[$attr] )*
             $vis trait $name { $( $body )* }
@@ -138,6 +140,13 @@ macro_rules! trait_with_dyn_impls {
         impl_trait_for_boxed! {
             $( #[$attr] )*
             $vis trait $name { $( $body )* }
+        }
+                // we can only implement the trait for `&T` if there are NO `&mut self`
+        // methods
+        search_for_mut_self! {
+            impl_trait_for_ref!( $( #[$attr] )* $vis trait $name { $( $body )* } );
+
+            $( $body )*
         }
     };
 }
