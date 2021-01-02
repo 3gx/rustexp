@@ -1,3 +1,8 @@
+use timely::dataflow::operators::{ToStream, Inspect};
+
 fn main() {
-    println!("Hello, world!");
+    timely::example(|scope| {
+        (0..10).to_stream(scope)
+               .inspect(|x| println!("seen: {:?}", x));
+    });
 }
