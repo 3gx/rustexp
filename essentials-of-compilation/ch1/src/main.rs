@@ -185,6 +185,13 @@ fn main() {
         println!("prog1= {:?}", prog1);
         let prog2 = pe_rint(&prog1);
         println!("prog2= {:?}", prog2);
+
+        fn test_pe(p: &Rint) {
+            assert_eq!(interp_rint(p), interp_rint(&pe_rint(p)));
+        }
+        test_pe(&rint!(plus!(int!(10), neg!(plus!(int!(5), int!(3))))));
+        test_pe(&rint!(plus!(int!(1), plus!(int!(3), int!(1)))));
+        test_pe(&rint!(neg!(plus!(int!(3), neg!(int!(5))))));
     }
     {
         println!("\n--- examples---\n");
