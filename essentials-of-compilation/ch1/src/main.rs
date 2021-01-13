@@ -84,6 +84,14 @@ fn main() {
         type Value = i64;
         fn interp_exp(e: &Term) -> Value {
             match e {
+                Int(n) => *n,
+                Prim(Read, v) if v.len() == 0 => {
+                    let mut input = String::new();
+                    std::io::stdin().read_line(&mut input).unwrap();
+                    input.trim().parse().unwrap()
+                },
+                Prim(Neg, v) if let [e] = &v[..] => -interp_exp(e),
+                Prim(Plus, v) if let [e1,e2] = &v[..] => interp_exp(e1) + interp_exp(e2),
                 _ => panic!("unhandled expression {:?}", e),
             }
         }
@@ -97,6 +105,30 @@ fn main() {
         let prog = Rint(vec![], Prim(Plus, vec![Int(10), Int(32)]));
         println!("prog= {:?}", prog);
         println!("exec(prog) = {}", interp_rint(&prog));
+
+        let prog = Rint(
+            vec![],
+            Prim(
+                Plus,
+                vec![Int(10), Prim(Neg, vec![Prim(Plus, vec![Int(12), Int(20)])])],
+            ),
+        );
+        println!("prog= {:?} is_rint={}", prog, is_rint(&prog));
+        println!("exec(prog) = {}", interp_rint(&prog));
+        let prog = Rint(
+            vec![],
+            Prim(
+                Plus,
+                vec![Int(10), Prim(Neg, vec![Prim(Plus, vec![Int(12), Int(20)])])],
+            ),
+        );
+        println!("prog= {:?} is_rint={}", prog, is_rint(&prog));
+        println!("exec(prog) = {}", interp_rint(&prog));
+        println!("enter number and press enter (get 42 for 50): ");
+        println!(
+            "exec(prog) = {}",
+            interp_rint(&Rint(vec![], ast1_1.clone()))
+        );
     }
     {
         println!("\n--- examples---\n");
