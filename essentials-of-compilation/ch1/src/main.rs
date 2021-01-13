@@ -18,6 +18,21 @@ pub struct Options;
 #[derive(Debug, Clone)]
 pub struct Rint(Vec<Options>, Term);
 
+trait IntoTerm {
+    fn into_term(&self) -> Term;
+}
+
+impl IntoTerm for i64 {
+    fn into_term(&self) -> Term {
+        Term::Int(*self)
+    }
+}
+impl IntoTerm for Term {
+    fn into_term(&self) -> Term {
+        self.clone()
+    }
+}
+
 fn main() {
     {
         let eight = Term::Int(8);
@@ -158,12 +173,12 @@ fn main() {
         }
         macro_rules! plus {
             ($e1:expr, $e2:expr) => {
-                Prim(Plus, vec![$e1.clone(), $e2.clone()])
+                Prim(Plus, vec![$e1.into_term(), $e2.into_term()])
             };
         }
         macro_rules! neg {
             ($e:expr) => {
-                Prim(Neg, vec![$e])
+                Prim(Neg, vec![$e.into_term()])
             };
         }
         macro_rules! read {
@@ -178,10 +193,10 @@ fn main() {
         }
         macro_rules! rint {
             ($e:expr) => {
-                Rint(vec![], $e.clone())
+                Rint(vec![], $e.into_term())
             };
         }
-        let prog1 = rint!(plus!(read!(), neg!(plus!(int!(5), int!(3)))));
+        let prog1 = rint!(plus!(read!(), neg!(plus!(5, 3))));
         println!("prog1= {:?}", prog1);
         let prog2 = pe_rint(&prog1);
         println!("prog2= {:?}", prog2);
@@ -189,9 +204,9 @@ fn main() {
         fn test_pe(p: &Rint) {
             assert_eq!(interp_rint(p), interp_rint(&pe_rint(p)));
         }
-        test_pe(&rint!(plus!(int!(10), neg!(plus!(int!(5), int!(3))))));
+        test_pe(&rint!(plus!(10, neg!(plus!(5, 3)))));
         test_pe(&rint!(plus!(int!(1), plus!(int!(3), int!(1)))));
-        test_pe(&rint!(neg!(plus!(int!(3), neg!(int!(5))))));
+        test_pe(&rint!(neg!(plus!(3, neg!(5)))));
     }
     {
         println!("\n--- examples---\n");
