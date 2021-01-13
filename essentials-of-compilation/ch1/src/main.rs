@@ -13,6 +13,10 @@ pub enum Term {
     Int(i64),
     Prim(OpCode, Vec<Term>),
 }
+#[derive(Debug, Clone)]
+pub struct Options;
+#[derive(Debug, Clone)]
+pub struct Rint(Vec<Options>, Box<Term>);
 
 fn main() {
     {
@@ -29,7 +33,7 @@ fn main() {
         let ast1_1 = Prim(Plus, vec![rd, neg_eight]);
         println!("ast1_1= {:?}", ast1_1);
 
-        match ast1_1 {
+        match &ast1_1 {
             Prim(op, v) if let [_,_] = &v[..] => println!("{:?}", op),
             _ => panic!("unhandled {:?}", ast1_1),
         };
@@ -49,6 +53,31 @@ fn main() {
         println!("is_leaf({:?}) = {}", term, is_leaf(&term));
         let term = Int(8);
         println!("is_leaf({:?}) = {}", term, is_leaf(&term));
+
+        fn is_exp(ast: &Term) -> bool {
+            match ast {
+                Int(_) => true,
+                Prim(Read, v) if v.len() == 0 => true,
+                Prim(Neg, v) if v.len() == 1 => is_exp(&v[0]),
+                Prim(Plus, v) if let [e1,e2] = &v[..] => is_exp(e1) && is_exp(e2),
+                _ => false,
+            }
+        }
+        fn is_rint(prog: &Rint) -> bool {
+            match prog {
+                Rint(_, ast) => is_exp(ast),
+            }
+        }
+        let prog = Rint(vec![], Box::new(ast1_1.clone()));
+        println!("prog= {:?}  is_rint= {}", prog, is_rint(&prog));
+        let prog = Rint(
+            vec![],
+            Box::new(Prim(
+                Neg,
+                vec![Prim(Read, vec![]), Prim(Plus, vec![Int(8)])],
+            )),
+        );
+        println!("prog= {:?}  is_rint= {}", prog, is_rint(&prog));
     }
     {
         println!("\n--- examples---\n");
