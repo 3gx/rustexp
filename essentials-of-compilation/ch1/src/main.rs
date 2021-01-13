@@ -16,7 +16,7 @@ pub enum Term {
 #[derive(Debug, Clone)]
 pub struct Options;
 #[derive(Debug, Clone)]
-pub struct Rint(Vec<Options>, Box<Term>);
+pub struct Rint(Vec<Options>, Term);
 
 fn main() {
     {
@@ -73,16 +73,30 @@ fn main() {
                 is_rint(&$arg)
             };
         }
-        let prog = Rint(vec![], Box::new(ast1_1.clone()));
+        let prog = Rint(vec![], ast1_1.clone());
         println!("prog= {:?}  is_rint= {}", prog, is_rint(&prog));
         let prog = Rint(
             vec![],
-            Box::new(Prim(
-                Neg,
-                vec![Prim(Read, vec![]), Prim(Plus, vec![Int(8)])],
-            )),
+            Prim(Neg, vec![Prim(Read, vec![]), Prim(Plus, vec![Int(8)])]),
         );
         println!("prog= {:?}  is_rint= {}", prog, is_rint!(prog));
+
+        type Value = i64;
+        fn interp_exp(e: &Term) -> Value {
+            match e {
+                _ => panic!("unhandled expression {:?}", e),
+            }
+        }
+
+        fn interp_rint(p: &Rint) -> Value {
+            match p {
+                Rint(_, e) => interp_exp(e),
+            }
+        }
+
+        let prog = Rint(vec![], Prim(Plus, vec![Int(10), Int(32)]));
+        println!("prog= {:?}", prog);
+        println!("exec(prog) = {}", interp_rint(&prog));
     }
     {
         println!("\n--- examples---\n");
