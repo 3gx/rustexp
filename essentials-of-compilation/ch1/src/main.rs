@@ -68,6 +68,11 @@ fn main() {
                 Rint(_, ast) => is_exp(ast),
             }
         }
+        macro_rules! is_rint {
+            ($arg:expr) => {
+                is_rint(&$arg)
+            };
+        }
         let prog = Rint(vec![], Box::new(ast1_1.clone()));
         println!("prog= {:?}  is_rint= {}", prog, is_rint(&prog));
         let prog = Rint(
@@ -77,7 +82,7 @@ fn main() {
                 vec![Prim(Read, vec![]), Prim(Plus, vec![Int(8)])],
             )),
         );
-        println!("prog= {:?}  is_rint= {}", prog, is_rint(&prog));
+        println!("prog= {:?}  is_rint= {}", prog, is_rint!(prog));
     }
     {
         println!("\n--- examples---\n");
