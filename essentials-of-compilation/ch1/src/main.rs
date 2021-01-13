@@ -1,3 +1,6 @@
+#![allow(incomplete_features)]
+#![feature(if_let_guard)]
+
 #[derive(Debug, Clone, Copy)]
 pub enum OpCode {
     Plus,
@@ -25,8 +28,30 @@ fn main() {
         use {OpCode::*, Term::*};
         let ast1_1 = Prim(Plus, vec![rd, neg_eight]);
         println!("ast1_1= {:?}", ast1_1);
+
+        match ast1_1 {
+            Prim(op, v) if let [_,_] = &v[..] => println!("{:?}", op),
+            _ => panic!("unhandled {:?}", ast1_1),
+        };
+
+        fn is_leaf(arith: &Term) -> bool {
+            match arith {
+                Int(_) => true,
+                Prim(Read, v) if let [] = &v[..] => true,
+                Prim(Neg, v) if let [_] = &v[..] => false,
+                Prim(Plus, v) if let [_,_] = &v[..] => false,
+                _ => panic!("invalid term {:?}", arith),
+            }
+        }
+        let term = Prim(Read, vec![]);
+        println!("is_leaf({:?}) = {}", term, is_leaf(&term));
+        let term = Prim(Neg, vec![Int(8)]);
+        println!("is_leaf({:?}) = {}", term, is_leaf(&term));
+        let term = Int(8);
+        println!("is_leaf({:?}) = {}", term, is_leaf(&term));
     }
     {
+        println!("\n--- examples---\n");
         fn fun(slice: &[i32]) {
             println!("slice= {:?}", slice);
             let what = match slice {
@@ -67,10 +92,7 @@ fn main() {
 
         fn match1(t1: &T1) {
             match t1 {
-                T1::Vi(v) => match &v[..] {
-                    [_, _, 3] => println!("ends with 3"),
-                    _ => println!("unhandled"),
-                },
+                T1::Vi(v) if let [_,_,3] = &v[..] => println!("ends with 3"),
                 _ => println!("unhandled"),
             }
         }
