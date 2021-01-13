@@ -129,6 +129,62 @@ fn main() {
             "exec(prog) = {}",
             interp_rint(&Rint(vec![], ast1_1.clone()))
         );
+
+        fn pe_neg(r: &Term) -> Term {
+            match r {
+                Int(n) => Int(-n),
+                _ => Prim(Neg, vec![r.clone()]),
+            }
+        }
+
+        fn pe_add(r1: &Term, r2: &Term) -> Term {
+            match (r1, r2) {
+                (Int(n1), Int(n2)) => Int(n1 + n2),
+                _ => Prim(Plus, vec![r1.clone(), r2.clone()]),
+            }
+        }
+
+        fn pe_exp(e: &Term) -> Term {
+            match e {
+                Prim(Neg, v) if let [e] = &v[..] => pe_neg(&pe_exp(e)),
+                Prim(Plus, v) if let [e1,e2] = &v[..] => pe_add(&pe_exp(e1), &pe_exp(e2)),
+                _ => e.clone(),
+            }
+        }
+        fn pe_rint(p: &Rint) -> Rint {
+            match p {
+                Rint(v, e) => Rint(v.clone(), pe_exp(e)),
+            }
+        }
+        macro_rules! plus {
+            ($e1:expr, $e2:expr) => {
+                Prim(Plus, vec![$e1.clone(), $e2.clone()])
+            };
+        }
+        macro_rules! neg {
+            ($e:expr) => {
+                Prim(Neg, vec![$e])
+            };
+        }
+        macro_rules! read {
+            () => {
+                Prim(Read, vec![])
+            };
+        }
+        macro_rules! int {
+            ($e:expr) => {
+                Int($e)
+            };
+        }
+        macro_rules! rint {
+            ($e:expr) => {
+                Rint(vec![], $e.clone())
+            };
+        }
+        let prog1 = rint!(plus!(read!(), neg!(plus!(int!(5), int!(3)))));
+        println!("prog1= {:?}", prog1);
+        let prog2 = pe_rint(&prog1);
+        println!("prog2= {:?}", prog2);
     }
     {
         println!("\n--- examples---\n");
