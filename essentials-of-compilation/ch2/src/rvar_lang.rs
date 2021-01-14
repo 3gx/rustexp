@@ -13,7 +13,7 @@ pub enum Term {
     Let(String, Box<Term>, Box<Term>),
 }
 #[macro_export]
-macro_rules! plus {
+macro_rules! rvar_plus {
     ($e1:ident, $e2:ident) => {
         Term::Prim(
             OpCode::Plus,
@@ -30,8 +30,10 @@ macro_rules! plus {
         Term::Prim(OpCode::Plus, vec![$e1.into_term(), $e2.into_term()])
     };
 }
+pub use rvar_plus as plus;
+
 #[macro_export]
-macro_rules! neg {
+macro_rules! rvar_neg {
     ($id:ident) => {
         neg!(var!($id))
     };
@@ -39,21 +41,26 @@ macro_rules! neg {
         Term::Prim(OpCode::Neg, vec![$e.into_term()])
     };
 }
+pub use rvar_neg as neg;
+
 #[macro_export]
-macro_rules! read {
+macro_rules! rvar_read {
     () => {
         Term::Prim(OpCode::Read, vec![])
     };
 }
+pub use rvar_read as read;
+
 #[macro_export]
-macro_rules! int {
+macro_rules! rvar_int {
     ($e:expr) => {
         Term::Int($e)
     };
 }
+pub use rvar_int as int;
 
 #[macro_export]
-macro_rules! var {
+macro_rules! rvar_var {
     ($id:ident) => {
         var!(stringify!($id))
     };
@@ -61,8 +68,10 @@ macro_rules! var {
         Term::Var($id.to_string())
     };
 }
+pub use rvar_var as var;
+
 #[macro_export]
-macro_rules! r#let {
+macro_rules! rvar_let {
     ([$id:ident <- $e1:expr]  $e2:ident) => {
         Term::Let(
             stringify!($id).to_owned(),
@@ -78,6 +87,7 @@ macro_rules! r#let {
         )
     };
 }
+pub use rvar_let as r#let;
 
 #[derive(Debug, Clone)]
 pub struct Options;
@@ -86,11 +96,13 @@ pub struct Options;
 pub struct Program(pub Vec<Options>, pub Term);
 
 #[macro_export]
-macro_rules! program {
+macro_rules! rvar_program {
     ($e:expr) => {
         Program(vec![], $e.into_term())
     };
 }
+pub use rvar_program as program;
+
 pub trait IntoTerm {
     fn into_term(&self) -> Term;
 }
