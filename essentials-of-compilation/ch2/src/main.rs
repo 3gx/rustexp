@@ -86,6 +86,10 @@ pub mod cvar_lang {
 
 fn main() {
     {
+        let v = ch2::rvar_lang::var!("x");
+        println!("v= {:?}", v);
+    }
+    {
         use ch2::rvar_lang::*;
 
         let p1 = program![r#let!([x <- plus!(12, 20)]  plus!(10, x))];
