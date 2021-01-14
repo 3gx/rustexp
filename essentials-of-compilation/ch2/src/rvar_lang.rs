@@ -62,14 +62,14 @@ pub macro var {
 
 #[macro_export]
 macro_rules! rvar_let {
-    ([$id:ident <- $e1:expr]  $e2:ident) => {
+    ([$id:ident $e1:expr]  $e2:ident) => {
         Term::Let(
             stringify!($id).to_owned(),
             Box::new($e1.into_term()),
             Box::new(var!(stringify!($e2))),
         )
     };
-    ([$id:ident <- $e1:expr]  $e2:expr) => {
+    ([$id:ident $e1:expr]  $e2:expr) => {
         Term::Let(
             stringify!($id).to_owned(),
             Box::new($e1.into_term()),
