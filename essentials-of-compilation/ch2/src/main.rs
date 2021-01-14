@@ -1,6 +1,7 @@
 #![allow(incomplete_features)]
 #![feature(if_let_guard)]
 #![feature(box_syntax)]
+#![feature(let_chains)]
 
 pub mod x86int_lang {
     #[allow(non_camel_case_types)]
@@ -84,6 +85,7 @@ fn main() {
         enum T {
             A(i32),
             B(String),
+            D(Box<String>),
             C(Box<T>),
             Kaboom,
         }
@@ -103,8 +105,9 @@ fn main() {
                 T::A(n) => println!("matched T::A(n), n={}", n),
                 case![T::B(String("42_i32"))] => println!("matched T::B(\"42_i32\")"),
                 case![T::B(String("42_i64"))] => println!("matched T::B(\"42_i64\")"),
-                case![T::C(Box(T::A(String("fun"))] => println!("matched box"),
-                case![T::C(Box(T::A(String(s))] => println!("matched box with s={}", s),
+                case![T::C(T::B("fun")] => println!("matched T::C<T> box"),
+                case![T::D(T::B("fun"] => println!("matched T::D box"),
+                case![T::C(ref T::B(s))] => println!("matched box with s={}", s),
                 T::B(s) => println!("matched T::B(s), s= {:?}", s),
                 _ => println!("unhandled match "),
             }
@@ -135,6 +138,44 @@ fn main() {
                 {
                     println!("matched T::B(\"42_i64\")")
                 }
+                T::C(s)
+                    if {
+                        if let T::B(_s1) = &**s {
+                            if let "fun" = &_s1[..] {
+                                true
+                            } else {
+                                false
+                            }
+                        } else {
+                            false
+                        }
+                    } =>
+                {
+                    if let T::B(_s1) = &**s {
+                        if let "fun" = &_s1[..] {
+                            println!("fun found\n")
+                        } else {
+                            panic!("internal error")
+                        }
+                    } else {
+                        panic!("internal error")
+                    }
+                }
+                T::C(s)
+                    if {
+                        if let T::B(_s1) = &**s {
+                            true
+                        } else {
+                            false
+                        }
+                    } =>
+                {
+                    if let T::B(_s1) = &**s {
+                        println!("matched  box with s={}", _s1)
+                    } else {
+                        panic!("internal error")
+                    }
+                }
                 T::B(s) => println!("matched T::B(s), s= {:?}", s),
                 _ => println!("unhandled match "),
             }
@@ -147,5 +188,9 @@ fn main() {
         matchme(&t2b);
         matchme(&t2c);
         matchme(&t3);
+        let t = T::C(Box::new(T::B("gun".to_string())));
+        matchme(&t);
+        let t = T::C(Box::new(T::B("fun".to_string())));
+        matchme(&t);
     }
 }
