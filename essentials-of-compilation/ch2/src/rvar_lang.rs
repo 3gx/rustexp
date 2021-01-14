@@ -12,36 +12,33 @@ pub enum Term {
     Var(String),
     Let(String, Box<Term>, Box<Term>),
 }
-#[macro_export]
-macro_rules! rvar_plus {
+pub macro plus {
     ($e1:ident, $e2:ident) => {
         Term::Prim(
             OpCode::Plus,
             vec![var!(stringify!($e1)), var!(stringify!($id))],
         )
-    };
+    },
     ($e1:ident, $e2:expr) => {
         Term::Prim(OpCode::Plus, vec![var!($e1), $e2.into_term()])
-    };
+    },
     ($e1:expr, $id:ident) => {
         Term::Prim(OpCode::Plus, vec![$e1.into_term(), var!(stringify!($id))])
-    };
+    },
     ($e1:expr, $e2:expr) => {
         Term::Prim(OpCode::Plus, vec![$e1.into_term(), $e2.into_term()])
-    };
+    },
 }
-pub use rvar_plus as plus;
+pub use plus as add;
 
-#[macro_export]
-macro_rules! rvar_neg {
+pub macro neg {
     ($id:ident) => {
         neg!(var!($id))
-    };
+    },
     ($e:expr) => {
         Term::Prim(OpCode::Neg, vec![$e.into_term()])
-    };
+    },
 }
-pub use rvar_neg as neg;
 
 #[macro_export]
 macro_rules! rvar_read {
@@ -51,26 +48,10 @@ macro_rules! rvar_read {
 }
 pub use rvar_read as read;
 
-#[macro_export]
-macro_rules! rvar_int {
-    ($e:expr) => {
-        Term::Int($e)
-    };
+pub macro int($e:expr) {
+    Term::Int($e)
 }
-pub use rvar_int as int;
 
-/*
-#[macro_export]
-macro_rules! rvar_var {
-    ($id:ident) => {
-        var!(stringify!($id))
-    };
-    ($id:expr) => {
-        Term::Var($id.to_string())
-    };
-}
-pub use rvar_var as var;
-*/
 pub macro var {
     ($id:ident) => {
         var!(stringify!($id))
