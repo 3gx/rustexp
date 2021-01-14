@@ -60,14 +60,14 @@ macro_rules! var {
     };
 }
 macro_rules! r#let {
-    ($id:ident, $e1:expr, $e2:ident) => {
+    ([$id:ident <- $e1:expr]  $e2:ident) => {
         Term::Let(
             stringify!($id).to_owned(),
             Box::new($e1.into_term()),
             Box::new(var!(stringify!($e2))),
         )
     };
-    ($id:ident, $e1:expr, $e2:expr) => {
+    ([$id:ident <- $e1:expr]  $e2:expr) => {
         Term::Let(
             stringify!($id).to_owned(),
             Box::new($e1.into_term()),
@@ -312,17 +312,20 @@ fn main() {
     }
 
     {
-        let p1 = program![r#let!(x, plus!(12, 20), plus!(10, x))];
+        let p1 = program![r#let!([x <- plus!(12, 20)]  plus!(10, x))];
         println!("p1= {:?} ", p1);
         let v1 = interp_program(&p1);
         println!("v1= {:?} ", v1);
 
-        let p1 = program![r#let!(x, 32, plus!(r#let!(x, 10, x), x))];
+        let p1 = program![r#let!([x <- 2]  plus!(r#let!([x <- 10]  x), x))];
         println!("p1= {:?} ", p1);
         let v1 = interp_program(&p1);
         println!("v1= {:?} ", v1);
 
-        let p1 = program![r#let!(x, read!(), r#let!(y, read!(), plus!(x, neg!(y))))];
+        let p1 = program![r#let!(
+            [x <- read!()]
+            r#let!([y <- read!()]  plus!(x, neg!(y)))
+        )];
         println!("p1= {:?} ", p1);
         let v1 = interp_program(&p1);
         println!("v1= {:?} ", v1);
