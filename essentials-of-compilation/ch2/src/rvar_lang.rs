@@ -174,3 +174,13 @@ pub fn interp_program(p: &Program) -> Value {
         Program(_, e) => interp_exp(&vec![], e),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn t1() {
+        use crate::rvar_lang::*;
+        let v = var!("x");
+        println!("v= {:?}", v);
+    }
+}

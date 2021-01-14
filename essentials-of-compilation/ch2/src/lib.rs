@@ -2,6 +2,7 @@
 #![feature(if_let_guard)]
 #![feature(decl_macro)]
 
+pub mod cvar_lang;
 pub mod rvar_lang;
 
 #[cfg(test)]
