@@ -59,6 +59,7 @@ macro_rules! rvar_int {
 }
 pub use rvar_int as int;
 
+/*
 #[macro_export]
 macro_rules! rvar_var {
     ($id:ident) => {
@@ -69,6 +70,15 @@ macro_rules! rvar_var {
     };
 }
 pub use rvar_var as var;
+*/
+pub macro var {
+    ($id:ident) => {
+        var!(stringify!($id))
+    },
+    ($id:expr) => {
+        Term::Var($id.to_string())
+    }
+}
 
 #[macro_export]
 macro_rules! rvar_let {
