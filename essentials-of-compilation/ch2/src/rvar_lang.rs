@@ -116,6 +116,18 @@ impl IntoTerm for &str {
 type Value = i64;
 pub type Env = Vec<(String, Value)>;
 
+pub macro env {
+    () => {
+        Vec::new()
+    },
+    ($elem:expr; $n:expr) => {
+        vec::from_elem($elem, $n)
+    },
+    ($($x:expr),+ $(,)?) => {
+        <[_]>::into_vec(box [$($x),+])
+    },
+}
+
 pub fn env_get<'a>(env: &'a Env, key: &str) -> Option<&'a Value> {
     //println!("env= {:?}", env);
     env.iter()
@@ -153,6 +165,10 @@ pub fn interp_program(p: &Program) -> Value {
     match p {
         Program(_, e) => interp_exp(&vec![], e),
     }
+}
+
+pub fn uniquify(env: &Env, expr: &Term) -> Term {
+    expr.clone()
 }
 
 #[cfg(test)]
