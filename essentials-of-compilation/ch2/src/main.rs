@@ -84,6 +84,7 @@ fn main() {
         enum T {
             A(i32),
             B(String),
+            Kaboom,
         }
         let t1a = T::A(42);
         let t1b = T::A(45);
@@ -91,12 +92,30 @@ fn main() {
         let t2a = T::B("42_i32".to_string());
         let t2b = T::B("42_i64".to_string());
         let t2c = T::B("42_f32".to_string());
+        let t3 = T::Kaboom;
 
         fn matchme(t: &T) {
             match t {
                 T::A(42) => println!("matched T::A(42)"),
                 T::A(45) => println!("matched T::A(45)"),
                 T::A(n) => println!("matched T::A(n), n={}", n),
+                T::B(s)
+                    if {
+                        let verify = |s| s == "42_i32";
+                        verify(s)
+                    } =>
+                {
+                    println!("matched T::B(\"42_i32\")")
+                }
+                T::B(s)
+                    if {
+                        let verify = |s| s == "42_i64";
+                        verify(s)
+                    } =>
+                {
+                    println!("matched T::B(\"42_i64\")")
+                }
+                T::B(s) => println!("matched T::B(s), s= {:?}", s),
                 _ => println!("unhandled match "),
             }
         }
@@ -107,5 +126,6 @@ fn main() {
         matchme(&t2a);
         matchme(&t2b);
         matchme(&t2c);
+        matchme(&t3);
     }
 }
