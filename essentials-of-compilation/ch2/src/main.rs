@@ -140,41 +140,49 @@ fn main() {
                 }
                 T::C(s)
                     if {
-                        if let T::B(_s1) = &**s {
-                            if let "fun" = &_s1[..] {
-                                true
-                            } else {
-                                false
+                        let guard = || {
+                            if let T::B(_s1) = &**s {
+                                if let "fun" = &_s1[..] {
+                                    return true;
+                                }
                             }
-                        } else {
-                            false
-                        }
+                            return false;
+                        };
+                        guard()
                     } =>
                 {
-                    if let T::B(_s1) = &**s {
-                        if let "fun" = &_s1[..] {
-                            println!("fun found\n")
-                        } else {
-                            panic!("internal error")
+                    let rule = || {
+                        if let T::B(_s1) = &**s {
+                            if let "fun" = &_s1[..] {
+                                return {
+                                    println!("fun found\n");
+                                };
+                            }
                         }
-                    } else {
-                        panic!("internal error")
-                    }
+                        panic!("unreachable")
+                    };
+                    rule()
                 }
                 T::C(s)
                     if {
-                        if let T::B(_s1) = &**s {
-                            true
-                        } else {
-                            false
-                        }
+                        let guard = || {
+                            if let T::B(_s1) = &**s {
+                                return true;
+                            }
+                            return false;
+                        };
+                        guard()
                     } =>
                 {
-                    if let T::B(_s1) = &**s {
-                        println!("matched  box with s={}", _s1)
-                    } else {
+                    let rule = || {
+                        if let T::B(_s1) = &**s {
+                            return {
+                                println!("matched  box with s={}", _s1);
+                            };
+                        }
                         panic!("internal error")
-                    }
+                    };
+                    rule()
                 }
                 T::B(s) => println!("matched T::B(s), s= {:?}", s),
                 _ => println!("unhandled match "),
