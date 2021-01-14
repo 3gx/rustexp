@@ -1,5 +1,6 @@
 #![allow(incomplete_features)]
 #![feature(if_let_guard)]
+#![feature(let_chains)]
 #![feature(decl_macro)]
 
 pub mod cvar_lang;
