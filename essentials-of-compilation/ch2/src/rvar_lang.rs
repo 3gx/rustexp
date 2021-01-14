@@ -1,6 +1,6 @@
 #[derive(Debug, Clone, Copy)]
 pub enum OpCode {
-    Plus,
+    Add,
     Neg,
     Read,
 }
@@ -12,24 +12,23 @@ pub enum Term {
     Var(String),
     Let(String, Box<Term>, Box<Term>),
 }
-pub macro plus {
+pub macro add {
     ($e1:ident, $e2:ident) => {
         Term::Prim(
-            OpCode::Plus,
+            OpCode::Add,
             vec![var!(stringify!($e1)), var!(stringify!($id))],
         )
     },
     ($e1:ident, $e2:expr) => {
-        Term::Prim(OpCode::Plus, vec![var!($e1), $e2.into_term()])
+        Term::Prim(OpCode::Add, vec![var!($e1), $e2.into_term()])
     },
     ($e1:expr, $id:ident) => {
-        Term::Prim(OpCode::Plus, vec![$e1.into_term(), var!(stringify!($id))])
+        Term::Prim(OpCode::Add, vec![$e1.into_term(), var!(stringify!($id))])
     },
     ($e1:expr, $e2:expr) => {
-        Term::Prim(OpCode::Plus, vec![$e1.into_term(), $e2.into_term()])
+        Term::Prim(OpCode::Add, vec![$e1.into_term(), $e2.into_term()])
     },
 }
-pub use plus as add;
 
 pub macro neg {
     ($id:ident) => {
@@ -140,7 +139,7 @@ pub fn interp_exp(env: &Env, e: &Term) -> Value {
                     input.trim().parse().unwrap()
             },
             Prim(Neg, v) if let [e] = &v[..] => -interp_exp(env, e),
-            Prim(Plus, v) if let [e1,e2] = &v[..] => interp_exp(env, e1) + interp_exp(env,e2),
+            Prim(Add, v) if let [e1,e2] = &v[..] => interp_exp(env, e1) + interp_exp(env,e2),
             Var(x) => env_get(env, &x).unwrap().clone(),
             Let(x, e, body) => {
                 let new_env = env_set(env,x, interp_exp(env,e));

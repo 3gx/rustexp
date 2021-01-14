@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod tests {
+mod rvar_lang {
     #[test]
     fn t1() {
         use ch2::rvar_lang::*;
@@ -11,19 +11,19 @@ mod tests {
     fn t2() {
         use ch2::rvar_lang::*;
 
-        let p1 = program![r#let!([x <- plus!(12, 20)]  plus!(10, x))];
+        let p1 = program![r#let!([x <- add!(12, 20)]  add!(10, x))];
         println!("p1= {:?} ", p1);
         let v1 = interp_program(&p1);
         println!("v1= {:?} ", v1);
 
-        let p1 = program![r#let!([x <- 2]  plus!(r#let!([x <- 10]  x), x))];
+        let p1 = program![r#let!([x <- 2]  add!(r#let!([x <- 10]  x), x))];
         println!("p1= {:?} ", p1);
         let v1 = interp_program(&p1);
         println!("v1= {:?} ", v1);
 
         let p1 = program![r#let!(
             [x <- read!()]
-            r#let!([y <- read!()]  plus!(x, neg!(y)))
+            r#let!([y <- read!()]  add!(x, neg!(y)))
         )];
         println!("p1= {:?} ", p1);
         let t = true;
