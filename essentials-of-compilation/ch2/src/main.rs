@@ -16,6 +16,9 @@ pub enum Term {
     Let(String, Box<Term>, Box<Term>),
 }
 macro_rules! plus {
+    ($e1:expr, $id:ident) => {
+        Term::Prim(OpCode::Plus, vec![$e1.into_term(), var!(stringify!($id))])
+    };
     ($e1:expr, $e2:expr) => {
         Term::Prim(OpCode::Plus, vec![$e1.into_term(), $e2.into_term()])
     };
@@ -42,8 +45,12 @@ macro_rules! var {
     };
 }
 macro_rules! r#let {
-    ($id:expr, $e1:expr, $e2:expr) => {
-        Term::Let($id.to_owned(), Box::new($e1.clone()), Box::new($e2.clone()))
+    ($id:ident, $e1:expr, $e2:expr) => {
+        Term::Let(
+            stringify!($id).to_owned(),
+            Box::new($e1.clone()),
+            Box::new($e2.clone()),
+        )
     };
 }
 
@@ -54,6 +61,11 @@ pub struct Rint(Vec<Options>, Term);
 
 #[derive(Debug, Clone)]
 pub struct Program(Vec<Options>, Term);
+macro_rules! program {
+    ($e:expr) => {
+        Program(vec![], $e.into_term())
+    };
+}
 
 macro_rules! rint {
     ($e:expr) => {
@@ -83,15 +95,17 @@ impl IntoTerm for &str {
 type Value = i64;
 pub type Env = Vec<(String, Value)>;
 
-pub fn env_get<'a>(dict: &'a Env, key: &str) -> Option<&'a Value> {
-    dict.iter()
-        .find_map(|x| if x.0 == key { None } else { Some(&x.1) })
+pub fn env_get<'a>(env: &'a Env, key: &str) -> Option<&'a Value> {
+    //println!("env= {:?}", env);
+    env.iter()
+        .rev()
+        .find_map(|x| if x.0 != key { None } else { Some(&x.1) })
 }
 
-pub fn env_set(dict: &Env, key: &str, val: Value) -> Env {
-    let mut dict = dict.clone();
-    dict.push((key.to_string(), val));
-    dict
+pub fn env_set(env: &Env, key: &str, val: Value) -> Env {
+    let mut env = env.clone();
+    env.push((key.to_string(), val));
+    env
 }
 
 pub fn interp_exp(env: &Env, e: &Term) -> Value {
@@ -276,8 +290,10 @@ fn main() {
     }
 
     {
-        let e1 = r#let!("x", plus!(12, 20), plus!(10, "x"));
-        println!("e1= {:?}", e1);
+        let p1 = program![r#let!(x, plus!(12, 20), plus!(10, x))];
+        println!("p1= {:?} ", p1);
+        let v1 = interp_program(&p1);
+        println!("v1= {:?} ", v1);
         //       macro_rules
         //        let ages = dict![("jane", 25), ("same", 24), ("kate", 45)];
     }
