@@ -16,6 +16,15 @@ pub enum Term {
     Let(String, Box<Term>, Box<Term>),
 }
 macro_rules! plus {
+    ($e1:ident, $e2:ident) => {
+        Term::Prim(
+            OpCode::Plus,
+            vec![var!(stringify!($e1)), var!(stringify!($id))],
+        )
+    };
+    ($e1:ident, $e2:expr) => {
+        Term::Prim(OpCode::Plus, vec![var!($e1), $e2.into_term()])
+    };
     ($e1:expr, $id:ident) => {
         Term::Prim(OpCode::Plus, vec![$e1.into_term(), var!(stringify!($id))])
     };
@@ -24,6 +33,9 @@ macro_rules! plus {
     };
 }
 macro_rules! neg {
+    ($id:ident) => {
+        neg!(var!($id))
+    };
     ($e:expr) => {
         Term::Prim(OpCode::Neg, vec![$e.into_term()])
     };
@@ -40,16 +52,26 @@ macro_rules! int {
 }
 
 macro_rules! var {
+    ($id:ident) => {
+        var!(stringify!($id))
+    };
     ($id:expr) => {
         Term::Var($id.to_string())
     };
 }
 macro_rules! r#let {
+    ($id:ident, $e1:expr, $e2:ident) => {
+        Term::Let(
+            stringify!($id).to_owned(),
+            Box::new($e1.into_term()),
+            Box::new(var!(stringify!($e2))),
+        )
+    };
     ($id:ident, $e1:expr, $e2:expr) => {
         Term::Let(
             stringify!($id).to_owned(),
-            Box::new($e1.clone()),
-            Box::new($e2.clone()),
+            Box::new($e1.into_term()),
+            Box::new($e2.into_term()),
         )
     };
 }
@@ -294,7 +316,15 @@ fn main() {
         println!("p1= {:?} ", p1);
         let v1 = interp_program(&p1);
         println!("v1= {:?} ", v1);
-        //       macro_rules
-        //        let ages = dict![("jane", 25), ("same", 24), ("kate", 45)];
+
+        let p1 = program![r#let!(x, 32, plus!(r#let!(x, 10, x), x))];
+        println!("p1= {:?} ", p1);
+        let v1 = interp_program(&p1);
+        println!("v1= {:?} ", v1);
+
+        let p1 = program![r#let!(x, read!(), r#let!(y, read!(), plus!(x, neg!(y))))];
+        println!("p1= {:?} ", p1);
+        let v1 = interp_program(&p1);
+        println!("v1= {:?} ", v1);
     }
 }
