@@ -167,4 +167,11 @@ pub fn inter_prog(prog: &CProgram) -> Value {
         [(s,tail)] if let "start" = &s[..] =>  interp_tail(&env![], tail),
         _ => panic!("unhandled {:?}", blocks)
     }
+
+    /*
+    match prog {
+        case!(CProgram(_, ["start", tail]) => interp_tail(&env![], tail)),
+        _ => panic!("unhandled {:?}", blocks)
+    }
+    */
 }
