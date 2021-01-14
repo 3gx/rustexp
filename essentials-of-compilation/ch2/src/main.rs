@@ -84,6 +84,7 @@ fn main() {
         enum T {
             A(i32),
             B(String),
+            C(Box<T>),
             Kaboom,
         }
         let t1a = T::A(42);
@@ -100,11 +101,18 @@ fn main() {
                 T::A(42) => println!("matched T::A(42)"),
                 T::A(45) => println!("matched T::A(45)"),
                 T::A(n) => println!("matched T::A(n), n={}", n),
-                case![T::B("42_i32")] => println!("matched T::B(\"42_i32\")"),
-                case![T::B("42_i64")] => println!("matched T::B(\"42_i64\")"),
+                case![T::B(String("42_i32"))] => println!("matched T::B(\"42_i32\")"),
+                case![T::B(String("42_i64"))] => println!("matched T::B(\"42_i64\")"),
+                case![T::C(Box(T::A(String("fun"))] => println!("matched box"),
+                case![T::C(Box(T::A(String(s))] => println!("matched box with s={}", s),
                 T::B(s) => println!("matched T::B(s), s= {:?}", s),
                 _ => println!("unhandled match "),
             }
+            */
+
+            /*
+            T::C(_box) if {
+                          }
             */
 
             match t {
