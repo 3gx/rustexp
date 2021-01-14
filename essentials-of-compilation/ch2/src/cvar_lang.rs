@@ -1,6 +1,5 @@
 type Int = i64;
 type Label = String;
-type Var = String;
 type Info = Vec<i64>;
 type Value = Int;
 pub type Env = Vec<(Label, Value)>;
@@ -29,10 +28,38 @@ pub macro env {
     },
 }
 
+pub trait IntoAtom {
+    type Output;
+    fn into_atom(&self) -> Self::Output;
+}
+
 #[derive(Debug, Clone)]
 pub enum Atm {
     Int(Int),
-    Var(Var),
+    Var(String),
+}
+pub macro int($e:expr) {
+    Atm::Int($e)
+}
+pub macro var {
+    ($id:ident) => {
+        var!(stringify!($id))
+    },
+    ($id:expr) => {
+        Atm::Var($id.to_string())
+    }
+}
+impl IntoAtom for i64 {
+    type Output = Atm;
+    fn into_atom(&self) -> Atm {
+        int!(*self)
+    }
+}
+impl IntoAtom for &str {
+    type Output = Atm;
+    fn into_atom(&self) -> Atm {
+        var!(self)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -40,6 +67,33 @@ pub enum Prim {
     Read,
     Neg(Atm),
     Add(Atm, Atm),
+}
+pub macro read() {
+    Prim::Read
+}
+
+pub macro neg {
+    ($id:ident) => {
+        neg!(var!($id))
+    },
+    ($e:expr) => {
+        Prim(Neg, $e.into_atom())
+    },
+}
+
+pub macro add {
+    ($i1:ident, $i2:ident) => {
+        Prim::Add(var!(stringify!($i1)), var!($i2))
+    },
+    ($i1:ident, $a2:expr) => {
+        Prim::Add(var!($i1), $a2.into_atom())
+    },
+    ($a1:expr, $i2:ident) => {
+        Prim::Add($a1.into_atom(), var!($i2)),
+    },
+    ($a1:expr, $a2:expr) => {
+        Prim::Add($a1.into_atom(), $a2.into_atom())
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -50,7 +104,7 @@ pub enum Exp {
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
-    AssignVar(Var, Exp),
+    AssignVar(String, Exp),
 }
 
 #[derive(Debug, Clone)]
