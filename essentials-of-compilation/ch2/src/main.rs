@@ -12,12 +12,54 @@ pub enum OpCode {
 pub enum Term {
     Int(i64),
     Prim(OpCode, Vec<Term>),
+    Var(String),
+    Let(String, Box<Term>, Box<Term>),
 }
+macro_rules! plus {
+    ($e1:expr, $e2:expr) => {
+        Term::Prim(OpCode::Plus, vec![$e1.into_term(), $e2.into_term()])
+    };
+}
+macro_rules! neg {
+    ($e:expr) => {
+        Term::Prim(OpCode::Neg, vec![$e.into_term()])
+    };
+}
+macro_rules! read {
+    () => {
+        Term::Prim(OpCode::Read, vec![])
+    };
+}
+macro_rules! int {
+    ($e:expr) => {
+        Term::Int($e)
+    };
+}
+
+macro_rules! var {
+    ($id:expr) => {
+        Term::Var($id.to_string())
+    };
+}
+macro_rules! r#let {
+    ($id:expr, $e1:expr, $e2:expr) => {
+        Term::Let($id.to_owned(), Box::new($e1.clone()), Box::new($e2.clone()))
+    };
+}
+
 #[derive(Debug, Clone)]
 pub struct Options;
 #[derive(Debug, Clone)]
 pub struct Rint(Vec<Options>, Term);
 
+#[derive(Debug, Clone)]
+pub struct Program(Vec<Options>, Term);
+
+macro_rules! rint {
+    ($e:expr) => {
+        Rint(vec![], $e.into_term())
+    };
+}
 trait IntoTerm {
     fn into_term(&self) -> Term;
 }
@@ -30,6 +72,51 @@ impl IntoTerm for i64 {
 impl IntoTerm for Term {
     fn into_term(&self) -> Term {
         self.clone()
+    }
+}
+impl IntoTerm for &str {
+    fn into_term(&self) -> Term {
+        var!(self)
+    }
+}
+
+type Value = i64;
+pub type Env = Vec<(String, Value)>;
+
+pub fn env_get<'a>(dict: &'a Env, key: &str) -> Option<&'a Value> {
+    dict.iter()
+        .find_map(|x| if x.0 == key { None } else { Some(&x.1) })
+}
+
+pub fn env_set(dict: &Env, key: &str, val: Value) -> Env {
+    let mut dict = dict.clone();
+    dict.push((key.to_string(), val));
+    dict
+}
+
+pub fn interp_exp(env: &Env, e: &Term) -> Value {
+    use {OpCode::*, Term::*};
+    match e {
+            Int(n) => n.clone(),
+            Prim(Read, v) if let [] = &v[..] => {
+                    let mut input = String::new();
+                    std::io::stdin().read_line(&mut input).unwrap();
+                    input.trim().parse().unwrap()
+            },
+            Prim(Neg, v) if let [e] = &v[..] => -interp_exp(env, e),
+            Prim(Plus, v) if let [e1,e2] = &v[..] => interp_exp(env, e1) + interp_exp(env,e2),
+            Var(x) => env_get(env, &x).unwrap().clone(),
+            Let(x, e, body) => {
+                let new_env = env_set(env,x, interp_exp(env,e));
+                interp_exp(&new_env, body)
+            }
+            _ => panic!("unhandled term {:?}", e),
+        }
+}
+
+pub fn interp_program(p: &Program) -> Value {
+    match p {
+        Program(_, e) => interp_exp(&vec![], e),
     }
 }
 
@@ -175,31 +262,6 @@ fn main() {
                 Rint(v, e) => Rint(v.clone(), pe_exp(e)),
             }
         }
-        macro_rules! plus {
-            ($e1:expr, $e2:expr) => {
-                Prim(Plus, vec![$e1.into_term(), $e2.into_term()])
-            };
-        }
-        macro_rules! neg {
-            ($e:expr) => {
-                Prim(Neg, vec![$e.into_term()])
-            };
-        }
-        macro_rules! read {
-            () => {
-                Prim(Read, vec![])
-            };
-        }
-        macro_rules! int {
-            ($e:expr) => {
-                Int($e)
-            };
-        }
-        macro_rules! rint {
-            ($e:expr) => {
-                Rint(vec![], $e.into_term())
-            };
-        }
         let prog1 = rint!(plus!(read!(), neg!(plus!(5, 3))));
         println!("prog1= {:?}", prog1);
         let prog2 = pe_rint(&prog1);
@@ -211,5 +273,12 @@ fn main() {
         test_pe(&rint!(plus!(10, neg!(plus!(5, 3)))));
         test_pe(&rint!(plus!(int!(1), plus!(int!(3), int!(1)))));
         test_pe(&rint!(neg!(plus!(3, neg!(5)))));
+    }
+
+    {
+        let e1 = r#let!("x", plus!(12, 20), plus!(10, "x"));
+        println!("e1= {:?}", e1);
+        //       macro_rules
+        //        let ages = dict![("jane", 25), ("same", 24), ("kate", 45)];
     }
 }
