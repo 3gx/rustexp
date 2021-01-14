@@ -95,6 +95,18 @@ fn main() {
         let t3 = T::Kaboom;
 
         fn matchme(t: &T) {
+            /*
+            match t {
+                T::A(42) => println!("matched T::A(42)"),
+                T::A(45) => println!("matched T::A(45)"),
+                T::A(n) => println!("matched T::A(n), n={}", n),
+                case![T::B("42_i32")] => println!("matched T::B(\"42_i32\")"),
+                case![T::B("42_i64")] => println!("matched T::B(\"42_i64\")"),
+                T::B(s) => println!("matched T::B(s), s= {:?}", s),
+                _ => println!("unhandled match "),
+            }
+            */
+
             match t {
                 T::A(42) => println!("matched T::A(42)"),
                 T::A(45) => println!("matched T::A(45)"),
