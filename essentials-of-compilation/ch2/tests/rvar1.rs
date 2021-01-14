@@ -34,4 +34,10 @@ mod rvar_lang {
             println!("v1= {:?} ", v1);
         }
     }
+
+    #[test]
+    fn t3() {
+        use ch2::rvar_lang::*;
+        let p1 = program![r#let!([x <- add!(12, 20)]  add!(10, x))];
+    }
 }

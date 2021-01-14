@@ -158,7 +158,7 @@ pub fn interp_program(p: &Program) -> Value {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn t1() {
+    fn txx() {
         use crate::rvar_lang::*;
         let v = var!("x");
         println!("v= {:?}", v);
