@@ -1,7 +1,7 @@
 #![allow(incomplete_features)]
 #![feature(if_let_guard)]
 
-pub mod x86int {
+pub mod x86int_lang {
     #[allow(non_camel_case_types)]
     pub enum Reg {
         rsp,
@@ -44,6 +44,43 @@ pub mod x86int {
 
     type Info = Vec<i64>;
     pub struct Block(Info, Vec<Instr>);
+}
+
+pub mod cvar_lang {
+    type Int = i64;
+    type Label = String;
+    type Var = String;
+    type Info = Vec<i64>;
+
+    pub enum Atm {
+        Int(Int),
+        Var(Var),
+    }
+
+    pub enum Prim {
+        Read,
+        Neg(Atm),
+        Add(Atm, Atm),
+    }
+
+    pub enum Exp {
+        Atm,
+        Read,
+        Prim,
+    }
+
+    pub enum Stmt {
+        Assign(Var, Exp),
+    }
+
+    pub enum Tail {
+        Return(Exp),
+        Seq(Stmt, Box<Tail>),
+    }
+
+    pub enum CVar {
+        CProgram(Info, Vec<(Label, Tail)>),
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -210,8 +247,12 @@ fn main() {
             r#let!([y <- read!()]  plus!(x, neg!(y)))
         )];
         println!("p1= {:?} ", p1);
-        println!("inter 52<enter>, 10<enter>, should get 42");
-        let v1 = interp_program(&p1);
-        println!("v1= {:?} ", v1);
+        let t = true;
+        let t = if t { false } else { true };
+        if t {
+            println!("inter 52<enter>, 10<enter>, should get 42");
+            let v1 = interp_program(&p1);
+            println!("v1= {:?} ", v1);
+        }
     }
 }
