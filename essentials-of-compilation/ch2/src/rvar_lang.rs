@@ -78,6 +78,7 @@ macro_rules! rvar_let {
     };
 }
 pub use rvar_let as r#let;
+pub use rvar_let as let_;
 
 #[derive(Debug, Clone)]
 pub struct Options;

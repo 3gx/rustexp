@@ -170,7 +170,18 @@ pub fn inter_prog(prog: &CProgram) -> Value {
 
     /*
     match prog {
-        case!(CProgram(_, ["start", tail]) => interp_tail(&env![], tail)),
+        case!(CProgram(_, Vec[(String("start"), tail)]) => interp_tail(&env![], tail)),
+        _ => panic!("unhandled {:?}", blocks)
+    }
+
+    becomes
+
+    match prog {
+        CProgram(_, vec) => match &vec[..] {
+            &[str, tail] => match &str[..] {
+                "start" => yay!
+            },
+        },
         _ => panic!("unhandled {:?}", blocks)
     }
     */

@@ -78,4 +78,34 @@ fn main() {
             println!("v1= {:?} ", v1);
         }
     }
+
+    {
+        #[derive(Debug, Clone)]
+        enum T {
+            A(i32),
+            B(String),
+        }
+        let t1a = T::A(42);
+        let t1b = T::A(45);
+        let t1c = T::A(45);
+        let t2a = T::B("42_i32".to_string());
+        let t2b = T::B("42_i64".to_string());
+        let t2c = T::B("42_f32".to_string());
+
+        fn matchme(t: &T) {
+            match t {
+                T::A(42) => println!("matched T::A(42)"),
+                T::A(45) => println!("matched T::A(45)"),
+                T::A(n) => println!("matched T::A(n), n={}", n),
+                _ => println!("unhandled match "),
+            }
+        }
+
+        matchme(&t1a);
+        matchme(&t1b);
+        matchme(&t1c);
+        matchme(&t2a);
+        matchme(&t2b);
+        matchme(&t2c);
+    }
 }
