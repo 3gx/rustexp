@@ -2,6 +2,7 @@
 #![feature(if_let_guard)]
 #![feature(box_syntax)]
 #![feature(let_chains)]
+#![feature(decl_macro)]
 
 pub mod x86int_lang {
     #[allow(non_camel_case_types)]
@@ -97,21 +98,26 @@ fn main() {
         let t2c = T::B("42_f32".to_string());
         let t3 = T::Kaboom;
 
+        /*
+        macro case($expr:expr) {
+            $expr
+        }
+        */
         fn matchme(t: &T) {
-            /*
             match t {
                 T::A(42) => println!("matched T::A(42)"),
                 T::A(45) => println!("matched T::A(45)"),
-                T::A(n) => println!("matched T::A(n), n={}", n),
-                case![T::B(String("42_i32"))] => println!("matched T::B(\"42_i32\")"),
-                case![T::B(String("42_i64"))] => println!("matched T::B(\"42_i64\")"),
-                case![T::C(T::B("fun")] => println!("matched T::C<T> box"),
-                case![T::D(T::B("fun"] => println!("matched T::D box"),
-                case![T::C(ref T::B(s))] => println!("matched box with s={}", s),
+                /*
+                //case![T::A(n)] => println!("matched T::A(n), n={}", n),
+                case![T::B(String("42_i32")) => println!("matched T::B(\"42_i32\")")],
+                case![T::B(String("42_i64")) => println!("matched T::B(\"42_i64\")")],
+                case![T::C(T::B("fun") => println!("matched T::C<T> box")],
+                case![T::D(T::B("fun" => println!("matched T::D box")],
+                case![T::C(ref T::B(s)) => println!("matched box with s={}", s)],
+                */
                 T::B(s) => println!("matched T::B(s), s= {:?}", s),
                 _ => println!("unhandled match "),
             }
-            */
 
             /*
             T::C(_box) if {
