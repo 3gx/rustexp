@@ -2,7 +2,7 @@
 #![feature(destructuring_assignment)]
 #![feature(let_chains)]
 #![allow(incomplete_features)]
-use if_chain;
+//use if_chain;
 /*
 #[allow(unused_macros)]
 macro mymatch {
@@ -94,12 +94,12 @@ macro mymatch3 {
                    )())* => {
                        (||
                            {
-                               mymatch3!(@guard $result, $($($guard)*)*);
-                               panic!("unreachable")
-                               /*
+             //                  mymatch3!(@guard $result, $($($guard)*)*);
+              //                 panic!("unreachable")
+               //                /*
                                stringify!($($($guard)*),*);
                                return $result;
-                               */
+                //               */
                            }
                        )()
                      }),*
