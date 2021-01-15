@@ -380,7 +380,7 @@ fn main() {
             fn eval(e: &Expr) -> i64 {
                 rmatch! { [e]
                     Int(n) => *n,
-                    Prim(Neg, v) if {[Int(m)] = &v[..]} => -*m,
+                    Prim(Neg, v) if {[Int(m)] = v.as_slice()} => -*m,
                     Prim(Neg, v) if {[e] = &v[..]} => -eval(e),
                     Prim(Add, v) if {[e1,e2] = &v[..]} => eval(e1) + eval(e2),
                     _ => panic!("unhandled {:?}", e)
