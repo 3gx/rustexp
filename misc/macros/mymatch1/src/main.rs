@@ -1,4 +1,5 @@
 #![feature(decl_macro)]
+#![feature(destructuring_assignment)]
 macro mymatch {
    ( |$obj:expr;| $($matcher:pat $(if $pred:expr)* => $result:expr),*) => {
        match $obj {
@@ -18,6 +19,17 @@ macro mymatch2 {
    (@unfolded [ $obj:expr ] $( $(@[$($guard:expr),*])? $matcher:pat $(if $pred:expr)* => $result:expr),*) => {
        match $obj {
            $($matcher $(if $pred)* => {stringify!($($($guard),*),*); $result}),*
+       }
+   },
+   (@pred $pred:expr $(,)?) => {
+       $pred
+   },
+   (@pred $pred:expr, $($tail:expr),*) => {
+       $pred && mymatch2!(@pred $($tail),*)
+   },
+   ([ $obj:expr ] $( $matcher:pat $(if [$($pred:expr),*])* => $result:expr),*) => {
+       match $obj {
+           $($matcher $(if mymatch2!(@pred $($pred),*))* => $result),*
        }
    },
 
@@ -93,10 +105,11 @@ fn main() {
     println!("y0={:?}", y0);
 
     let x1 = Some(20);
-    let y1 = mymatch2! { @unfolded
+    let y1 = mymatch2! {
         [x1]
-            Some(10) => "Ten",
-           @[m=n,30=m] Some(n)  => "twice Ten",
+           Some(10) => "Ten",
+           Some(n) if [n == 20, n == 21] => "twice Ten",
+           //n if [Some(n) = n, 20 = n] => "twice Ten",
     //     with_guard[10 => "guarded Ten"],
          _ => "something else"
         };
