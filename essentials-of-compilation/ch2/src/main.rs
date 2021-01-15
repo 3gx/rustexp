@@ -171,24 +171,22 @@ fn main() {
                 }
                 T::C(s)
                     if {
-                        let guard = || {
+                        (|| {
                             if let T::B(_s1) = &**s {
                                 return true;
                             }
                             return false;
-                        };
-                        guard()
+                        })()
                     } =>
                 {
-                    let rule = || {
+                    (|| {
                         if let T::B(_s1) = &**s {
                             return {
                                 println!("matched  box with s={}", _s1);
                             };
                         }
                         panic!("internal error")
-                    };
-                    rule()
+                    })()
                 }
                 T::B(s) => println!("matched T::B(s), s= {:?}", s),
                 _ => println!("unhandled match "),
