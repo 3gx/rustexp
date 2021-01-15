@@ -15,11 +15,13 @@ macro mymatch1 {
 
 }
 macro mymatch2 {
-   (@unfolded [ $obj:expr ] $($matcher:pat $(if $pred:expr)* => $result:expr),*) => {
+   (@unfolded [ $obj:expr ] $( $(@[$($guard:expr),*])? $matcher:pat $(if $pred:expr)* => $result:expr),*) => {
        match $obj {
-           $($matcher $(if $pred)* => $result),*
+           $($matcher $(if $pred)* => {stringify!($($($guard),*),*); $result}),*
        }
    },
+
+   /*
    (@case) => {},
    (@case $matcher:pat $(if $pred:expr)* => $result:expr $(,$tail:tt)*) => {
        $matcher $(if $pred)* => $result,
@@ -34,9 +36,10 @@ macro mymatch2 {
 //   }//,
    ( [ $obj:expr ]  $($tail:tt)*) => {
        match $obj {
-           mymatch2!(@case $($tail)*)
+           mymatch2!(@case $($tail)*) => (),
        }
    }
+   */
 }
 /*
 macro mymatch1 {
@@ -89,10 +92,11 @@ fn main() {
         };
     println!("y0={:?}", y0);
 
-    let x1 = 20;
-    let y1 = mymatch2! {
+    let x1 = Some(20);
+    let y1 = mymatch2! { @unfolded
         [x1]
-            20 => "twice Ten",
+            Some(10) => "Ten",
+           @[m=n,30=m] Some(n)  => "twice Ten",
     //     with_guard[10 => "guarded Ten"],
          _ => "something else"
         };
