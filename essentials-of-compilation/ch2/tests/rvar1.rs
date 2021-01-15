@@ -59,4 +59,71 @@ mod rvar_lang {
         println!("e1u= {:?}", e1u);
         assert_eq!(e2, e1u);
     }
+    /*
+    fn is_lit(&self) -> bool {
+        match self {
+            Self::Lit(..) => return true,
+            Self::Unary(expr_unary) => {
+                if let ast::ExprUnary {
+                    op: ast::UnOp::Neg,
+                    expr,
+                    ..
+                } = &**expr_unary
+                {
+                    if let Self::Lit(expr) = expr {
+                        return matches!(
+                            &**expr,
+                            ast::ExprLit {
+                                lit: ast::Lit::Number(..),
+                                ..
+                            }
+                        );
+                    }
+                }
+            }
+            _ => (),
+        }
+
+        false
+    }
+    fn is_lit1(&self) -> bool {
+        match self {
+            Self::Lit(..) => return true,
+            Self::Unary(box ast::ExprUnary {
+                op: ast::UnOp::Neg,
+                expr: Self::Lit(expr),
+                ..
+            }) => {
+                return matches!(
+                    &**expr,
+                    ast::ExprLit {
+                        lit: ast::Lit::Number(..),
+                        ..
+                    }
+                )
+            }
+            _ => (),
+        }
+        false
+    }
+    fn is_lit1(&self) -> bool {
+        mymatch! {|self|
+            Self::Lit(..) => return true,
+            Self::Unary(ref ast::ExprUnary {
+                op: ast::UnOp::Neg,
+                expr: ref Self::Lit(expr),
+                ..
+            }) =>
+                return matches!(
+                    &**expr,
+                    ast::ExprLit {
+                        lit: ast::Lit::Number(..),
+                        ..
+                    }
+                ),
+            _ => (),
+        }
+        false
+    }
+    */
 }
