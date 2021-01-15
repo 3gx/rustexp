@@ -39,13 +39,9 @@ pub macro neg {
     },
 }
 
-#[macro_export]
-macro_rules! rvar_read {
-    () => {
-        Term::Prim(OpCode::Read, vec![])
-    };
+pub macro read() {
+    Term::Prim(OpCode::Read, vec![])
 }
-pub use rvar_read as read;
 
 pub macro int($e:expr) {
     Term::Int($e)
@@ -60,25 +56,22 @@ pub macro var {
     }
 }
 
-#[macro_export]
-macro_rules! rvar_let {
+pub macro r#let {
     ([$id:ident $e1:expr]  $e2:ident) => {
         Term::Let(
             stringify!($id).to_owned(),
             Box::new($e1.into_term()),
             Box::new(var!(stringify!($e2))),
         )
-    };
+    },
     ([$id:ident $e1:expr]  $e2:expr) => {
         Term::Let(
             stringify!($id).to_owned(),
             Box::new($e1.into_term()),
             Box::new($e2.into_term()),
         )
-    };
+    }
 }
-pub use rvar_let as r#let;
-pub use rvar_let as let_;
 
 #[derive(Debug, Clone)]
 pub struct Options;
@@ -86,13 +79,9 @@ pub struct Options;
 #[derive(Debug, Clone)]
 pub struct Program(pub Vec<Options>, pub Term);
 
-#[macro_export]
-macro_rules! rvar_program {
-    ($e:expr) => {
-        Program(vec![], $e.into_term())
-    };
+pub macro program($e:expr) {
+    Program(vec![], $e.into_term())
 }
-pub use rvar_program as program;
 
 pub trait IntoTerm {
     fn into_term(&self) -> Term;
