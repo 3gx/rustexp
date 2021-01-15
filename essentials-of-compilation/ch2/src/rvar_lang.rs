@@ -151,8 +151,22 @@ pub fn interp_program(p: &Program) -> Value {
     }
 }
 
-pub fn uniquify(_env: &Env, expr: &Term) -> Term {
-    expr.clone()
+pub fn uniquify_expr(env: &Env, expr: &Term) -> Term {
+    use Term::*;
+    match expr {
+        Var(_x) => unimplemented!(),
+        Int(n) => Int(*n),
+        Let(_x, _e, _body) => unimplemented!(),
+        Neg(e) => Neg(box uniquify_expr(env, e)),
+        Add(e1, e2) => Add(box uniquify_expr(env, e1), box uniquify_expr(env, e2)),
+        Read => Read,
+    }
+}
+
+pub fn uniquify(p: Program) -> Program {
+    match p {
+        Program(v, e) => Program(v, uniquify_expr(&env![], &e)),
+    }
 }
 
 #[cfg(test)]

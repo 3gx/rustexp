@@ -46,7 +46,7 @@ mod rvar_lang {
         let e2 = r#let!([x_1 32]  add!(r#let!([x_2 10] x_2), x_1));
         println!("e1= {:?}", e1);
         println!("e2= {:?}", e2);
-        let e1u = uniquify(&env![], &e1);
+        let e1u = uniquify_expr(&env![], &e1);
         println!("e1u= {:?}", e1u);
         assert_eq!(e2, e1u);
     }
