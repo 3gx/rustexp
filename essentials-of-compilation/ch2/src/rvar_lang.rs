@@ -152,9 +152,9 @@ pub fn interp_program(p: &Program) -> Value {
 }
 
 fn gensym() -> String {
-    static mut COUNTER: usize = 0;
     let c;
     unsafe {
+        static mut COUNTER: usize = 0;
         COUNTER += 1;
         c = COUNTER;
     }
