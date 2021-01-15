@@ -170,6 +170,13 @@ fn main() {
     };
     println!("y1={:?}", y1);
 
+    let y2 = match x1 {
+        Some(10) => "Ten".to_string(),
+        Some(n) if n == 20 && n == 21 => "twice Ten A".to_string(),
+        _ => "something else".to_string(),
+    };
+    println!("y2={:?}", y2);
+
     /*
     let x = if_chain::if_chain! {
         if let Some(i) = x1;
