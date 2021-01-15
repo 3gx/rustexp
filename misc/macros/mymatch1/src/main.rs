@@ -2,7 +2,7 @@
 #![feature(destructuring_assignment)]
 #![feature(let_chains)]
 #![allow(incomplete_features)]
-use if_chain;
+//use if_chain;
 /*
 #[allow(unused_macros)]
 macro mymatch {
@@ -73,25 +73,25 @@ macro mymatch2 {
 */
 
 macro mymatch3 {
-   (@guard let $pat:pat = $expr:expr $(,)?) => {
-       let $pat = $expr
+   (@guard $ret:expr, let $pat:pat = $expr:expr $(,)?) => {
+       if let $pat = $expr { return $ret }
    },
-   (@guard $guard:expr $(,)?) => {
-       $guard
+   (@guard $ret:expr, $guard:expr $(,)?) => {
+       if $guard { return $ret }
    },
-   (@guard $guard:expr, $($tail:tt)*) => {
-       mymatch3!(@guard $guard) && mymatch3!(@guard $($tail)*)
+   (@guard $ret:expr, $guard:expr, $($tail:tt)*) => {
+       if $guard { mymatch3!(@guard $ret, $($tail)*) }
    },
-   (@guard let $pat:pat = $expr:expr, $($tail:tt)*) => {
-       mymatch3!(@guard let $pat = $expr) && mymatch3!(@guard $($tail)*)
+   (@guard $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
+       if let $pat = $expr {  mymatch3!(@guard $ret, $($tail)*) }
    },
    ([ $obj:expr ] $( $matcher:pat $(if {$($guard:tt)*})* => $result:expr),*) => {
        match $obj {
            $($matcher $(if
-//                   if_chain::if_chain!
-                   {
-                       mymatch3!(@guard $($guard)*)
-                   })* =>
+                   (|| {
+                       mymatch3!(@guard true, $($guard)*);
+                       return false; }
+                   )())* =>
                     {stringify!($($($guard)*),*); $result}),*
        }
    },
@@ -139,13 +139,14 @@ fn main() {
     let y1 = mymatch3! {
         [x1]
            Some(10) => "Ten",
-           Some(n) if {n == 20, n == 21} => "twice Ten",
-           n if {let Some(n) = n, let 20 = n} => "twice Ten",
+           Some(n) if {n == 20, n == 21} => "twice Ten A",
+           n if {let Some(n) = n, 20 == n} => "twice Ten",
     //     with_guard[10 => "guarded Ten"],
          _ => "something else"
         };
     println!("y1={:?}", y1);
 
+    /*
     let x = if_chain::if_chain! {
         if let Some(i) = x1;
         if let 20 = i;
@@ -153,4 +154,5 @@ fn main() {
         else {false}
     };
     println!("x={}", x);
+    */
 }
