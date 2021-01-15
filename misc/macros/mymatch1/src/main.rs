@@ -11,8 +11,7 @@ macro mymatch {
            $($matcher $(if $pred)* => $result),*
        }
    }
-}
-#[allow(unused_macros)]
+} #[allow(unused_macros)]
 macro mymatch1 {
    ( [ $obj:expr ]  $($matcher:pat $(if $pred:expr)* => $result:expr),*) => {
        match $obj {
@@ -94,12 +93,8 @@ macro mymatch3 {
                    )())* => {
                        (||
                            {
-             //                  mymatch3!(@guard $result, $($($guard)*)*);
-              //                 panic!("unreachable")
-               //                /*
-                               stringify!($($($guard)*),*);
-                               return $result;
-                //               */
+                               mymatch3!(@guard $result, true, $($($guard)*)*);
+                                 panic!("unreacahble");
                            }
                        )()
                      }),*
@@ -165,13 +160,13 @@ fn main() {
     println!("y0={:?}", y0);
     */
 
-    let x1 = Some(20);
+    let x1 = Some(23);
     let y1 = mymatch3! {
     [x1]
-       Some(10) => "Ten",
-       Some(n) if {n == 20, n == 21} => "twice Ten A",
-       n if {let Some(n) = n, 20 == n} => "twice Ten",
-     _ => "something else"
+       Some(10) => "Ten".to_string(),
+       Some(n) if {n == 20, n == 21} => "twice Ten A".to_string(),
+       n if {let Some(m) = n, 23 == m} => m.to_string(),
+     _ => "something else".to_string()
     };
     println!("y1={:?}", y1);
 
