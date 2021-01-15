@@ -2,6 +2,7 @@
 #![feature(destructuring_assignment)]
 #![feature(let_chains)]
 #![allow(incomplete_features)]
+use if_chain;
 macro mymatch {
    ( |$obj:expr;| $($matcher:pat $(if $pred:expr)* => $result:expr),*) => {
        match $obj {
@@ -65,21 +66,28 @@ macro mymatch2 {
    }
    */
 }
-/*
-macro mymatch1 {
-   ( | $($tail:tt)* ) => { mymatch1!(@s1 $($tail)*) },
-   (@s1 $obj:expr  $($tail:tt)* ) => {
+
+macro mymatch3 {
+   (@guard let $pat:pat = $expr:expr $(,)?) => {
+       let $pat = $expr
+   },
+   (@guard $guard:expr $(,)?) => {
+       $guard
+   },
+   (@guard $guard:expr, $($tail:tt)*) => {
+       mymatch3!(@guard $guard) && mymatch3!(@guard $($tail)*)
+   },
+   (@guard let $pat:pat = $expr:expr, $($tail:tt)*) => {
+       mymatch3!(@guard let $pat = $expr) && mymatch3!(@guard $($tail)*)
+   },
+   ([ $obj:expr ] $( $matcher:pat $(if {$($guard:tt)*})* => $result:expr),*) => {
        match $obj {
-           mymatch1!(@s2 $($tail)*)
+           $($matcher $(if mymatch3!(@guard $($guard)*))* =>
+                    {stringify!($($($guard)*),*); $result}),*
        }
    },
-   ( $obj:expr, $($matcher:pat $(if $pred:expr)* => $result:expr),*) => {
-       match $obj {
-           $($matcher $(if $pred)* => $result),*
-       }
-   }
+
 }
-*/
 fn main() {
     let matchme = |x| {
         mymatch! { |x;|
@@ -117,7 +125,7 @@ fn main() {
     println!("y0={:?}", y0);
 
     let x1 = Some(20);
-    let y1 = mymatch2! {
+    let y1 = mymatch3! {
         [x1]
            Some(10) => "Ten",
            Some(n) if {n == 20, n == 21} => "twice Ten",
