@@ -27,7 +27,7 @@ macro mymatch2 {
    (@guard $guard:expr, $($tail:expr),*) => {
        $guard && mymatch2!(@guard $($tail),*)
    },
-   ([ $obj:expr ] $( $matcher:pat $(if [$($guard:expr),*])* => $result:expr),*) => {
+   ([ $obj:expr ] $( $matcher:pat $(if {$($guard:expr),*})* => $result:expr),*) => {
        match $obj {
            $($matcher $(if mymatch2!(@guard $($guard),*))* =>
                     {stringify!($($($guard),*),*); $result}),*
@@ -109,7 +109,7 @@ fn main() {
     let y1 = mymatch2! {
         [x1]
            Some(10) => "Ten",
-           Some(n) if [n == 20, n == 21] => "twice Ten",
+           Some(n) if {n == 20, n == 21} => "twice Ten",
            //n if [Some(n) = n, 20 = n] => "twice Ten",
     //     with_guard[10 => "guarded Ten"],
          _ => "something else"
