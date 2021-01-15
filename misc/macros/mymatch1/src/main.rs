@@ -3,6 +3,8 @@
 #![feature(let_chains)]
 #![allow(incomplete_features)]
 use if_chain;
+/*
+#[allow(unused_macros)]
 macro mymatch {
    ( |$obj:expr;| $($matcher:pat $(if $pred:expr)* => $result:expr),*) => {
        match $obj {
@@ -10,6 +12,7 @@ macro mymatch {
        }
    }
 }
+#[allow(unused_macros)]
 macro mymatch1 {
    ( [ $obj:expr ]  $($matcher:pat $(if $pred:expr)* => $result:expr),*) => {
        match $obj {
@@ -18,6 +21,7 @@ macro mymatch1 {
    }
 
 }
+#[allow(unused_macros)]
 macro mymatch2 {
    (@unfolded [ $obj:expr ] $( $(@[$($guard:expr),*])? $matcher:pat $(if $pred:expr)* => $result:expr),*) => {
        match $obj {
@@ -66,6 +70,7 @@ macro mymatch2 {
    }
    */
 }
+*/
 
 macro mymatch3 {
    (@guard let $pat:pat = $expr:expr $(,)?) => {
@@ -83,6 +88,7 @@ macro mymatch3 {
    ([ $obj:expr ] $( $matcher:pat $(if {$($guard:tt)*})* => $result:expr),*) => {
        match $obj {
            $($matcher $(if
+                   if_chain::if_chain!
                    {
                        mymatch3!(@guard $($guard)*)
                    })* =>
@@ -92,6 +98,7 @@ macro mymatch3 {
 
 }
 fn main() {
+    /*
     let matchme = |x| {
         mymatch! { |x;|
             Some(Some(7)) => println!("seven!"),
@@ -126,6 +133,7 @@ fn main() {
          _ => "something else"
         };
     println!("y0={:?}", y0);
+    */
 
     let x1 = Some(20);
     let y1 = mymatch3! {
@@ -137,4 +145,12 @@ fn main() {
          _ => "something else"
         };
     println!("y1={:?}", y1);
+
+    let x = if_chain::if_chain! {
+        if let Some(i) = x1;
+        if let 20 = i;
+        then { true }
+        else {false}
+    };
+    println!("x={}", x);
 }
