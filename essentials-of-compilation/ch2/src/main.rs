@@ -147,6 +147,9 @@ fn main() {
                     println!("matched T::B(\"42_i64\")")
                 }
                 /*
+                with_guard[T::C(s), T::B(s) = &**s, "fun" = &s[..]] =>
+                    println!("fun found, s= {:#?}", S),
+                  or
                 T::C(s) if guard!(T::B(s) = &**s, "fun" = &s[..]) =>
                        println!("fun found"),
                 rule![|T::B(s) = &**s, "fun" = &s[..] | {println!("fun_found")}],
