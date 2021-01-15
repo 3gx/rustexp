@@ -165,7 +165,7 @@ fn main() {
     [x1]
        Some(10) => "Ten".to_string(),
        Some(n) if {n == 20, n == 21} => "twice Ten A".to_string(),
-       n if {let Some(m) = n, 23 == m} => m.to_string(),
+       n if {let Some(m) = n} => {println!("{}", m); m.to_string()},
      _ => "something else".to_string()
     };
     println!("y1={:?}", y1);
