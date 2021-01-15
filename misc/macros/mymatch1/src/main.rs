@@ -88,7 +88,7 @@ macro mymatch3 {
    ([ $obj:expr ] $( $matcher:pat $(if {$($guard:tt)*})* => $result:expr),*) => {
        match $obj {
            $($matcher $(if
-                   if_chain::if_chain!
+//                   if_chain::if_chain!
                    {
                        mymatch3!(@guard $($guard)*)
                    })* =>
