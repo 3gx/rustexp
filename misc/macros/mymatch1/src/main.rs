@@ -21,15 +21,16 @@ macro mymatch2 {
            $($matcher $(if $pred)* => {stringify!($($($guard),*),*); $result}),*
        }
    },
-   (@pred $pred:expr $(,)?) => {
-       $pred
+   (@guard $guard:expr $(,)?) => {
+       $guard
    },
-   (@pred $pred:expr, $($tail:expr),*) => {
-       $pred && mymatch2!(@pred $($tail),*)
+   (@guard $guard:expr, $($tail:expr),*) => {
+       $guard && mymatch2!(@guard $($tail),*)
    },
-   ([ $obj:expr ] $( $matcher:pat $(if [$($pred:expr),*])* => $result:expr),*) => {
+   ([ $obj:expr ] $( $matcher:pat $(if [$($guard:expr),*])* => $result:expr),*) => {
        match $obj {
-           $($matcher $(if mymatch2!(@pred $($pred),*))* => $result),*
+           $($matcher $(if mymatch2!(@guard $($guard),*))* =>
+                    {stringify!($($($guard),*),*); $result}),*
        }
    },
 
