@@ -144,6 +144,20 @@ fn main() {
                 {
                     println!("matched T::B(\"42_i64\")")
                 }
+                /*
+                T::C(s) if guard!(T::B(s) = &**s, "fun" = &s[..]) =>
+                       println!("fun found"),
+                rule![|T::B(s) = &**s, "fun" = &s[..] | {println!("fun_found")}],
+                 expands to
+                T::C(s) if {
+                ( || {let T::B(s) = &**s {
+                           if let "fun" = &s[..] {
+                                   return true;
+                               }
+                           }
+                      return false;})() =>
+                       println!("fun found"),
+                */
                 T::C(s)
                     if {
                         let guard = || {
@@ -169,6 +183,12 @@ fn main() {
                     };
                     rule()
                 }
+                /*
+                T::C(s) if guard!(T::B(s) = &**s) =>
+                       rule![|T::B(s) = &**s | {
+                       println!("T::C(T::B(s)) with s = {}", s)}];
+                expands to what is below
+                */
                 T::C(s)
                     if {
                         (|| {
@@ -182,7 +202,7 @@ fn main() {
                     (|| {
                         if let T::B(s) = &**s {
                             return {
-                                println!("matched  box with s={}", s);
+                                println!("T::C(T::B(s)) with s = \"{}\"", s);
                             };
                         }
                         panic!("internal error")
