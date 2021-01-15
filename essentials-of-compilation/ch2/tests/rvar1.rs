@@ -1,3 +1,6 @@
+#![feature(box_patterns)]
+#![feature(box_syntax)]
+
 #[cfg(test)]
 mod rvar_lang {
     #[test]
