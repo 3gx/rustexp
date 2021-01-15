@@ -99,9 +99,10 @@ impl IntoTerm for &str {
 }
 
 type Value = i64;
-pub type Env = Vec<(String, Value)>;
+type SymTable<T> = Vec<(String, T)>;
+pub type Env = SymTable<Value>;
 
-pub macro env {
+pub macro sym {
     () => {
         Vec::new()
     },
@@ -113,17 +114,16 @@ pub macro env {
     },
 }
 
-pub fn env_get<'a>(env: &'a Env, key: &str) -> Option<&'a Value> {
-    //println!("env= {:?}", env);
-    env.iter()
+pub fn env_get<'a, T>(sym: &'a SymTable<T>, key: &str) -> Option<&'a T> {
+    sym.iter()
         .rev()
         .find_map(|x| if x.0 != key { None } else { Some(&x.1) })
 }
 
-pub fn env_set(env: &Env, key: &str, val: Value) -> Env {
-    let mut env = env.clone();
-    env.push((key.to_string(), val));
-    env
+pub fn sym_set<T: Clone>(sym: &SymTable<T>, key: &str, val: &T) -> SymTable<T> {
+    let mut sym = sym.clone();
+    sym.push((key.to_string(), val.clone()));
+    sym
 }
 
 pub fn interp_exp(env: &Env, e: &Term) -> Value {
@@ -139,7 +139,7 @@ pub fn interp_exp(env: &Env, e: &Term) -> Value {
         Add(e1, e2) => interp_exp(env, e1) + interp_exp(env, e2),
         Var(x) => env_get(env, &x).unwrap().clone(),
         Let(x, e, body) => {
-            let new_env = env_set(env, x, interp_exp(env, e));
+            let new_env = sym_set(env, x, &interp_exp(env, e));
             interp_exp(&new_env, body)
         }
     }
@@ -165,7 +165,7 @@ pub fn uniquify_expr(env: &Env, expr: &Term) -> Term {
 
 pub fn uniquify(p: Program) -> Program {
     match p {
-        Program(v, e) => Program(v, uniquify_expr(&env![], &e)),
+        Program(v, e) => Program(v, uniquify_expr(&sym![], &e)),
     }
 }
 
