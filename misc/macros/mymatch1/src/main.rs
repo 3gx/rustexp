@@ -84,11 +84,25 @@ macro mymatch3 {
    (@guard $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
        if let $pat = $expr {  mymatch3!(@guard $ret, $($tail)*) }
    },
+   (@guard @unused $ret:expr, let $pat:pat = $expr:expr $(,)?) => {
+       #[allow(unused_variables)]
+       if let $pat = $expr { return $ret }
+   },
+   (@guard @unused $ret:expr, $guard:expr $(,)?) => {
+       if $guard { return $ret }
+   },
+   (@guard @unused $ret:expr, $guard:expr, $($tail:tt)*) => {
+       if $guard { mymatch3!(@guard $ret, $($tail)*) }
+   },
+   (@guard @unused $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
+       #[allow(unused_variables)]
+       if let $pat = $expr {  mymatch3!(@guard $ret, $($tail)*) }
+   },
    ([ $obj:expr ] $( $matcher:pat $(if {$($guard:tt)*})? => $result:expr),*) => {
        match $obj {
            $($matcher $(if
                    (|| {
-                       mymatch3!(@guard true, $($guard)*);
+                       mymatch3!(@guard @unused true, $($guard)*);
                        return false; }
                    )())* => {
                        (||
@@ -173,6 +187,29 @@ fn main() {
     let y2 = match x1 {
         Some(10) => "Ten".to_string(),
         Some(n) if n == 20 && n == 21 => "twice Ten A".to_string(),
+        n if {
+            #[allow(unused_variables)]
+            if true {
+                if let Some(m) = n {
+                    if let Some(k) = n {
+                        true
+                    } else {
+                        true
+                    }
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        } =>
+        {
+            if let Some(m) = n {
+                m.to_string()
+            } else {
+                panic!("unreachable")
+            }
+        }
         _ => "something else".to_string(),
     };
     println!("y2={:?}", y2);

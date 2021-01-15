@@ -6,34 +6,48 @@
 #![feature(box_patterns)]
 
 macro r#match {
-    (@guard $ret:expr, let $pat:pat = $expr:expr $(,)?) => {
-        if let $pat = $expr { return $ret }
-    },
-    (@guard $ret:expr, $guard:expr $(,)?) => {
-        if $guard { return $ret }
-    },
-    (@guard $ret:expr, $guard:expr, $($tail:tt)*) => {
-        if $guard { r#match!(@guard $ret, $($tail)*) }
-    },
-    (@guard $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
-        if let $pat = $expr {  r#match!(@guard $ret, $($tail)*) }
-    },
-    ([ $obj:expr ] $( $matcher:pat $(if {$($guard:tt)*})? => $result:expr),*) => {
-        match $obj {
-            $($matcher $(if
-                    (|| {
-                        r#match!(@guard true, $($guard)*);
-                        return false; }
-                    )())* => {
-                (||
-                 {
-                     r#match!(@guard $result, true, $($($guard)*)*);
-                     panic!("unreacahble");
-                 }
-                )()
-            }),*
-        }
-    },
+   (@guard $ret:expr, let $pat:pat = $expr:expr $(,)?) => {
+       if let $pat = $expr { return $ret }
+   },
+   (@guard $ret:expr, $guard:expr $(,)?) => {
+       if $guard { return $ret }
+   },
+   (@guard $ret:expr, $guard:expr, $($tail:tt)*) => {
+       if $guard { r#match!(@guard $ret, $($tail)*) }
+   },
+   (@guard $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
+       if let $pat = $expr {  r#match!(@guard $ret, $($tail)*) }
+   },
+   (@guard @unused $ret:expr, let $pat:pat = $expr:expr $(,)?) => {
+       #[allow(unused_variables)]
+       if let $pat = $expr { return $ret }
+   },
+   (@guard @unused $ret:expr, $guard:expr $(,)?) => {
+       if $guard { return $ret }
+   },
+   (@guard @unused $ret:expr, $guard:expr, $($tail:tt)*) => {
+       if $guard { r#match!(@guard $ret, $($tail)*) }
+   },
+   (@guard @unused $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
+       #[allow(unused_variables)]
+       if let $pat = $expr {  r#match!(@guard $ret, $($tail)*) }
+   },
+   ([ $obj:expr ] $( $matcher:pat $(if {$($guard:tt)*})? => $result:expr),*) => {
+       match $obj {
+           $($matcher $(if
+                   (|| {
+                       r#match!(@guard @unused true, $($guard)*);
+                       return false; }
+                   )())* => {
+                       (||
+                           {
+                               r#match!(@guard $result, true, $($($guard)*)*);
+                                 panic!("unreacahble");
+                           }
+                       )()
+                     }),*
+       }
+   },
 }
 
 pub mod x86int_lang {
