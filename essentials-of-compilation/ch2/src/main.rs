@@ -267,7 +267,7 @@ fn main() {
                     println!("matched T::B(\"42_i64\")"),
                 T::C(s) if {let T::B(s) = &**s, let "fun" = &s[..]} =>
                                     println!("fun found\n"),
-                T::C(s) if {let T::B(s) = &**s} =>
+                T::C(s) if {let T::B(s) = &**s}  =>
                                 println!("xT::C(T::B(s)) with s = \"{}\"", s),
                 T::B(s) => println!("matched T::B(s), s= {:?}", s),
                 T::C(box T::D(box s)) if {"hun" == &s[..]} => {
