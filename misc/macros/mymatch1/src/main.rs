@@ -97,29 +97,16 @@ macro mymatch3 {
    },
 }
 
-macro ifff {
-    ($($tt:tt)*) => {"ifff"; $($tt)*}
-}
-
 macro mymatch4 {
-//   (@guard let $pat:pat = $expr:expr $(,)?) => {
- //      if let $pat = $expr;
-  // },
-   //(@guard $guard:expr $(,)?) => {
-    //   if $guard { false } else { true };
-  // },
-//   (@guard $guard:expr, $($tail:tt)*) => {
- //      $guard && mymatch4!(@guard $($tail)*)
-  // },
- //  (@guard let $pat:pat = $expr:expr, $($tail:tt)*) => {
-  //     mymatch4!(@guard let $pat = $expr); mymatch4!(@guard $($tail)*);
-   //},
+   (@ifs if $expr:expr; $($tt:tt)*) => {
+       if $expr; mymatch4!($($tt)*)
+   },
    ([ $obj:expr ] $( $matcher:pat $(if {$($guard:tt)*})* => $result:expr),*) => {
        match $obj {
            $($matcher $(if
                    {
                     if_chain::if_chain!{
-                       $($guard)*;
+                       mymatch4!(@ifs $($guard)*)
                        then { true } else {false }
                    }}
                    )* =>
@@ -166,26 +153,27 @@ fn main() {
     println!("y0={:?}", y0);
     */
 
-    /*
-     let x1 = Some(20);
-     let y1 = mymatch3! {
-     [x1]
-        Some(10) => "Ten",
-        Some(n) if {n == 20, n == 21} => "twice Ten A",
-        n if {let Some(n) = n, 20 == n} => "twice Ten",
-      _ => "something else"
-     };
-     println!("y1={:?}", y1);
+    let x1 = Some(20);
+    let y1 = mymatch3! {
+    [x1]
+       Some(10) => "Ten",
+       Some(n) if {n == 20, n == 21} => "twice Ten A",
+       n if {let Some(n) = n, 20 == n} => "twice Ten",
+     _ => "something else"
+    };
+    println!("y1={:?}", y1);
 
-     let x = if_chain::if_chain! {
-         if let Some(i) = x1;
-         if let 20 = i;
-         then { true }
-         else {false}
-     };
-     println!("x={}", x);
+    /*
+    let x = if_chain::if_chain! {
+        if let Some(i) = x1;
+        if let 20 = i;
+        then { true }
+        else {false}
+    };
+    println!("x={}", x);
     */
 
+    /*
     let x2 = Some(20);
     let y2 = mymatch4! {
     [x2]
@@ -195,4 +183,5 @@ fn main() {
      _ => "something else"
     };
     println!("y2={:?}", y2);
+     */
 }
