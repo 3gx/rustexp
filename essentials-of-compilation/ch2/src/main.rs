@@ -189,6 +189,8 @@ fn main() {
                     rule()
                 }
                 /*
+                with_guard[T::C(s), [T::B(s) = &**s],
+                          println!("T::C(T::B(s)) with s = {}", s)],
                 T::C(s) if guard!(T::B(s) = &**s) =>
                        rule![|T::B(s) = &**s | {
                        println!("T::C(T::B(s)) with s = {}", s)}];
