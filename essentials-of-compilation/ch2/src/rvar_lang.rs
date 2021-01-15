@@ -151,14 +151,23 @@ pub fn interp_program(p: &Program) -> Value {
     }
 }
 
-fn gensym() -> String {
-    let c;
-    unsafe {
-        static mut COUNTER: usize = 0;
-        COUNTER += 1;
-        c = COUNTER;
-    }
-    "t".to_string() + &c.to_string()
+lazy_static! {
+    static ref MAP: Mutex<HashMap<String, usize>> = Mutex::new(HashMap::new());
+}
+use lazy_static::lazy_static; // 1.4.0
+use std::collections::HashMap;
+use std::sync::Mutex;
+
+pub fn gensym_reset() {
+    let mut map = MAP.lock().unwrap();
+    map.clear();
+}
+fn gensym(x: &String) -> String {
+    let mut map = MAP.lock().unwrap();
+    let counter = map.entry(x.to_string()).or_insert(0);
+    *counter += 1;
+
+    x.clone() + &counter.to_string()
 }
 
 type UMap = SymTable<String>;
@@ -168,7 +177,7 @@ pub fn uniquify_expr(umap: &UMap, expr: &Term) -> Term {
         Var(x) => Var(sym_get(umap, x).unwrap().clone()),
         Int(n) => Int(*n),
         Let(x, e, body) => {
-            let newvar = gensym();
+            let newvar = gensym(x);
             let umap = sym_set(umap, x, &newvar);
             Let(
                 newvar,

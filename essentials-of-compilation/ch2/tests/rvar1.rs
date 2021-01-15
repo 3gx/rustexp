@@ -43,7 +43,16 @@ mod rvar_lang {
         use ch2::rvar_lang::sym;
         use ch2::rvar_lang::*;
         let e1 = r#let!([x 32]  add!(r#let!([x 10] x), x));
-        let e2 = r#let!([t1 32]  add!(r#let!([t2 10] t2), t1));
+        let e2 = r#let!([x1 32]  add!(r#let!([x2 10] x2), x1));
+        println!("e1= {:?}", e1);
+        println!("e2= {:?}", e2);
+        let e1u = uniquify_expr(&sym![], &e1);
+        println!("e1u= {:?}", e1u);
+        assert_eq!(e2, e1u);
+
+        gensym_reset();
+        let e1 = r#let!([x 32]  add!(r#let!([y 10] y), x));
+        let e2 = r#let!([x1 32]  add!(r#let!([y1 10] y1), x1));
         println!("e1= {:?}", e1);
         println!("e2= {:?}", e2);
         let e1u = uniquify_expr(&sym![], &e1);
