@@ -82,7 +82,10 @@ macro mymatch3 {
    },
    ([ $obj:expr ] $( $matcher:pat $(if {$($guard:tt)*})* => $result:expr),*) => {
        match $obj {
-           $($matcher $(if mymatch3!(@guard $($guard)*))* =>
+           $($matcher $(if
+                   {
+                       mymatch3!(@guard $($guard)*)
+                   })* =>
                     {stringify!($($($guard)*),*); $result}),*
        }
    },
