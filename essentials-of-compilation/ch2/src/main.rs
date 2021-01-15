@@ -180,9 +180,9 @@ fn main() {
                     } =>
                 {
                     (|| {
-                        if let T::B(_s1) = &**s {
+                        if let T::B(s) = &**s {
                             return {
-                                println!("matched  box with s={}", _s1);
+                                println!("matched  box with s={}", s);
                             };
                         }
                         panic!("internal error")
