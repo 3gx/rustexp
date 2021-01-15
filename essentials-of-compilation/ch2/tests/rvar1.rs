@@ -43,7 +43,7 @@ mod rvar_lang {
         use ch2::rvar_lang::sym;
         use ch2::rvar_lang::*;
         let e1 = r#let!([x 32]  add!(r#let!([x 10] x), x));
-        let e2 = r#let!([x_1 32]  add!(r#let!([x_2 10] x_2), x_1));
+        let e2 = r#let!([t1 32]  add!(r#let!([t2 10] t2), t1));
         println!("e1= {:?}", e1);
         println!("e2= {:?}", e2);
         let e1u = uniquify_expr(&sym![], &e1);

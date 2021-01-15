@@ -114,7 +114,7 @@ pub macro sym {
     },
 }
 
-pub fn env_get<'a, T>(sym: &'a SymTable<T>, key: &str) -> Option<&'a T> {
+pub fn sym_get<'a, T>(sym: &'a SymTable<T>, key: &str) -> Option<&'a T> {
     sym.iter()
         .rev()
         .find_map(|x| if x.0 != key { None } else { Some(&x.1) })
@@ -137,7 +137,7 @@ pub fn interp_exp(env: &Env, e: &Term) -> Value {
         }
         Neg(e) => -interp_exp(env, e),
         Add(e1, e2) => interp_exp(env, e1) + interp_exp(env, e2),
-        Var(x) => env_get(env, &x).unwrap().clone(),
+        Var(x) => sym_get(env, &x).unwrap().clone(),
         Let(x, e, body) => {
             let new_env = sym_set(env, x, &interp_exp(env, e));
             interp_exp(&new_env, body)
@@ -151,14 +151,33 @@ pub fn interp_program(p: &Program) -> Value {
     }
 }
 
-pub fn uniquify_expr(env: &Env, expr: &Term) -> Term {
+fn gensym() -> String {
+    static mut COUNTER: usize = 0;
+    let c;
+    unsafe {
+        COUNTER += 1;
+        c = COUNTER;
+    }
+    "t".to_string() + &c.to_string()
+}
+
+type UMap = SymTable<String>;
+pub fn uniquify_expr(umap: &UMap, expr: &Term) -> Term {
     use Term::*;
     match expr {
-        Var(_x) => unimplemented!(),
+        Var(x) => Var(sym_get(umap, x).unwrap().clone()),
         Int(n) => Int(*n),
-        Let(_x, _e, _body) => unimplemented!(),
-        Neg(e) => Neg(box uniquify_expr(env, e)),
-        Add(e1, e2) => Add(box uniquify_expr(env, e1), box uniquify_expr(env, e2)),
+        Let(x, e, body) => {
+            let newvar = gensym();
+            let umap = sym_set(umap, x, &newvar);
+            Let(
+                newvar,
+                box uniquify_expr(&umap, e),
+                box uniquify_expr(&umap, body),
+            )
+        }
+        Neg(e) => Neg(box uniquify_expr(umap, e)),
+        Add(e1, e2) => Add(box uniquify_expr(umap, e1), box uniquify_expr(umap, e2)),
         Read => Read,
     }
 }
