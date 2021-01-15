@@ -96,26 +96,33 @@ macro mymatch3 {
        }
    },
 }
+
+macro ifff {
+    ($($tt:tt)*) => {"ifff"; $($tt)*}
+}
+
 macro mymatch4 {
-   (@guard $ret:expr, let $pat:pat = $expr:expr $(,)?) => {
-       if let $pat = $expr { return $ret }
-   },
-   (@guard $ret:expr, $guard:expr $(,)?) => {
-       if $guard { return $ret }
-   },
-   (@guard $ret:expr, $guard:expr, $($tail:tt)*) => {
-       if $guard { mymatch3!(@guard $ret, $($tail)*) }
-   },
-   (@guard $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
-       if let $pat = $expr {  mymatch3!(@guard $ret, $($tail)*) }
-   },
+//   (@guard let $pat:pat = $expr:expr $(,)?) => {
+ //      if let $pat = $expr;
+  // },
+   //(@guard $guard:expr $(,)?) => {
+    //   if $guard { false } else { true };
+  // },
+//   (@guard $guard:expr, $($tail:tt)*) => {
+ //      $guard && mymatch4!(@guard $($tail)*)
+  // },
+ //  (@guard let $pat:pat = $expr:expr, $($tail:tt)*) => {
+  //     mymatch4!(@guard let $pat = $expr); mymatch4!(@guard $($tail)*);
+   //},
    ([ $obj:expr ] $( $matcher:pat $(if {$($guard:tt)*})* => $result:expr),*) => {
        match $obj {
            $($matcher $(if
-                   (|| {
-                       mymatch3!(@guard true, $($guard)*);
-                       return false; }
-                   )())* =>
+                   {
+                    if_chain::if_chain!{
+                       $($guard)*;
+                       then { true } else {false }
+                   }}
+                   )* =>
                     {stringify!($($($guard)*),*); $result}),*
        }
    },
@@ -159,32 +166,32 @@ fn main() {
     println!("y0={:?}", y0);
     */
 
-    let x1 = Some(20);
-    let y1 = mymatch3! {
-    [x1]
-       Some(10) => "Ten",
-       Some(n) if {n == 20, n == 21} => "twice Ten A",
-       n if {let Some(n) = n, 20 == n} => "twice Ten",
-     _ => "something else"
-    };
-    println!("y1={:?}", y1);
-
     /*
-    let x = if_chain::if_chain! {
-        if let Some(i) = x1;
-        if let 20 = i;
-        then { true }
-        else {false}
-    };
-    println!("x={}", x);
+     let x1 = Some(20);
+     let y1 = mymatch3! {
+     [x1]
+        Some(10) => "Ten",
+        Some(n) if {n == 20, n == 21} => "twice Ten A",
+        n if {let Some(n) = n, 20 == n} => "twice Ten",
+      _ => "something else"
+     };
+     println!("y1={:?}", y1);
+
+     let x = if_chain::if_chain! {
+         if let Some(i) = x1;
+         if let 20 = i;
+         then { true }
+         else {false}
+     };
+     println!("x={}", x);
     */
 
     let x2 = Some(20);
     let y2 = mymatch4! {
     [x2]
-       Some(10) => "Ten",
-       Some(n) if {n == 20, n == 21} => "twice Ten A",
-       n if {let Some(n) = n, 20 == n} => "twice Ten",
+    //   Some(10) => "Ten",
+     //  Some(n) if {n == 20, n == 21} => "twice Ten A",
+       n if {if let Some(n) = n; if 20 == n} => "twice Ten",
      _ => "something else"
     };
     println!("y2={:?}", y2);
