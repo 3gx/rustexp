@@ -1,6 +1,7 @@
 #![feature(decl_macro)]
 #![feature(destructuring_assignment)]
 #![feature(let_chains)]
+#![allow(incomplete_features)]
 macro mymatch {
    ( |$obj:expr;| $($matcher:pat $(if $pred:expr)* => $result:expr),*) => {
        match $obj {
@@ -120,7 +121,7 @@ fn main() {
         [x1]
            Some(10) => "Ten",
            Some(n) if {n == 20, n == 21} => "twice Ten",
-           n if {let Some(n) = n, 20 == n} => "twice Ten",
+           n if {let Some(n) = n, let 20 = n} => "twice Ten",
     //     with_guard[10 => "guarded Ten"],
          _ => "something else"
         };
