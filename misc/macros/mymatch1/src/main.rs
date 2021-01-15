@@ -1,5 +1,6 @@
 #![feature(decl_macro)]
 #![feature(destructuring_assignment)]
+#![feature(let_chains)]
 macro mymatch {
    ( |$obj:expr;| $($matcher:pat $(if $pred:expr)* => $result:expr),*) => {
        match $obj {
@@ -21,16 +22,25 @@ macro mymatch2 {
            $($matcher $(if $pred)* => {stringify!($($($guard),*),*); $result}),*
        }
    },
+//   (@guard $($guard:tt)*) => {
+ //      stringify!($($guard)*);
+  // },
+   (@guard let $pat:pat = $expr:expr $(,)?) => {
+       let $pat = $expr
+   },
    (@guard $guard:expr $(,)?) => {
        $guard
    },
-   (@guard $guard:expr, $($tail:expr),*) => {
-       $guard && mymatch2!(@guard $($tail),*)
+   (@guard $guard:expr, $($tail:tt)*) => {
+       mymatch2!(@guard $guard) && mymatch2!(@guard $($tail)*)
    },
-   ([ $obj:expr ] $( $matcher:pat $(if {$($guard:expr),*})* => $result:expr),*) => {
+   (@guard let $pat:pat = $expr:expr, $($tail:tt)*) => {
+       mymatch2!(@guard let $pat = $expr) && mymatch2!(@guard $($tail)*)
+   },
+   ([ $obj:expr ] $( $matcher:pat $(if {$($guard:tt)*})* => $result:expr),*) => {
        match $obj {
-           $($matcher $(if mymatch2!(@guard $($guard),*))* =>
-                    {stringify!($($($guard),*),*); $result}),*
+           $($matcher $(if mymatch2!(@guard $($guard)*))* =>
+                    {stringify!($($($guard)*),*); $result}),*
        }
    },
 
@@ -110,7 +120,7 @@ fn main() {
         [x1]
            Some(10) => "Ten",
            Some(n) if {n == 20, n == 21} => "twice Ten",
-           //n if [Some(n) = n, 20 = n] => "twice Ten",
+           n if {let Some(n) = n, 20 == n} => "twice Ten",
     //     with_guard[10 => "guarded Ten"],
          _ => "something else"
         };
