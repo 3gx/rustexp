@@ -6,6 +6,14 @@ macro mymatch {
        }
    }
 }
+macro mymatch1 {
+   ( [ $obj:expr ]  $($matcher:pat $(if $pred:expr)* => $result:expr),*) => {
+       match $obj {
+           $($matcher $(if $pred)* => $result),*
+       }
+   }
+
+}
 /*
 macro mymatch1 {
    ( | $($tail:tt)* ) => { mymatch1!(@s1 $($tail)*) },
@@ -39,6 +47,14 @@ fn main() {
     let x = 10;
     let y = mymatch! {
         |x;|
+     10 => "Ten",
+     _ => "something else"
+    };
+    println!("y={:?}", y);
+
+    let x = 10;
+    let y = mymatch1! {
+        [x]
      10 => "Ten",
      _ => "something else"
     };
