@@ -5,6 +5,37 @@
 #![feature(decl_macro)]
 #![feature(box_patterns)]
 
+macro r#match {
+    (@guard $ret:expr, let $pat:pat = $expr:expr $(,)?) => {
+        if let $pat = $expr { return $ret }
+    },
+    (@guard $ret:expr, $guard:expr $(,)?) => {
+        if $guard { return $ret }
+    },
+    (@guard $ret:expr, $guard:expr, $($tail:tt)*) => {
+        if $guard { r#match!(@guard $ret, $($tail)*) }
+    },
+    (@guard $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
+        if let $pat = $expr {  r#match!(@guard $ret, $($tail)*) }
+    },
+    ([ $obj:expr ] $( $matcher:pat $(if {$($guard:tt)*})? => $result:expr),*) => {
+        match $obj {
+            $($matcher $(if
+                    (|| {
+                        r#match!(@guard true, $($guard)*);
+                        return false; }
+                    )())* => {
+                (||
+                 {
+                     r#match!(@guard $result, true, $($($guard)*)*);
+                     panic!("unreacahble");
+                 }
+                )()
+            }),*
+        }
+    },
+}
+
 pub mod x86int_lang {
     #[allow(non_camel_case_types)]
     pub enum Reg {
@@ -223,6 +254,26 @@ fn main() {
                     println!("hun matches with s = {:#?}", s)
                 }
                 _ => println!("unhandled match "),
+            }
+            r#match! { [t]
+                T::A(42) => println!("matched T::A(42)"),
+                T::A(45) => println!("matched T::A(45)"),
+                T::A(n) => println!("matched T::A(n), n={}", n),
+                T::B(s) if {s == "42_i32"}
+                     =>
+                    println!("matched T::B(\"42_i32\")"),
+                T::B(s)
+                    if {s == "42_i64"} =>
+                    println!("matched T::B(\"42_i64\")"),
+                T::C(s) if {let T::B(s) = &**s, let "fun" = &s[..]} =>
+                                    println!("fun found\n"),
+                T::C(s) if {let T::B(s) = &**s} =>
+                                println!("xT::C(T::B(s)) with s = \"{}\"", s),
+                T::B(s) => println!("matched T::B(s), s= {:?}", s),
+                T::C(box T::D(box s)) if {"hun" == &s[..]} => {
+                    println!("hun matches with s = {:#?}", s)
+                },
+                _ => println!("unhandled match ")
             }
         }
 
