@@ -2,7 +2,7 @@
 #![feature(destructuring_assignment)]
 #![feature(let_chains)]
 #![allow(incomplete_features)]
-//use if_chain;
+use if_chain;
 /*
 #[allow(unused_macros)]
 macro mymatch {
@@ -95,8 +95,32 @@ macro mymatch3 {
                     {stringify!($($($guard)*),*); $result}),*
        }
    },
-
 }
+macro mymatch4 {
+   (@guard $ret:expr, let $pat:pat = $expr:expr $(,)?) => {
+       if let $pat = $expr { return $ret }
+   },
+   (@guard $ret:expr, $guard:expr $(,)?) => {
+       if $guard { return $ret }
+   },
+   (@guard $ret:expr, $guard:expr, $($tail:tt)*) => {
+       if $guard { mymatch3!(@guard $ret, $($tail)*) }
+   },
+   (@guard $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
+       if let $pat = $expr {  mymatch3!(@guard $ret, $($tail)*) }
+   },
+   ([ $obj:expr ] $( $matcher:pat $(if {$($guard:tt)*})* => $result:expr),*) => {
+       match $obj {
+           $($matcher $(if
+                   (|| {
+                       mymatch3!(@guard true, $($guard)*);
+                       return false; }
+                   )())* =>
+                    {stringify!($($($guard)*),*); $result}),*
+       }
+   },
+}
+
 fn main() {
     /*
     let matchme = |x| {
@@ -137,13 +161,12 @@ fn main() {
 
     let x1 = Some(20);
     let y1 = mymatch3! {
-        [x1]
-           Some(10) => "Ten",
-           Some(n) if {n == 20, n == 21} => "twice Ten A",
-           n if {let Some(n) = n, 20 == n} => "twice Ten",
-    //     with_guard[10 => "guarded Ten"],
-         _ => "something else"
-        };
+    [x1]
+       Some(10) => "Ten",
+       Some(n) if {n == 20, n == 21} => "twice Ten A",
+       n if {let Some(n) = n, 20 == n} => "twice Ten",
+     _ => "something else"
+    };
     println!("y1={:?}", y1);
 
     /*
@@ -155,4 +178,14 @@ fn main() {
     };
     println!("x={}", x);
     */
+
+    let x2 = Some(20);
+    let y2 = mymatch4! {
+    [x2]
+       Some(10) => "Ten",
+       Some(n) if {n == 20, n == 21} => "twice Ten A",
+       n if {let Some(n) = n, 20 == n} => "twice Ten",
+     _ => "something else"
+    };
+    println!("y2={:?}", y2);
 }
