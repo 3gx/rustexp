@@ -10,6 +10,7 @@ macro r#match {
        if let $pat = $expr { return $ret }
    },
    (@guard $ret:expr, $guard:expr $(,)?) => {
+       #[allow(unreachable_code)]
        if $guard { return $ret }
    },
    (@guard $ret:expr, $guard:expr, $($tail:tt)*) => {
@@ -304,5 +305,46 @@ fn main() {
         matchme(&t);
         let t = T::C(Box::new(T::D(box String::from("hun"))));
         matchme(&t);
+
+        {
+            #[derive(Debug, Clone)]
+            enum OpCode {
+                Neg,
+                Add,
+            }
+            #[derive(Debug, Clone)]
+            enum Expr {
+                Int(i64),
+                Prim(OpCode, Vec<Expr>),
+            }
+            use Expr::*;
+            use OpCode::*;
+
+            let e0 = Int(32);
+            let e1 = Prim(Neg, vec![Int(32)]);
+            let e1a = Prim(Neg, vec![Prim(Add, vec![Int(10), Int(32)])]);
+            let e2 = Prim(
+                Add,
+                vec![Prim(Add, vec![Int(32), Prim(Neg, vec![Int(44)])]), Int(42)],
+            );
+            println!("e0= {:?}", e0);
+            println!("e1= {:?}", e1);
+            println!("e1a= {:?}", e1a);
+            println!("e2= {:?}", e2);
+
+            fn eval(e: &Expr) -> i64 {
+                r#match! { [e]
+                    Int(n) => *n,
+                    Prim(Neg, v) if {let [Int(m)] = &v[..]} => -*m,
+                    Prim(Neg, v) if {let [e] = &v[..]} => -eval(e),
+                    Prim(Add, v) if {let [e1,e2] = &v[..]} => eval(e1) + eval(e2),
+                    _ => panic!("unhandled {:?}", e)
+                }
+            }
+            println!("eval(e0)= {}", eval(&e0));
+            println!("eval(e1)= {}", eval(&e1));
+            println!("eval(e1a)= {}", eval(&e1a));
+            println!("eval(e2)= {}", eval(&e2));
+        }
     }
 }
