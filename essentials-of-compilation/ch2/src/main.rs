@@ -50,6 +50,51 @@ macro r#match {
        }
    },
 }
+macro rmatch {
+   (@guard $ret:expr, $pat:pat = $expr:expr $(,)?) => {
+       if let $pat = $expr { return $ret }
+   },
+   (@guard $ret:expr, $guard:expr $(,)?) => {
+       #[allow(unreachable_code)]
+       if $guard { return $ret }
+   },
+   (@guard $ret:expr, $guard:expr, $($tail:tt)*) => {
+       if $guard { rmatch!(@guard $ret, $($tail)*) }
+   },
+   (@guard $ret:expr, $pat:pat = $expr:expr, $($tail:tt)*) => {
+       if let $pat = $expr {  rmatch!(@guard $ret, $($tail)*) }
+   },
+   (@guard @unused $ret:expr, $pat:pat = $expr:expr $(,)?) => {
+       #[allow(unused_variables)]
+       if let $pat = $expr { return $ret }
+   },
+   (@guard @unused $ret:expr, $guard:expr $(,)?) => {
+       if $guard { return $ret }
+   },
+   (@guard @unused $ret:expr, $guard:expr, $($tail:tt)*) => {
+       if $guard { rmatch!(@guard $ret, $($tail)*) }
+   },
+   (@guard @unused $ret:expr, $pat:pat = $expr:expr, $($tail:tt)*) => {
+       #[allow(unused_variables)]
+       if let $pat = $expr {  rmatch!(@guard $ret, $($tail)*) }
+   },
+   ([ $obj:expr ] $( $matcher:pat $(if {$($guard:tt)*})? => $result:expr),*) => {
+       match $obj {
+           $($matcher $(if
+                   (|| {
+                       rmatch!(@guard @unused true, $($guard)*);
+                       return false; }
+                   )())* => {
+                       (||
+                           {
+                               rmatch!(@guard $result, true, $($($guard)*)*);
+                                 panic!("unreacahble");
+                           }
+                       )()
+                     }),*
+       }
+   },
+}
 
 pub mod x86int_lang {
     #[allow(non_camel_case_types)]
@@ -333,11 +378,11 @@ fn main() {
             println!("e2= {:?}", e2);
 
             fn eval(e: &Expr) -> i64 {
-                r#match! { [e]
+                rmatch! { [e]
                     Int(n) => *n,
-                    Prim(Neg, v) if {let [Int(m)] = &v[..]} => -*m,
-                    Prim(Neg, v) if {let [e] = &v[..]} => -eval(e),
-                    Prim(Add, v) if {let [e1,e2] = &v[..]} => eval(e1) + eval(e2),
+                    Prim(Neg, v) if {[Int(m)] = &v[..]} => -*m,
+                    Prim(Neg, v) if {[e] = &v[..]} => -eval(e),
+                    Prim(Add, v) if {[e1,e2] = &v[..]} => eval(e1) + eval(e2),
                     _ => panic!("unhandled {:?}", e)
                 }
             }
