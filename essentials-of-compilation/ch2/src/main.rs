@@ -153,6 +153,7 @@ fn main() {
                 T::C(s) if guard!(T::B(s) = &**s, "fun" = &s[..]) =>
                        println!("fun found"),
                 rule![|T::B(s) = &**s, "fun" = &s[..] | {println!("fun_found")}],
+
                  expands to
                 T::C(s) if {
                 ( || {let T::B(s) = &**s {
@@ -191,11 +192,13 @@ fn main() {
                 /*
                 with_guard[T::C(s), [T::B(s) = &**s],
                           println!("T::C(T::B(s)) with s = {}", s)],
-                T::C(s) if guard!(T::B(s) = &**s) =>
-                       rule![|T::B(s) = &**s | {
+                T::C(s) if [T::B(s) = &**s, "fun" = s] =>
                        println!("T::C(T::B(s)) with s = {}", s)}];
                 expands to what is below
                 */
+                // T:C(s) if {let T::B(s) = &**s, let "fun" = &s[..]} =>
+                //           println!("T::C(T::B(s)) with s = \"{}\"", s);
+                //
                 T::C(s)
                     if {
                         (|| {
