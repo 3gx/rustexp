@@ -3,6 +3,7 @@
 #![feature(box_syntax)]
 #![feature(let_chains)]
 #![feature(decl_macro)]
+#![feature(box_patterns)]
 
 pub mod x86int_lang {
     #[allow(non_camel_case_types)]
@@ -210,6 +211,9 @@ fn main() {
                     })()
                 }
                 T::B(s) => println!("matched T::B(s), s= {:?}", s),
+                T::C(box T::D(box s)) if "hun" == &s[..] => {
+                    println!("hun matches with s = {:#?}", s)
+                }
                 _ => println!("unhandled match "),
             }
         }
@@ -224,6 +228,8 @@ fn main() {
         let t = T::C(Box::new(T::B("gun".to_string())));
         matchme(&t);
         let t = T::C(Box::new(T::B("fun".to_string())));
+        matchme(&t);
+        let t = T::C(Box::new(T::D(box String::from("hun"))));
         matchme(&t);
     }
 }

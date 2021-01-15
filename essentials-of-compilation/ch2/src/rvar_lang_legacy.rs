@@ -168,7 +168,7 @@ pub fn interp_program(p: &Program) -> Value {
     }
 }
 
-pub fn uniquify(env: &Env, expr: &Term) -> Term {
+pub fn uniquify(_env: &Env, expr: &Term) -> Term {
     expr.clone()
 }
 

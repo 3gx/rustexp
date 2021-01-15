@@ -4,6 +4,7 @@
 #![feature(decl_macro)]
 #![feature(associated_type_defaults)]
 #![feature(box_patterns)]
+#![feature(box_syntax)]
 
 pub mod cvar_lang;
 pub mod rvar_lang;

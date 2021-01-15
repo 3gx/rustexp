@@ -1,46 +1,41 @@
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum OpCode {
-    Add,
-    Neg,
-    Read,
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum Term {
     Int(i64),
-    Prim(OpCode, Vec<Term>),
+    Read,
+    Neg(Box<Term>),
+    Add(Box<Term>, Box<Term>),
     Var(String),
     Let(String, Box<Term>, Box<Term>),
 }
+
 pub macro add {
     ($e1:ident, $e2:ident) => {
-        Term::Prim(
-            OpCode::Add,
-            vec![var!(stringify!($e1)), var!(stringify!($id))],
+        Term::Add(
+            box var!(stringify!($e1)), box var!(stringify!($id))
         )
     },
     ($e1:ident, $e2:expr) => {
-        Term::Prim(OpCode::Add, vec![var!($e1), $e2.into_term()])
+        Term::Add(box var!($e1), box $e2.into_term())
     },
     ($e1:expr, $id:ident) => {
-        Term::Prim(OpCode::Add, vec![$e1.into_term(), var!(stringify!($id))])
+        Term::Add(box $e1.into_term(), box var!(stringify!($id)))
     },
     ($e1:expr, $e2:expr) => {
-        Term::Prim(OpCode::Add, vec![$e1.into_term(), $e2.into_term()])
+        Term::Add(box $e1.into_term(), box $e2.into_term())
     },
 }
 
 pub macro neg {
     ($id:ident) => {
-        neg!(var!($id))
+        neg!(box var!($id))
     },
     ($e:expr) => {
-        Term::Prim(OpCode::Neg, vec![$e.into_term()])
+        Term::Neg(box $e.into_term())
     },
 }
 
 pub macro read() {
-    Term::Prim(OpCode::Read, vec![])
+    Term::Read
 }
 
 pub macro int($e:expr) {
@@ -132,23 +127,22 @@ pub fn env_set(env: &Env, key: &str, val: Value) -> Env {
 }
 
 pub fn interp_exp(env: &Env, e: &Term) -> Value {
-    use {OpCode::*, Term::*};
+    use Term::*;
     match e {
-            Int(n) => n.clone(),
-            Prim(Read, v) if let [] = &v[..] => {
-                    let mut input = String::new();
-                    std::io::stdin().read_line(&mut input).unwrap();
-                    input.trim().parse().unwrap()
-            },
-            Prim(Neg, v) if let [e] = &v[..] => -interp_exp(env, e),
-            Prim(Add, v) if let [e1,e2] = &v[..] => interp_exp(env, e1) + interp_exp(env,e2),
-            Var(x) => env_get(env, &x).unwrap().clone(),
-            Let(x, e, body) => {
-                let new_env = env_set(env,x, interp_exp(env,e));
-                interp_exp(&new_env, body)
-            }
-            _ => panic!("unhandled term {:?}", e),
+        Int(n) => n.clone(),
+        Read => {
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input).unwrap();
+            input.trim().parse().unwrap()
         }
+        Neg(e) => -interp_exp(env, e),
+        Add(e1, e2) => interp_exp(env, e1) + interp_exp(env, e2),
+        Var(x) => env_get(env, &x).unwrap().clone(),
+        Let(x, e, body) => {
+            let new_env = env_set(env, x, interp_exp(env, e));
+            interp_exp(&new_env, body)
+        }
+    }
 }
 
 pub fn interp_program(p: &Program) -> Value {
@@ -157,7 +151,7 @@ pub fn interp_program(p: &Program) -> Value {
     }
 }
 
-pub fn uniquify(env: &Env, expr: &Term) -> Term {
+pub fn uniquify(_env: &Env, expr: &Term) -> Term {
     expr.clone()
 }
 
