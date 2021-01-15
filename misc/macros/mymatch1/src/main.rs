@@ -85,18 +85,29 @@ macro mymatch3 {
    (@guard $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
        if let $pat = $expr {  mymatch3!(@guard $ret, $($tail)*) }
    },
-   ([ $obj:expr ] $( $matcher:pat $(if {$($guard:tt)*})* => $result:expr),*) => {
+   ([ $obj:expr ] $( $matcher:pat $(if {$($guard:tt)*})? => $result:expr),*) => {
        match $obj {
            $($matcher $(if
                    (|| {
                        mymatch3!(@guard true, $($guard)*);
                        return false; }
-                   )())* =>
-                    {stringify!($($($guard)*),*); $result}),*
+                   )())* => {
+                       (||
+                           {
+                               mymatch3!(@guard $result, $($($guard)*)*);
+                               panic!("unreachable")
+                               /*
+                               stringify!($($($guard)*),*);
+                               return $result;
+                               */
+                           }
+                       )()
+                     }),*
        }
    },
 }
 
+/*
 macro mymatch4 {
    (@ifs if $expr:expr; $($tt:tt)*) => {
        if $expr; mymatch4!($($tt)*)
@@ -114,6 +125,7 @@ macro mymatch4 {
        }
    },
 }
+*/
 
 fn main() {
     /*
