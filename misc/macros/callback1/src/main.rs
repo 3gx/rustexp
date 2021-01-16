@@ -3,7 +3,7 @@ use if_chain::if_chain;
 
 macro mk_chain_impl {
     ($callback:ident $($tt:tt)*) => {
-        stringify!($callback! $($tt)* )
+        $callback!{$($tt)*}
     }
 }
 macro mk_chain {
@@ -21,10 +21,8 @@ fn main() {
     println!("x={}", x);
 
     let x = mk_chain! {
-        {if let Some(i) = x1;
-         if let 20 = i; },
-        true,
-        false,
+        if let Some(i) = x1;
+         if let 20 = i;
     };
     println!("x={}", x);
 }
