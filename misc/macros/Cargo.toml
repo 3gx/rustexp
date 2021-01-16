@@ -1,7 +1,9 @@
 [workspace]
 
 members = [
-    "mymatch1",
-    "callback1",
+   "mymatch1",
+   "callback1",
+   "procmacro1",
+   "nontrivial",
 ]
 
