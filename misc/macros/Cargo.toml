@@ -2,5 +2,6 @@
 
 members = [
     "mymatch1",
+    "callback1",
 ]
 
