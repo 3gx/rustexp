@@ -1,13 +1,6 @@
 #![feature(decl_macro)]
 use if_chain::if_chain;
 
-/*
-macro mk_chain_impl {
-    ($callback:ident $($tt:tt)*) => {
-        $callback!{$($tt)*}
-    }
-}
-*/
 macro mk_chain_impl {
     (@callback $cb:ident $($body:tt)*) => {
         //stringify!($cb! { $($body)* })
@@ -27,7 +20,6 @@ macro mk_chain {
     ($($tt:tt)*) => {
         mk_chain_impl!(@accum ($($tt)*) -> ())
     },
-//        mk_chain_impl!(if_chain $($tt)*)},
 }
 
 fn main() {
