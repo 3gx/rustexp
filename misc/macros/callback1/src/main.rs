@@ -10,6 +10,7 @@ macro mk_chain_impl {
 */
 macro mk_chain_impl {
     (@callback $cb:ident $($body:tt)*) => {
+        //stringify!($cb! { $($body)* })
         $cb! { $($body)* }
     },
     (@accum (then $then:tt else $else:tt) -> ($($body:tt)*)) => {
@@ -18,8 +19,8 @@ macro mk_chain_impl {
     (@accum (let $pat:pat = $expr:expr; $($tail:tt)*) -> ($($body:tt)*)) => {
         mk_chain_impl!(@accum ($($tail)*) -> ($($body)* if let $pat = $expr;))
     },
-    (@accum ($expr:expr, $($tail:tt)*) -> ($($body:tt)*)) => {
-        mk_chain_impl!(@accum ($($tail)*) -> ($($body)*; if $expr;))
+    (@accum ($expr:expr; $($tail:tt)*) -> ($($body:tt)*)) => {
+        mk_chain_impl!(@accum ($($tail)*) -> ($($body)* if $expr;))
     },
 }
 macro mk_chain {
@@ -41,6 +42,7 @@ fn main() {
 
     let x = mk_chain! {
         let Some(i) = x1;
+        20 == i;
         let 20 = i;
         then {"fun"} else {"gun"}
     };
