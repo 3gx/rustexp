@@ -54,13 +54,6 @@ macro rmatch {
    (@guard $ret:expr, $pat:pat = $expr:expr $(,)?) => {
        if let $pat = $expr { return $ret }
    },
-   (@guard $ret:expr, $guard:expr $(,)?) => {
-       #[allow(unreachable_code)]
-       if $guard { return $ret }
-   },
-   (@guard $ret:expr, $guard:expr, $($tail:tt)*) => {
-       if $guard { rmatch!(@guard $ret, $($tail)*) }
-   },
    (@guard $ret:expr, $pat:pat = $expr:expr, $($tail:tt)*) => {
        if let $pat = $expr {  rmatch!(@guard $ret, $($tail)*) }
    },
@@ -68,15 +61,22 @@ macro rmatch {
        #[allow(unused_variables)]
        if let $pat = $expr { return $ret }
    },
+   (@guard @unused $ret:expr, $pat:pat = $expr:expr, $($tail:tt)*) => {
+       #[allow(unused_variables)]
+       if let $pat = $expr {  rmatch!(@guard $ret, $($tail)*) }
+   },
+   (@guard $ret:expr, $guard:expr $(,)?) => {
+       #[allow(unreachable_code)]
+       if $guard { return $ret }
+   },
+   (@guard $ret:expr, $guard:expr, $($tail:tt)*) => {
+       if $guard { rmatch!(@guard $ret, $($tail)*) }
+   },
    (@guard @unused $ret:expr, $guard:expr $(,)?) => {
        if $guard { return $ret }
    },
    (@guard @unused $ret:expr, $guard:expr, $($tail:tt)*) => {
        if $guard { rmatch!(@guard $ret, $($tail)*) }
-   },
-   (@guard @unused $ret:expr, $pat:pat = $expr:expr, $($tail:tt)*) => {
-       #[allow(unused_variables)]
-       if let $pat = $expr {  rmatch!(@guard $ret, $($tail)*) }
    },
    ([ $obj:expr ] $( $matcher:pat $(if {$($guard:tt)*})? => $result:expr),*) => {
        match $obj {
@@ -337,6 +337,33 @@ fn main() {
                     println!("dun matches with s = {:#?}", s)
                 },
                 T::C(td) if {let T::D(s) = &**td} => {
+                    println!("some matches with s = {:#?}", s)
+                },
+                _ => println!("unhandled match ")
+            }
+
+            rmatch! { [t]
+                T::A(42) => println!("matched T::A(42)"),
+                T::A(45) => println!("matched T::A(45)"),
+                T::A(n) => println!("matched T::A(n), n={}", n),
+                T::B(s) if {s == "42_i32"}
+                     =>
+                    println!("matched T::B(\"42_i32\")"),
+                T::B(s)
+                    if {s == "42_i64"} =>
+                    println!("matched T::B(\"42_i64\")"),
+                T::C(s) if {T::B(s) = &**s, "fun" = &s[..]} =>
+                                    println!("fun found\n"),
+                T::C(s) if {T::B(s) = &**s}  =>
+                                println!("xT::C(T::B(s)) with s = \"{}\"", s),
+                T::B(s) => println!("matched T::B(s), s= {:?}", s),
+                T::C(box T::D(box s)) if {"hun" == &s[..]} => {
+                    println!("hun matches with s = {:#?}", s)
+                },
+                T::C(td) if {T::D(s) = &**td, "dun" == &s[..]} => {
+                    println!("dun matches with s = {:#?}", s)
+                },
+                T::C(td) if {T::D(s) = &**td} => {
                     println!("some matches with s = {:#?}", s)
                 },
                 _ => println!("unhandled match ")
