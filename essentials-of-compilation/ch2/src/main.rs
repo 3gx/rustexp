@@ -333,6 +333,12 @@ fn main() {
                 T::C(box T::D(box s)) if {"hun" == &s[..]} => {
                     println!("hun matches with s = {:#?}", s)
                 },
+                T::C(td) if {let T::D(s) = &**td, "dun" == &s[..]} => {
+                    println!("dun matches with s = {:#?}", s)
+                },
+                T::C(td) if {let T::D(s) = &**td} => {
+                    println!("some matches with s = {:#?}", s)
+                },
                 _ => println!("unhandled match ")
             }
         }
@@ -349,6 +355,10 @@ fn main() {
         let t = T::C(Box::new(T::B("fun".to_string())));
         matchme(&t);
         let t = T::C(Box::new(T::D(box String::from("hun"))));
+        matchme(&t);
+        let t = T::C(Box::new(T::D(box String::from("dun"))));
+        matchme(&t);
+        let t = T::C(Box::new(T::D(box String::from("arun"))));
         matchme(&t);
 
         {
