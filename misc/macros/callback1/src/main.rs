@@ -10,10 +10,10 @@ macro mk_chain_impl {
 */
 macro mk_chain_impl {
     (@callback $cb:ident $($body:tt)*) => {
-        $cb! { $($body)* }
+        stringify!($cb! { $($body)* })
     },
     (@accum (then $then:tt else $else:tt) -> ($($body:tt)*)) => {
-        mk_chain_impl!(@callback stringify {$($body)* then $then else $else})
+        mk_chain_impl!(@callback if_chain {$($body)* then $then else $else})
     },
     (@accum (let $pat:pat = $expr:expr; $($tail:tt)*) -> ($($body:tt)*)) => {
         mk_chain_impl!(@accum ($($tail)*) -> ($($body)* if let $pat = $expr;))
