@@ -246,17 +246,17 @@ fn main() {
     */
 
     let y1 = mymatch4! {
-        [x1]
-           Some(10) => "Ten".to_string(),
-           Some(n) if n == 20 => "twice Ten A".to_string(),
-           Some(n) if @{n == 22} => "twice Ten @A".to_string(),
-           Some(n) if @{let 23 = n} => "let twice Ten @A".to_string(),
-           Some(n) if {
-               let abc = || n == 23;
-               abc() } => "twice Ten A 23".to_string(),
-    //       n if {let Some(m) = n} => {println!("{}", m); m.to_string()},
-         _ => "something else".to_string(),
-        };
+    [x1]
+       Some(10) => "Ten".to_string(),
+       Some(n) if n == 20 => "twice Ten A".to_string(),
+       Some(n) if @{n == 22} => "twice Ten @A".to_string(),
+       Some(n) if @{let 22 = n} => "let twice Ten @A".to_string(),
+       Some(n) if {
+           let abc = || n == 24;
+           abc() } => "twice Ten A 23".to_string(),
+       n if @{let Some(m) = n} => {println!("m is {}", m); m.to_string()},
+     _ => "something else".to_string(),
+    };
     println!("y1={:?}", y1);
 
     /*
