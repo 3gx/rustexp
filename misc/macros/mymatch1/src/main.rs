@@ -128,6 +128,18 @@ macro mymatch4 {
            }
  //      )
    },
+   (@guard $ret:expr, let $pat:pat = $expr:expr $(,)?) => {
+       if let $pat = $expr { return $ret }
+   },
+   (@guard $ret:expr, $guard:expr $(,)?) => {
+       if $guard { return $ret }
+   },
+   (@guard $ret:expr, $guard:expr, $($tail:tt)*) => {
+       if $guard { mymatch4!(@guard $ret, $($tail)*) }
+   },
+   (@guard $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
+       if let $pat = $expr {  mymatch4!(@guard $ret, $($tail)*) }
+   },
 
    ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr, $($tail:tt)*)
     (@obj $($obj:tt)*)
@@ -138,10 +150,12 @@ macro mymatch4 {
                (@rules $($rules)* $pat
                     $(if
                         (|| {
-                            $($guard)*
+                            mymatch4!(@guard true, $($guard)*);
+                            return false;
                         })()
                      )? => (||{
-                           $result
+                        mymatch4!(@guard $result, true, $($($guard)*)?);
+                        panic!("unreacahble");
                           })(),))
    },
    ((@cases $pat:pat $(if $guard:expr)? => $result:expr, $($tail:tt)*)
@@ -232,16 +246,17 @@ fn main() {
     */
 
     let y1 = mymatch4! {
-    [x1]
-       Some(10) => "Ten".to_string(),
-       Some(n) if n == 20 => "twice Ten A".to_string(),
-       Some(n) if @{n == 23} => "twice Ten @A".to_string(),
-       Some(n) if {
-           let abc = || n == 23;
-           abc() } => "twice Ten A 23".to_string(),
-    //   n if {let Some(m) = n} => {println!("{}", m); m.to_string()},
-     _ => "something else".to_string(),
-    };
+        [x1]
+           Some(10) => "Ten".to_string(),
+           Some(n) if n == 20 => "twice Ten A".to_string(),
+           Some(n) if @{n == 22} => "twice Ten @A".to_string(),
+           Some(n) if @{let 23 = n} => "let twice Ten @A".to_string(),
+           Some(n) if {
+               let abc = || n == 23;
+               abc() } => "twice Ten A 23".to_string(),
+    //       n if {let Some(m) = n} => {println!("{}", m); m.to_string()},
+         _ => "something else".to_string(),
+        };
     println!("y1={:?}", y1);
 
     /*
