@@ -99,7 +99,7 @@ macro rmatch {
 */
 
 macro r#match {
-    /* terminal case */
+   // terminal case, generate match expression
    ((@cases)
     (@obj $($obj:tt)*)
     (@rules $($rules:tt)*)) => {
@@ -107,7 +107,8 @@ macro r#match {
                $($rules)*
            }
    },
-   /* inject attribute allow_unused */
+
+   // inject token-tree with attributes
    (@allow_unused $($tt:tt)*) => {
       #[allow(unused_variables)]
       $($tt)*
@@ -116,6 +117,8 @@ macro r#match {
    (@carbon_copy $($tt:tt)*) => {
       $($tt)*
    },
+
+   // generate guard code for match
    (@guard $cb:ident $ret:expr, let $pat:pat = $expr:expr $(,)?)
        => {
        r#match!(@$cb if let $pat = $expr { return $ret })
@@ -131,6 +134,7 @@ macro r#match {
        if $guard { r#match!(@guard $cb $ret, $($tail)*) }
    },
 
+   // match different cases for match
    ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr, $($tail:tt)*)
     (@obj $($obj:tt)*)
     (@rules $($rules:tt)*)) => {
@@ -174,6 +178,7 @@ macro r#match {
                (@rules $($rules)*))
    },
 
+   // entry match code
    ( [ $obj:expr ] $($tail:tt)* ) => {
        r#match!(
            (@cases $($tail)*)
