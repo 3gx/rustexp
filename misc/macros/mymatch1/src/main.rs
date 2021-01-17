@@ -266,7 +266,7 @@ fn main() {
        Some(10) => "Ten".to_string(),
        Some(n) if n == 20 => "twice Ten A".to_string(),
        Some(n) if @{n == 22} => "twice Ten @A".to_string(),
-       Some(n) if @{let 24 = n} => "let twice Ten @A".to_string(),
+       Some(n) if @{let 23 = n} => {let x=5; format!("{:?} {}", "twice Ten @A".to_string(),x)},
        Some(n) if {
            let abc = || n == 24;
            abc() } => "twice Ten A 23".to_string(),
