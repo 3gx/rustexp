@@ -71,6 +71,7 @@ macro mymatch2 {
 }
 */
 
+/*
 macro mymatch3 {
    (@guard $ret:expr, let $pat:pat = $expr:expr $(,)?) => {
        if let $pat = $expr { return $ret }
@@ -114,6 +115,19 @@ macro mymatch3 {
                      }),*
        }
    },
+}
+*/
+
+macro mymatch4 {
+   (@case $pat:pat => $result:expr, $($tail:tt)*
+                 (@obj ($obj:tt)*)
+                 (@rules $($rules:tt)*)) => {
+        mymatch4!($($tail)* (@obj $($obj)*)
+            (@rules $($rules)*, $pat:path => $result:expr))
+   },
+   ( [ $obj:expr ] $($tail:tt)* ) => {
+       mymatch4!(@case $($tail)* (@obj $obj))
+   }
 }
 
 /*
@@ -175,6 +189,7 @@ fn main() {
     */
 
     let x1 = Some(23);
+    /*
     let y1 = mymatch3! {
     [x1]
        Some(10) => "Ten".to_string(),
@@ -183,7 +198,18 @@ fn main() {
      _ => "something else".to_string()
     };
     println!("y1={:?}", y1);
+    */
 
+    let y1 = mymatch4! {
+        [x1]
+           Some(10) => "Ten".to_string(),
+    //       Some(n) if {n == 20, n == 21} => "twice Ten A".to_string(),
+     //      n if {let Some(m) = n} => {println!("{}", m); m.to_string()},
+         _ => "something else".to_string(),
+        };
+    println!("y1={:?}", y1);
+
+    /*
     let y2 = match x1 {
         Some(10) => "Ten".to_string(),
         Some(n) if n == 20 && n == 21 => "twice Ten A".to_string(),
@@ -213,6 +239,7 @@ fn main() {
         _ => "something else".to_string(),
     };
     println!("y2={:?}", y2);
+    */
 
     /*
     let x = if_chain::if_chain! {
