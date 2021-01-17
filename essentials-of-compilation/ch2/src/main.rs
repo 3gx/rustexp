@@ -99,47 +99,47 @@ macro rmatch {
 */
 
 macro r#match {
-   // terminal case, generate match expression
-   ((@cases)
-    (@obj $($obj:tt)*)
-    (@rules $($rules:tt)*)) => {
+    // terminal case, generate match expression
+    ((@cases)
+     (@obj $($obj:tt)*)
+     (@rules $($rules:tt)*)) => {
            match $($obj)* {
                $($rules)*
            }
-   },
+    },
 
-   // inject token-tree with attributes
-   (@allow_unused $($tt:tt)*) => {
-      #[allow(unused_variables)]
-      $($tt)*
-   },
-   /* carbon_copy */
-   (@carbon_copy $($tt:tt)*) => {
-      $($tt)*
-   },
+    // inject token-tree with attributes
+    (@allow_unused $($tt:tt)*) => {
+        #[allow(unused_variables)]
+        $($tt)*
+    },
+    /* carbon_copy */
+    (@carbon_copy $($tt:tt)*) => {
+        $($tt)*
+    },
 
-   // generate terimal guard code for match
-   (@guard $cb:ident $ret:expr, let $pat:pat = $expr:expr $(,)?) => {
-       r#match!(@$cb if let $pat = $expr { return $ret })
-   },
-   (@guard $cb:ident $ret:expr, $guard:expr $(,)?) => {
-       #[allow(unreachable_code)]
-       if $guard { return $ret }
-   },
+    // generate terimal guard code for match
+    (@guard $cb:ident $ret:expr, let $pat:pat = $expr:expr $(,)?) => {
+        r#match!(@$cb if let $pat = $expr { return $ret })
+    },
+    (@guard $cb:ident $ret:expr, $guard:expr $(,)?) => {
+        #[allow(unreachable_code)]
+        if $guard { return $ret }
+    },
 
-   // generate recursive guard code for match
-   (@guard $cb:ident $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
-       r#match!(@$cb if let $pat = $expr {  r#match!(@guard $cb $ret, $($tail)*) })
-   },
-   (@guard $cb:ident $ret:expr, $guard:expr, $($tail:tt)*) => {
-       if $guard { r#match!(@guard $cb $ret, $($tail)*) }
-   },
+    // generate recursive guard code for match
+    (@guard $cb:ident $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
+        r#match!(@$cb if let $pat = $expr {  r#match!(@guard $cb $ret, $($tail)*) })
+    },
+    (@guard $cb:ident $ret:expr, $guard:expr, $($tail:tt)*) => {
+        if $guard { r#match!(@guard $cb $ret, $($tail)*) }
+    },
 
-   // generate different cases for match with patter matching guard
-   ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr, $($tail:tt)*)
-    (@obj $($obj:tt)*)
-    (@rules $($rules:tt)*)) => {
-       r#match!(
+    // generate different cases for match with patter matching guard
+    ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr, $($tail:tt)*)
+     (@obj $($obj:tt)*)
+     (@rules $($rules:tt)*)) => {
+           r#match!(
                (@cases $($tail)*)
                (@obj $($obj)*)
                (@rules $($rules)* $pat
@@ -152,42 +152,42 @@ macro r#match {
                         r#match!(@guard carbon_copy $result, true, $($($guard)*)?);
                         panic!("unreacheable");
                           })(),))
-   },
-   ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr)
-    (@obj $($obj:tt)*)
-    (@rules $($rules:tt)*)) => {
-       r#match!(
+    },
+    ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr)
+     (@obj $($obj:tt)*)
+     (@rules $($rules:tt)*)) => {
+          r#match!(
                (@cases $pat $(if @{$($guard)*})? => $result,)
                (@obj $($obj)*)
                (@rules $($rules)*))
-   },
+    },
 
-   // generate different cases for match with conditional guard
-   ((@cases $pat:pat $(if $guard:expr)? => $result:expr, $($tail:tt)*)
-    (@obj $($obj:tt)*)
-    (@rules $($rules:tt)*)) => {
-       r#match!(
+    // generate different cases for match with conditional guard
+    ((@cases $pat:pat $(if $guard:expr)? => $result:expr, $($tail:tt)*)
+     (@obj $($obj:tt)*)
+     (@rules $($rules:tt)*)) => {
+         r#match!(
                (@cases $($tail)*)
                (@obj $($obj)*)
                (@rules $($rules)* $pat $(if $guard)? => $result,))
-   },
-   ((@cases $pat:pat $(if $guard:expr)? => $result:expr)
-    (@obj $($obj:tt)*)
-    (@rules $($rules:tt)*)) => {
-       r#match!(
+    },
+    ((@cases $pat:pat $(if $guard:expr)? => $result:expr)
+     (@obj $($obj:tt)*)
+     (@rules $($rules:tt)*)) => {
+          r#match!(
                (@cases $pat $(if $guard)? => $result,)
                (@obj $($obj)*)
                (@rules $($rules)*))
-   },
+    },
 
-   // entry match code
-   ( [ $obj:expr ] $($tail:tt)* ) => {
-       r#match!(
-           (@cases $($tail)*)
-           (@obj $obj)
-           (@rules)
-       )
-   }
+    // entry match code
+    ( [ $obj:expr ] $($tail:tt)* ) => {
+        r#match!(
+            (@cases $($tail)*)
+            (@obj $obj)
+            (@rules)
+        )
+    }
 }
 
 pub mod x86int_lang {
