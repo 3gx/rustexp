@@ -5,6 +5,7 @@
 #![feature(decl_macro)]
 #![feature(box_patterns)]
 
+/*
 macro r#match {
    (@guard $ret:expr, let $pat:pat = $expr:expr $(,)?) => {
        if let $pat = $expr { return $ret }
@@ -94,6 +95,92 @@ macro rmatch {
                      }),*
        }
    },
+}
+*/
+
+macro r#match {
+    /* terminal case */
+   ((@cases)
+    (@obj $($obj:tt)*)
+    (@rules $($rules:tt)*)) => {
+           match $($obj)* {
+               $($rules)*
+           }
+   },
+   /* inject attribute allow_unused */
+   (@allow_unused $($tt:tt)*) => {
+      #[allow(unused_variables)]
+      $($tt)*
+   },
+   /* carbon_copy */
+   (@carbon_copy $($tt:tt)*) => {
+      $($tt)*
+   },
+   (@guard $cb:ident $ret:expr, let $pat:pat = $expr:expr $(,)?)
+       => {
+       r#match!(@$cb if let $pat = $expr { return $ret })
+   },
+   (@guard $cb:ident $ret:expr, $guard:expr $(,)?) => {
+       #[allow(unreachable_code)]
+       if $guard { return $ret }
+   },
+   (@guard $cb:ident $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
+       r#match!(@$cb if let $pat = $expr {  r#match!(@guard $cb $ret, $($tail)*) })
+   },
+   (@guard $cb:ident $ret:expr, $guard:expr, $($tail:tt)*) => {
+       if $guard { r#match!(@guard $cb $ret, $($tail)*) }
+   },
+
+   ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr, $($tail:tt)*)
+    (@obj $($obj:tt)*)
+    (@rules $($rules:tt)*)) => {
+       r#match!(
+               (@cases $($tail)*)
+               (@obj $($obj)*)
+               (@rules $($rules)* $pat
+                    $(if
+                        (|| {
+                            r#match!(@guard allow_unused true, $($guard)*);
+                            return false;
+                        })()
+                     )? => (||{
+                        r#match!(@guard carbon_copy $result, true, $($($guard)*)?);
+                        panic!("unreacahble");
+                          })(),))
+   },
+   ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr)
+    (@obj $($obj:tt)*)
+    (@rules $($rules:tt)*)) => {
+       r#match!(
+               (@cases $pat $(if @{$($guard)*})? => $result,)
+               (@obj $($obj)*)
+               (@rules $($rules)*))
+   },
+
+   ((@cases $pat:pat $(if $guard:expr)? => $result:expr, $($tail:tt)*)
+    (@obj $($obj:tt)*)
+    (@rules $($rules:tt)*)) => {
+       r#match!(
+               (@cases $($tail)*)
+               (@obj $($obj)*)
+               (@rules $($rules)* $pat $(if $guard)? => $result,))
+   },
+   ((@cases $pat:pat $(if $guard:expr)? => $result:expr)
+    (@obj $($obj:tt)*)
+    (@rules $($rules:tt)*)) => {
+       r#match!(
+               (@cases $pat $(if $guard)? => $result,)
+               (@obj $($obj)*)
+               (@rules $($rules)*))
+   },
+
+   ( [ $obj:expr ] $($tail:tt)* ) => {
+       r#match!(
+           (@cases $($tail)*)
+           (@obj $obj)
+           (@rules)
+       )
+   }
 }
 
 pub mod x86int_lang {
@@ -325,24 +412,24 @@ fn main() {
                 T::B(s)
                     if {s == "42_i64"} =>
                     println!("matched T::B(\"42_i64\")"),
-                T::C(s) if {let T::B(s) = &**s, let "fun" = &s[..]} =>
+                T::C(s) if @{let T::B(s) = &**s, let "fun" = &s[..]} =>
                                     println!("fun found\n"),
-                T::C(s) if {let T::B(s) = &**s}  =>
+                T::C(s) if @{let T::B(s) = &**s}  =>
                                 println!("xT::C(T::B(s)) with s = \"{}\"", s),
                 T::B(s) => println!("matched T::B(s), s= {:?}", s),
                 T::C(box T::D(box s)) if {"hun" == &s[..]} => {
                     println!("hun matches with s = {:#?}", s)
                 },
-                T::C(td) if {let T::D(s) = &**td, "dun" == &s[..]} => {
+                T::C(td) if @{let T::D(s) = &**td, "dun" == &s[..]} => {
                     println!("dun matches with s = {:#?}", s)
                 },
-                T::C(td) if {let T::D(s) = &**td} => {
+                T::C(td) if @{let T::D(s) = &**td} => {
                     println!("some matches with s = {:#?}", s)
                 },
-                _ => println!("unhandled match ")
+                _ => println!("unhandled match "),
             }
 
-            rmatch! { [t]
+            r#match! { [t]
                 T::A(42) => println!("matched T::A(42)"),
                 T::A(45) => println!("matched T::A(45)"),
                 T::A(n) => println!("matched T::A(n), n={}", n),
@@ -352,18 +439,18 @@ fn main() {
                 T::B(s)
                     if {s == "42_i64"} =>
                     println!("matched T::B(\"42_i64\")"),
-                T::C(s) if {T::B(s) = &**s, "fun" = &s[..]} =>
+                T::C(s) if @{let T::B(s) = &**s, "fun" == &s[..]} =>
                                     println!("fun found\n"),
-                T::C(s) if {T::B(s) = &**s}  =>
+                T::C(s) if @{let T::B(s) = &**s}  =>
                                 println!("xT::C(T::B(s)) with s = \"{}\"", s),
                 T::B(s) => println!("matched T::B(s), s= {:?}", s),
                 T::C(box T::D(box s)) if {"hun" == &s[..]} => {
                     println!("hun matches with s = {:#?}", s)
                 },
-                T::C(td) if {T::D(s) = &**td, "dun" == &s[..]} => {
+                T::C(td) if @{let T::D(s) = &**td, "dun" == &s[..]} => {
                     println!("dun matches with s = {:#?}", s)
                 },
-                T::C(td) if {T::D(s) = &**td} => {
+                T::C(td) if @{let T::D(s) = &**td} => {
                     println!("some matches with s = {:#?}", s)
                 },
                 _ => println!("unhandled match ")
@@ -415,11 +502,11 @@ fn main() {
             println!("e2= {:?}", e2);
 
             fn eval(e: &Expr) -> i64 {
-                rmatch! { [e]
+                r#match! { [e]
                     Int(n) => *n,
-                    Prim(Neg, v) if {[Int(m)] = v.as_slice()} => -*m,
-                    Prim(Neg, v) if {[e] = &v[..]} => -eval(e),
-                    Prim(Add, v) if {[e1,e2] = &v[..]} => eval(e1) + eval(e2),
+                    Prim(Neg, v) if @{let [Int(m)] = v.as_slice()} => -*m,
+                    Prim(Neg, v) if @{let [e] = &v[..]} => -eval(e),
+                    Prim(Add, v) if @{let [e1,e2] = &v[..]} => eval(e1) + eval(e2),
                     _ => panic!("unhandled {:?}", e)
                 }
             }

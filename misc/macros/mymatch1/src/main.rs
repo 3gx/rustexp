@@ -140,19 +140,23 @@ macro mymatch4 {
        => {
        mymatch4!(@$cb if let $pat = $expr { return $ret })
    },
+   /*
    (@guard $cb:ident $ret:expr, $pat:pat = $expr:expr $(,)?)
        => {
        mymatch4!(@$cb if let $pat = $expr { return $ret })
    },
+   */
    (@guard $cb:ident $ret:expr, $guard:expr $(,)?) => {
        if $guard { return $ret }
    },
    (@guard $cb:ident $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
        mymatch4!(@$cb if let $pat = $expr {  mymatch4!(@guard $cb $ret, $($tail)*) })
    },
+   /*
    (@guard $cb:ident $ret:expr, $pat:pat = $expr:expr, $($tail:tt)*) => {
        mymatch4!(@$cb if let $pat = $expr {  mymatch4!(@guard $cb $ret, $($tail)*) })
    },
+   */
    (@guard $cb:ident $ret:expr, $guard:expr, $($tail:tt)*) => {
        if $guard { mymatch4!(@guard $cb $ret, $($tail)*) }
    },
@@ -270,7 +274,7 @@ fn main() {
        Some(n) if {
            let abc = || n == 24;
            abc() } => "twice Ten A 23".to_string(),
-       n if @{Some(m) = n, m == 23} => {println!("m is {}", m); m.to_string()},
+       n if @{let Some(m) = n, m == 23} => {println!("m is {}", m); m.to_string()},
      _ => "something else".to_string(),
     };
     println!("y1={:?}", y1);
