@@ -119,9 +119,6 @@ macro mymatch3 {
 */
 
 macro mymatch4impl {
-   (@show $($tt:tt)*) => {
-       compile_error!(stringify!($($tt)*))
-   },
    ((@cases)
     (@obj $($obj:tt)*)
     (@rules $($rules:tt)*)) => {
@@ -132,34 +129,6 @@ macro mymatch4impl {
  //      )
    },
 
-   /*
-   ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr $(,)?)
-    (@obj $($obj:tt)*)
-    (@rules $($rules:tt)*)) => {
-       mymatch4impl!(@finalize
-               (@obj $($obj)*)
-               (@rules $($rules)* $pat $(if $($guard)*)? => $result,))
-   },
-
-   ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr, $($tail:tt)*)
-    (@obj $($obj:tt)*)
-    (@rules $($rules:tt)*)) => {
-       mymatch4impl!(
-               (@cases $($tail)*)
-               (@obj $($obj)*)
-               (@rules $($rules)* $pat $(if $($guard)*)? => $result,))
-   },
-   */
-   /*
-   ((@cases $pat:pat $(if $guard:expr)? => $result:expr $(,)?)
-    (@obj $($obj:tt)*)
-    (@rules $($rules:tt)*)) => {
-       mymatch4impl!(
-               (@cases)
-               (@obj $($obj)*)
-               (@rules $($rules)* $pat $(if $guard)? => $result,))
-   },
-   */
    ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr, $($tail:tt)*)
     (@obj $($obj:tt)*)
     (@rules $($rules:tt)*)) => {
