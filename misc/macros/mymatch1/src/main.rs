@@ -140,14 +140,21 @@ macro mymatch4 {
        => {
        mymatch4!(@$cb if let $pat = $expr { return $ret })
    },
-   (@guard $_cb:ident $ret:expr, $guard:expr $(,)?) => {
+   (@guard $cb:ident $ret:expr, $pat:pat = $expr:expr $(,)?)
+       => {
+       mymatch4!(@$cb if let $pat = $expr { return $ret })
+   },
+   (@guard $cb:ident $ret:expr, $guard:expr $(,)?) => {
        if $guard { return $ret }
    },
    (@guard $cb:ident $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
        mymatch4!(@$cb if let $pat = $expr {  mymatch4!(@guard $cb $ret, $($tail)*) })
    },
+   (@guard $cb:ident $ret:expr, $pat:pat = $expr:expr, $($tail:tt)*) => {
+       mymatch4!(@$cb if let $pat = $expr {  mymatch4!(@guard $cb $ret, $($tail)*) })
+   },
    (@guard $cb:ident $ret:expr, $guard:expr, $($tail:tt)*) => {
-       mymatch4!(@$cb if $guard { mymatch4!(@guard $cb $ret, $($tail)*) })
+       if $guard { mymatch4!(@guard $cb $ret, $($tail)*) }
    },
 
    ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr, $($tail:tt)*)
@@ -259,11 +266,11 @@ fn main() {
        Some(10) => "Ten".to_string(),
        Some(n) if n == 20 => "twice Ten A".to_string(),
        Some(n) if @{n == 22} => "twice Ten @A".to_string(),
-       Some(n) if @{let 22 = n} => "let twice Ten @A".to_string(),
+       Some(n) if @{let 24 = n} => "let twice Ten @A".to_string(),
        Some(n) if {
            let abc = || n == 24;
            abc() } => "twice Ten A 23".to_string(),
-       n if @{let Some(m) = n} => {println!("m is {}", m); m.to_string()},
+       n if @{Some(m) = n, m == 23} => {println!("m is {}", m); m.to_string()},
      _ => "something else".to_string(),
     };
     println!("y1={:?}", y1);
