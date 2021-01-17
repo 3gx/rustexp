@@ -135,7 +135,14 @@ macro mymatch4 {
        mymatch4!(
                (@cases $($tail)*)
                (@obj $($obj)*)
-               (@rules $($rules)* $pat $(if $($guard)*)? => $result,))
+               (@rules $($rules)* $pat
+                    $(if
+                        (|| {
+                            $($guard)*
+                        })()
+                     )? => (||{
+                           $result
+                          })(),))
    },
    ((@cases $pat:pat $(if $guard:expr)? => $result:expr, $($tail:tt)*)
     (@obj $($obj:tt)*)
