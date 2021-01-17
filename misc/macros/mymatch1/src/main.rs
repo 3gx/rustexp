@@ -2,7 +2,7 @@
 #![feature(destructuring_assignment)]
 #![feature(let_chains)]
 #![allow(incomplete_features)]
-use if_chain;
+//use if_chain;
 /*
 #[allow(unused_macros)]
 macro mymatch {
@@ -119,29 +119,35 @@ macro mymatch3 {
 */
 
 macro mymatch4 {
+    /* terminal case */
    ((@cases)
     (@obj $($obj:tt)*)
     (@rules $($rules:tt)*)) => {
-//       compile_error!(stringify!(
            match $($obj)* {
                $($rules)*
            }
- //      ))
    },
-   (@replace $_id:ident $($tt:tt)*) => {$($tt)*},
-   (@guard $((@attr $attr:ident))? $ret:expr, let $pat:pat = $expr:expr $(,)?)
+   /* inject attribute allow_unused */
+   (@allow_unused $($tt:tt)*) => {
+      #[allow(unused_variables)]
+      $($tt)*
+   },
+   /* carbon_copy */
+   (@carbon_copy $($tt:tt)*) => {
+      $($tt)*
+   },
+   (@guard $cb:ident $ret:expr, let $pat:pat = $expr:expr $(,)?)
        => {
-       //$(mymatch4!(@replace $attr #[allow(unused_variables)]))?
-       if let $pat = $expr { return $ret }
+       mymatch4!(@$cb if let $pat = $expr { return $ret })
    },
-   (@guard $((@attr $_attr:ident))? $ret:expr, $guard:expr $(,)?) => {
+   (@guard $_cb:ident $ret:expr, $guard:expr $(,)?) => {
        if $guard { return $ret }
    },
-   (@guard $((@attr $attr:ident))? $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
-       if let $pat = $expr {  mymatch4!(@guard $((@attr $attr))? $ret, $($tail)*) }
+   (@guard $cb:ident $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
+       mymatch4!(@$cb if let $pat = $expr {  mymatch4!(@guard $cb $ret, $($tail)*) })
    },
-   (@guard $((@attr $attr:ident))? $ret:expr, $guard:expr, $($tail:tt)*) => {
-       if $guard { mymatch4!(@guard $((@attr $attr))? $ret, $($tail)*) }
+   (@guard $cb:ident $ret:expr, $guard:expr, $($tail:tt)*) => {
+       mymatch4!(@$cb if $guard { mymatch4!(@guard $cb $ret, $($tail)*) })
    },
 
    ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr, $($tail:tt)*)
@@ -153,11 +159,11 @@ macro mymatch4 {
                (@rules $($rules)* $pat
                     $(if
                         (|| {
-                            mymatch4!(@guard true, $($guard)*);
+                            mymatch4!(@guard allow_unused true, $($guard)*);
                             return false;
                         })()
                      )? => (||{
-                        mymatch4!(@guard $result, true, $($($guard)*)?);
+                        mymatch4!(@guard carbon_copy $result, true, $($($guard)*)?);
                         panic!("unreacahble");
                           })(),))
    },
