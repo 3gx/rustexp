@@ -118,11 +118,11 @@ macro mymatch3 {
 }
 */
 
-macro mymatch4impl {
+macro mymatch4 {
    ((@cases)
     (@obj $($obj:tt)*)
     (@rules $($rules:tt)*)) => {
-//       mymatch4impl!(@show
+//       mymatch4!(@show
            match $($obj)* {
                $($rules)*
            }
@@ -132,7 +132,7 @@ macro mymatch4impl {
    ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr, $($tail:tt)*)
     (@obj $($obj:tt)*)
     (@rules $($rules:tt)*)) => {
-       mymatch4impl!(
+       mymatch4!(
                (@cases $($tail)*)
                (@obj $($obj)*)
                (@rules $($rules)* $pat $(if $($guard)*)? => $result,))
@@ -140,15 +140,13 @@ macro mymatch4impl {
    ((@cases $pat:pat $(if $guard:expr)? => $result:expr, $($tail:tt)*)
     (@obj $($obj:tt)*)
     (@rules $($rules:tt)*)) => {
-       mymatch4impl!(
+       mymatch4!(
                (@cases $($tail)*)
                (@obj $($obj)*)
                (@rules $($rules)* $pat $(if $guard)? => $result,))
    },
-}
-macro mymatch4 {
    ( [ $obj:expr ] $($tail:tt)* ) => {
-       mymatch4impl!(
+       mymatch4!(
            (@cases $($tail)*)
            (@obj $obj)
            (@rules)
