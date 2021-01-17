@@ -2,7 +2,7 @@
 #![feature(destructuring_assignment)]
 #![feature(let_chains)]
 #![allow(incomplete_features)]
-//use if_chain;
+use if_chain;
 /*
 #[allow(unused_macros)]
 macro mymatch {
@@ -122,11 +122,11 @@ macro mymatch4 {
    ((@cases)
     (@obj $($obj:tt)*)
     (@rules $($rules:tt)*)) => {
-//       mymatch4!(@show
+//       compile_error!(stringify!(
            match $($obj)* {
                $($rules)*
            }
- //      )
+ //      ))
    },
    (@guard $ret:expr, let $pat:pat = $expr:expr $(,)?) => {
        if let $pat = $expr { return $ret }
