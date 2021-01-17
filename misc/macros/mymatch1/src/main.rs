@@ -118,15 +118,26 @@ macro mymatch3 {
 }
 */
 
-macro mymatch4 {
-   (@case $pat:pat => $result:expr, $($tail:tt)*
-                 (@obj ($obj:tt)*)
-                 (@rules $($rules:tt)*)) => {
-        mymatch4!($($tail)* (@obj $($obj)*)
-            (@rules $($rules)*, $pat:path => $result:expr))
+macro mymatch4impl {
+   (@show $($tt:tt)*) => {
+       compile_error!(stringify!($($tt)*))
    },
+   ((@cases $pat:pat => $result:expr, $($tail:tt)*)
+    (@obj $($obj:tt)*)
+    (@rules $($rules:tt)*)) => {
+       mymatch4impl!(@show
+               (@cases $($tail)*)
+               (@obj $($obj)*)
+               (@rules $pat => $result))
+   },
+}
+macro mymatch4 {
    ( [ $obj:expr ] $($tail:tt)* ) => {
-       mymatch4!(@case $($tail)* (@obj $obj))
+       mymatch4impl!(
+           (@cases $($tail)*)
+           (@obj $obj)
+           (@rules)
+       )
    }
 }
 
@@ -202,10 +213,10 @@ fn main() {
 
     let y1 = mymatch4! {
         [x1]
-           Some(10) => "Ten".to_string(),
+           Some(10) => 11, //"Ten".to_string(),
     //       Some(n) if {n == 20, n == 21} => "twice Ten A".to_string(),
      //      n if {let Some(m) = n} => {println!("{}", m); m.to_string()},
-         _ => "something else".to_string(),
+         _ => 0, //"something else".to_string(),
         };
     println!("y1={:?}", y1);
 
