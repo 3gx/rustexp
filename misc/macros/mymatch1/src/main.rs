@@ -128,17 +128,20 @@ macro mymatch4 {
            }
  //      ))
    },
-   (@guard $ret:expr, let $pat:pat = $expr:expr $(,)?) => {
+   (@replace $_id:ident $($tt:tt)*) => {$($tt)*},
+   (@guard $((@attr $attr:ident))? $ret:expr, let $pat:pat = $expr:expr $(,)?)
+       => {
+       //$(mymatch4!(@replace $attr #[allow(unused_variables)]))?
        if let $pat = $expr { return $ret }
    },
-   (@guard $ret:expr, $guard:expr $(,)?) => {
+   (@guard $((@attr $_attr:ident))? $ret:expr, $guard:expr $(,)?) => {
        if $guard { return $ret }
    },
-   (@guard $ret:expr, $guard:expr, $($tail:tt)*) => {
-       if $guard { mymatch4!(@guard $ret, $($tail)*) }
+   (@guard $((@attr $attr:ident))? $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
+       if let $pat = $expr {  mymatch4!(@guard $((@attr $attr))? $ret, $($tail)*) }
    },
-   (@guard $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
-       if let $pat = $expr {  mymatch4!(@guard $ret, $($tail)*) }
+   (@guard $((@attr $attr:ident))? $ret:expr, $guard:expr, $($tail:tt)*) => {
+       if $guard { mymatch4!(@guard $((@attr $attr))? $ret, $($tail)*) }
    },
 
    ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr, $($tail:tt)*)
