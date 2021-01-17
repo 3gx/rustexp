@@ -2,7 +2,7 @@
 #![feature(destructuring_assignment)]
 #![feature(let_chains)]
 #![allow(incomplete_features)]
-//use if_chain;
+use if_chain;
 /*
 #[allow(unused_macros)]
 macro mymatch {
@@ -71,7 +71,6 @@ macro mymatch2 {
 }
 */
 
-/*
 macro mymatch3 {
    (@guard $ret:expr, let $pat:pat = $expr:expr $(,)?) => {
        if let $pat = $expr { return $ret }
@@ -116,7 +115,6 @@ macro mymatch3 {
        }
    },
 }
-*/
 
 macro mymatch4 {
     /* terminal case */
@@ -254,7 +252,6 @@ fn main() {
     */
 
     let x1 = Some(23);
-    /*
     let y1 = mymatch3! {
     [x1]
        Some(10) => "Ten".to_string(),
@@ -263,7 +260,6 @@ fn main() {
      _ => "something else".to_string()
     };
     println!("y1={:?}", y1);
-    */
 
     let y1 = mymatch4! {
     [x1]
@@ -279,7 +275,6 @@ fn main() {
     };
     println!("y1={:?}", y1);
 
-    /*
     let y2 = match x1 {
         Some(10) => "Ten".to_string(),
         Some(n) if n == 20 && n == 21 => "twice Ten A".to_string(),
@@ -309,9 +304,7 @@ fn main() {
         _ => "something else".to_string(),
     };
     println!("y2={:?}", y2);
-    */
 
-    /*
     let x = if_chain::if_chain! {
         if let Some(i) = x1;
         if let 20 = i;
@@ -319,17 +312,6 @@ fn main() {
         else {false}
     };
     println!("x={}", x);
-    */
 
-    /*
-    let x2 = Some(20);
-    let y2 = mymatch4! {
-    [x2]
-    //   Some(10) => "Ten",
-     //  Some(n) if {n == 20, n == 21} => "twice Ten A",
-       n if {if let Some(n) = n; if 20 == n} => "twice Ten",
-     _ => "something else"
-    };
     println!("y2={:?}", y2);
-     */
 }
