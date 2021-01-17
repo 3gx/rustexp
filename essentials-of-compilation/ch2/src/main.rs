@@ -149,7 +149,7 @@ macro r#match {
                         })()
                      )? => (||{
                         r#match!(@guard carbon_copy $result, true, $($($guard)*)?);
-                        panic!("unreacahble");
+                        panic!("unreacheable");
                           })(),))
    },
    ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr)
