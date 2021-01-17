@@ -118,15 +118,16 @@ macro r#match {
       $($tt)*
    },
 
-   // generate guard code for match
-   (@guard $cb:ident $ret:expr, let $pat:pat = $expr:expr $(,)?)
-       => {
+   // generate terimal guard code for match
+   (@guard $cb:ident $ret:expr, let $pat:pat = $expr:expr $(,)?) => {
        r#match!(@$cb if let $pat = $expr { return $ret })
    },
    (@guard $cb:ident $ret:expr, $guard:expr $(,)?) => {
        #[allow(unreachable_code)]
        if $guard { return $ret }
    },
+
+   // generate recursive guard code for match
    (@guard $cb:ident $ret:expr, let $pat:pat = $expr:expr, $($tail:tt)*) => {
        r#match!(@$cb if let $pat = $expr {  r#match!(@guard $cb $ret, $($tail)*) })
    },
@@ -134,7 +135,7 @@ macro r#match {
        if $guard { r#match!(@guard $cb $ret, $($tail)*) }
    },
 
-   // match different cases for match
+   // generate different cases for match with patter matching guard
    ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr, $($tail:tt)*)
     (@obj $($obj:tt)*)
     (@rules $($rules:tt)*)) => {
@@ -161,6 +162,7 @@ macro r#match {
                (@rules $($rules)*))
    },
 
+   // generate different cases for match with conditional guard
    ((@cases $pat:pat $(if $guard:expr)? => $result:expr, $($tail:tt)*)
     (@obj $($obj:tt)*)
     (@rules $($rules:tt)*)) => {
