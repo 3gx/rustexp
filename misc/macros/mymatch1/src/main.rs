@@ -122,7 +122,7 @@ macro mymatch4impl {
    (@show $($tt:tt)*) => {
        compile_error!(stringify!($($tt)*))
    },
-   (@finalize
+   ((@cases)
     (@obj $($obj:tt)*)
     (@rules $($rules:tt)*)) => {
 //       mymatch4impl!(@show
@@ -132,6 +132,7 @@ macro mymatch4impl {
  //      )
    },
 
+   /*
    ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr $(,)?)
     (@obj $($obj:tt)*)
     (@rules $($rules:tt)*)) => {
@@ -148,14 +149,25 @@ macro mymatch4impl {
                (@obj $($obj)*)
                (@rules $($rules)* $pat $(if $($guard)*)? => $result,))
    },
+   */
+   /*
    ((@cases $pat:pat $(if $guard:expr)? => $result:expr $(,)?)
     (@obj $($obj:tt)*)
     (@rules $($rules:tt)*)) => {
-       mymatch4impl!(@finalize
+       mymatch4impl!(
+               (@cases)
                (@obj $($obj)*)
                (@rules $($rules)* $pat $(if $guard)? => $result,))
    },
-
+   */
+   ((@cases $pat:pat $(if @{$($guard:tt)*})? => $result:expr, $($tail:tt)*)
+    (@obj $($obj:tt)*)
+    (@rules $($rules:tt)*)) => {
+       mymatch4impl!(
+               (@cases $($tail)*)
+               (@obj $($obj)*)
+               (@rules $($rules)* $pat $(if $($guard)*)? => $result,))
+   },
    ((@cases $pat:pat $(if $guard:expr)? => $result:expr, $($tail:tt)*)
     (@obj $($obj:tt)*)
     (@rules $($rules:tt)*)) => {
@@ -249,7 +261,10 @@ fn main() {
     [x1]
        Some(10) => "Ten".to_string(),
        Some(n) if n == 20 => "twice Ten A".to_string(),
-       Some(n) if @{n == 23} => "twice Ten A 23".to_string(),
+       Some(n) if @{n == 23} => "twice Ten @A".to_string(),
+       Some(n) if {
+           let abc = || n == 23;
+           abc() } => "twice Ten A 23".to_string(),
     //   n if {let Some(m) = n} => {println!("{}", m); m.to_string()},
      _ => "something else".to_string(),
     };
