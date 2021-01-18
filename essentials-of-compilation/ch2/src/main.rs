@@ -139,9 +139,7 @@ macro r#match {
         )
     },
     (@guard $cb:ident ($then:expr,$else:expr), $guard:expr, $($tail:tt)*) => {
-        if $guard { r#match!(@guard $cb ($then,$else), $($tail)*) } else {
-            $else
-        }
+        if $guard { r#match!(@guard $cb ($then,$else), $($tail)*) } else { $else }
     },
 
     // generate different cases for match with patter matching guard
