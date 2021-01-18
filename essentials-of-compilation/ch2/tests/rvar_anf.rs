@@ -7,6 +7,8 @@ mod rvar_anf_tests {
     fn t1() {
         use ch2::rvar_anf_lang::{interp_exp, rco_exp};
         let (p1, v1) = {
+            // not the same as
+            // use ch2::rvar_lang::*;
             use ch2::rvar_anf_lang::rvar_lang::*;
             let p1 = r#let!([x add!(12, add!(neg!(20), neg!(add!(10,neg!(15)))))]
                     add!(add!(30, neg!(15)), x));
