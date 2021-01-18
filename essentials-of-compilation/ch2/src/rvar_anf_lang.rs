@@ -219,7 +219,7 @@ pub fn interp_exp(env: &Env, e: &Expr) -> Value {
 }
 
 #[cfg(test)]
-mod rvar_anf_lang {
+mod test {
     #[test]
     fn t1() {
         use super::{interp_exp, rco_exp};
