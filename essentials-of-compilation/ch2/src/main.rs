@@ -1,9 +1,11 @@
-#![allow(incomplete_features)]
-#![feature(if_let_guard)]
+//#![allow(incomplete_features)]
+//#![feature(if_let_guard)]
 #![feature(box_syntax)]
-#![feature(let_chains)]
-#![feature(decl_macro)]
 #![feature(box_patterns)]
+//#![feature(let_chains)]
+#![feature(decl_macro)]
+//#![feature(stmt_expr_attributes)]
+#![feature(stmt_expr_attributes)]
 
 /*
 macro r#match {
@@ -120,7 +122,10 @@ macro r#match {
 
     // generate terimal guard code for match
     (@guard $cb:ident ($then:expr, $else:expr), let $pat:pat = $expr:expr $(,)?) => {
-        r#match!(@$cb if let $pat = $expr { $then } else {$else })
+        r#match!(@$cb
+            match $expr { $pat => $then,  _ => $else }
+            //if let $pat = $expr { $then } else {$else }
+            )
     },
     (@guard $cb:ident ($then:expr, $else:expr), $guard:expr $(,)?) => {
         if $guard { $then } else { $else }
@@ -128,8 +133,10 @@ macro r#match {
 
     // generate recursive guard code for match
     (@guard $cb:ident ($then:expr, $else:expr), let $pat:pat = $expr:expr, $($tail:tt)*) => {
-        r#match!(@$cb if let $pat = $expr {  r#match!(@guard $cb ($then,$else), $($tail)*) }
-             else { $else })
+        r#match!(@$cb
+//          if let $pat = $expr { r#match!(@guard $cb ($then,$else), $($tail)*) } else { $else }
+          match $expr { $pat => r#match!(@guard $cb ($then,$else), $($tail)*), _ => $else }
+        )
     },
     (@guard $cb:ident ($then:expr,$else:expr), $guard:expr, $($tail:tt)*) => {
         if $guard { r#match!(@guard $cb ($then,$else), $($tail)*) } else {
@@ -145,12 +152,12 @@ macro r#match {
                (@cases $($tail)*)
                (@obj $($obj)*)
                (@rules $($rules)* $($pat)|+
-                    $(if {
-                            r#match!(@guard allow_unused
-                                     (true,false), $($guard)*) }
-                     )? => {
-                        r#match!(@guard carbon_copy
-                                 ($result,panic!("unreachable")), true, $($($guard)*)?) },
+                    $(if {r#match!(@guard allow_unused
+                                   (true,false), $($guard)*) }
+                     )? => {r#match!(@guard carbon_copy
+                                      ($result,
+                                       panic!("unreachable")),
+                                      true, $($($guard)*)?) },
                           ))
     },
     ((@cases $($pat:pat)|+ $(if @{$($guard:tt)*})? => $result:expr)
