@@ -1,0 +1,10 @@
+[package]
+name = "highorder1"
+version = "0.1.0"
+authors = ["Evghenii <egx@egx-mbp.local>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tt-call = "1.0"
