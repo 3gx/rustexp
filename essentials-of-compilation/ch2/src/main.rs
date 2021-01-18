@@ -123,12 +123,13 @@ macro r#match {
     // generate terimal guard code for match
     (@guard $cb:ident ($then:expr, $else:expr), let $pat:pat = $expr:expr $(,)?) => {
         r#match!(@$cb
-            match $expr { $pat => $then,  _ => $else }
+            match $expr { $pat => $then, _ => $else }
             //if let $pat = $expr { $then } else {$else }
             )
     },
     (@guard $cb:ident ($then:expr, $else:expr), $guard:expr $(,)?) => {
-        if $guard { $then } else { $else }
+        //if $guard { $then } else { $else }
+        match $guard { true => $then, _ => $else }
     },
 
     // generate recursive guard code for match
@@ -139,7 +140,8 @@ macro r#match {
         )
     },
     (@guard $cb:ident ($then:expr,$else:expr), $guard:expr, $($tail:tt)*) => {
-        if $guard { r#match!(@guard $cb ($then,$else), $($tail)*) } else { $else }
+        match $guard { true => r#match!(@guard $cb ($then,$else), $($tail)*), _ => $else }
+//        if $guard { r#match!(@guard $cb ($then,$else), $($tail)*) } else { $else }
     },
 
     // generate different cases for match with patter matching guard
