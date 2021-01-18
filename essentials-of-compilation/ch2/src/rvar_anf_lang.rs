@@ -3,6 +3,13 @@ type Label = String;
 type Info = Vec<i64>;
 type Value = Int;
 
+#[path = "cvar_lang.rs"]
+mod cvar_lang;
+#[path = "./macros.rs"]
+mod macros;
+#[path = "rvar_lang.rs"]
+pub mod rvar_lang;
+
 #[derive(Debug, Clone)]
 pub enum Atom {
     Int(Int),
@@ -73,13 +80,6 @@ pub macro add {
         Expr::Add($a1.into_atom(), $a2.into_atom())
     },
 }
-
-#[path = "cvar_lang.rs"]
-mod cvar_lang;
-#[path = "./macros.rs"]
-mod macros;
-#[path = "rvar_lang.rs"]
-mod rvar_lang;
 
 use macros::r#match;
 
