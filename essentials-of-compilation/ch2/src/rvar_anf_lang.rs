@@ -80,6 +80,10 @@ pub struct Program(Info, Expr);
 
 #[path = "./cvar_lang.rs"]
 mod cvar_lang;
+
+#[path = "./macros.rs"]
+mod macros;
+
 #[cfg(test)]
 mod rvar_anf_lang {
     #[test]
@@ -95,10 +99,10 @@ mod rvar_anf_lang {
         println!("expr= {:?}", exp);
         println!("res= {}", interp_exp(&cvar_lang::env![], &exp));
     }
-    /*
+
     #[test]
     fn ast1() {
-        use super::r#match;
+        use super::macros::r#match;
         #[derive(Debug, Clone)]
         enum OpCode {
             Neg,
@@ -138,5 +142,4 @@ mod rvar_anf_lang {
         println!("eval(e1a)= {}", eval(&e1a));
         println!("eval(e2)= {}", eval(&e2));
     }
-    */
 }
