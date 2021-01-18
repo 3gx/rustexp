@@ -75,10 +75,6 @@ pub macro add {
     },
 }
 
-pub fn remove_complex_operas() {
-    unimplemented!()
-}
-
 #[path = "cvar_lang.rs"]
 mod cvar_lang;
 #[path = "./macros.rs"]
@@ -86,8 +82,49 @@ mod macros;
 #[path = "rvar_lang.rs"]
 mod rvar_lang;
 
+use macros::r#match;
+
 #[derive(Debug, Clone)]
 pub struct Program(Info, Expr);
+
+use rvar_lang::Term as RVarTerm;
+
+lazy_static! {
+    static ref MAP: Mutex<HashMap<String, usize>> = Mutex::new(HashMap::new());
+}
+use lazy_static::lazy_static; // 1.4.0
+use std::collections::HashMap;
+use std::sync::Mutex;
+
+pub fn gensym_reset() {
+    let mut map = MAP.lock().unwrap();
+    map.clear();
+}
+fn gensym(x: &String) -> String {
+    let mut map = MAP.lock().unwrap();
+    let counter = map.entry(x.to_string()).or_insert(0);
+    *counter += 1;
+
+    x.clone() + &counter.to_string()
+}
+
+pub fn rco_exp(e: &RVarTerm) -> Expr {
+    r#match! { [e]
+        RVarTerm::Int(i) => Expr::Atom(int!(*i)),
+        RVarTerm::Var(x) => Expr::Atom(var!(&x)),
+        RVarTerm::Read => Expr::Read,
+        RVarTerm::Add(e1, e2) => Expr::Add(rco_atom(e1), rco_atom(e2)),
+        RVarTerm::Neg(e) => Expr::Neg(rco_atom(e)),
+        RVarTerm::Let(x, e, body) => Expr::Let(x.clone(), box rco_exp(e), box rco_exp(body)),
+    }
+}
+pub fn rco_atom(e: &RVarTerm) -> Atom {
+    r#match! { [e]
+        RVarTerm::Int(i) => int!(*i),
+        RVarTerm::Var(x) => var!(&x),
+        _ => panic!("not an atomic expression {:#?}", e)
+    }
+}
 
 pub macro r#let {
     ([$id:ident $e1:expr]  $e2:ident) => {
