@@ -112,9 +112,10 @@ mod rvar_anf_lang {
     fn t1() {
         let p1 = {
             use super::rvar_lang::*;
-            r#let!([x add!(12, 20)]  add!(10, x))
+            r#let!([x add!(12, add!(neg!(20), neg!(add!(10,neg!(15)))))]
+                    add!(add!(30, neg!(15)), x))
         };
-        println!("p1= {:?} ", p1);
+        println!("p1= {:#?} ", p1);
     }
     #[test]
     fn cvar1() {
