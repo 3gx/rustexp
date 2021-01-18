@@ -178,7 +178,7 @@ fn main() {
     }
 
     {
-        use ch2::r#match;
+        use ch2::macros::r#match;
         #[derive(Debug, Clone)]
         enum T {
             A(i32),
