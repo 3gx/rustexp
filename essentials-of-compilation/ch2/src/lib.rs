@@ -1,8 +1,8 @@
-#![allow(incomplete_features)]
-#![feature(if_let_guard)]
-#![feature(let_chains)]
+//#![allow(incomplete_features)]
+//#![feature(if_let_guard)]
+//#![feature(let_chains)]
 #![feature(decl_macro)]
-#![feature(associated_type_defaults)]
+//#![feature(associated_type_defaults)]
 #![feature(box_patterns)]
 #![feature(box_syntax)]
 

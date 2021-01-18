@@ -142,24 +142,27 @@ pub fn env_set(env: &Env, key: &str, val: Value) -> Env {
     env
 }
 
+#[path = "macros.rs"]
+mod macros;
+
 pub fn interp_exp(env: &Env, e: &Term) -> Value {
     use {OpCode::*, Term::*};
-    match e {
-            Int(n) => n.clone(),
-            Prim(Read, v) if let [] = &v[..] => {
-                    let mut input = String::new();
-                    std::io::stdin().read_line(&mut input).unwrap();
-                    input.trim().parse().unwrap()
-            },
-            Prim(Neg, v) if let [e] = &v[..] => -interp_exp(env, e),
-            Prim(Add, v) if let [e1,e2] = &v[..] => interp_exp(env, e1) + interp_exp(env,e2),
-            Var(x) => env_get(env, &x).unwrap().clone(),
-            Let(x, e, body) => {
-                let new_env = env_set(env,x, interp_exp(env,e));
-                interp_exp(&new_env, body)
-            }
-            _ => panic!("unhandled term {:?}", e),
-        }
+    macros::r#match! { [ e ]
+        Int(n) => n.clone(),
+        Prim(Read, v) if @{ let [] = &v[..] } => {
+                let mut input = String::new();
+                std::io::stdin().read_line(&mut input).unwrap();
+                input.trim().parse().unwrap()
+        },
+        Prim(Neg, v) if @{let [e] = &v[..] } => -interp_exp(env, e),
+        Prim(Add, v) if @{let [e1,e2] = &v[..] } => interp_exp(env, e1) + interp_exp(env,e2),
+        Var(x) => env_get(env, &x).unwrap().clone(),
+        Let(x, e, body) => {
+            let new_env = env_set(env,x, interp_exp(env,e));
+            interp_exp(&new_env, body)
+        },
+        _ => panic!("unhandled term {:?}", e),
+    }
 }
 
 pub fn interp_program(p: &Program) -> Value {

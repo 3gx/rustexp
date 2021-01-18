@@ -161,10 +161,13 @@ pub fn interp_tail(env: &Env, tail: &Tail) -> Value {
     }
 }
 
+#[path = "macros.rs"]
+mod macros;
+
 pub fn inter_prog(prog: &CProgram) -> Value {
     let CProgram(_, blocks) = prog;
-    match &blocks[..] {
-        [(s,tail)] if let "start" = &s[..] =>  interp_tail(&env![], tail),
+    macros::r#match! { [ &blocks[..] ]
+        [(s,tail)] if @{let "start" = &s[..]} =>  interp_tail(&env![], tail),
         _ => panic!("unhandled {:?}", blocks)
     }
 
