@@ -100,21 +100,47 @@ pub fn gensym_reset() {
     let mut map = MAP.lock().unwrap();
     map.clear();
 }
-fn gensym(x: &String) -> String {
+fn gensym(x: &str) -> String {
     let mut map = MAP.lock().unwrap();
     let counter = map.entry(x.to_string()).or_insert(0);
     *counter += 1;
 
-    x.clone() + &counter.to_string()
+    x.to_string() + &counter.to_string()
 }
 
 pub fn rco_exp(e: &RVarTerm) -> Expr {
+    fn is_atom(e: &RVarTerm) -> bool {
+        match e {
+            RVarTerm::Int(_) | RVarTerm::Var(_) => true,
+            _ => false,
+        }
+    }
     r#match! { [e]
         RVarTerm::Int(i) => Expr::Atom(int!(*i)),
         RVarTerm::Var(x) => Expr::Atom(var!(&x)),
         RVarTerm::Read => Expr::Read,
-        RVarTerm::Add(e1, e2) => Expr::Add(rco_atom(e1), rco_atom(e2)),
-        RVarTerm::Neg(e) => Expr::Neg(rco_atom(e)),
+        RVarTerm::Add(e1, e2) => match (is_atom(e1),is_atom(e2)) {
+            (true,true) => Expr::Add(rco_atom(e1), rco_atom(e2)),
+            (false,true) => {
+                let t1 = gensym("tmp");
+                Expr::Let(t1.clone(), box rco_exp(e1), box Expr::Add(var!(&t1), rco_atom(e2)))
+            },
+            (true,false) => {
+                let t2 = gensym("tmp");
+                Expr::Let(t2.clone(), box rco_exp(e2), box Expr::Add(rco_atom(e1), var!(&t2)))
+            },
+            (false, false) => {
+                let t1 = gensym("tmp");
+                let t2 = gensym("tmp");
+                Expr::Let(t1.clone(), box rco_exp(e1),
+                    box Expr::Let(t2.clone(), box rco_exp(e2), box Expr::Add(var!(&t1), var!(&t2))))
+            },
+        },
+        RVarTerm::Neg(e) if is_atom(e) => Expr::Neg(rco_atom(e)),
+        RVarTerm::Neg(e) => {
+            let t = gensym("tmp");
+            Expr::Let(t.clone(), box rco_exp(e), box Expr::Neg(var!(&t)))
+        },
         RVarTerm::Let(x, e, body) => Expr::Let(x.clone(), box rco_exp(e), box rco_exp(body)),
     }
 }
@@ -122,7 +148,7 @@ pub fn rco_atom(e: &RVarTerm) -> Atom {
     r#match! { [e]
         RVarTerm::Int(i) => int!(*i),
         RVarTerm::Var(x) => var!(&x),
-        _ => panic!("not an atomic expression {:#?}", e)
+        _ => panic!("not an atomic expression {:?}", e)
     }
 }
 
@@ -147,13 +173,31 @@ pub macro r#let {
 mod rvar_anf_lang {
     #[test]
     fn t1() {
+        use super::rco_exp;
         let p1 = {
             use super::rvar_lang::*;
             r#let!([x add!(12, add!(neg!(20), neg!(add!(10,neg!(15)))))]
                     add!(add!(30, neg!(15)), x))
         };
         println!("p1= {:#?} ", p1);
+
+        let p1anf = rco_exp(&p1);
+        println!("p1= {:#?} ", p1anf);
     }
+
+    #[test]
+    fn t2() {
+        use super::rco_exp;
+        let p1 = {
+            use super::rvar_lang::*;
+            r#let!([a 42] r#let!([b var!(a)] b))
+        };
+        println!("p1= {:#?} ", p1);
+
+        let p1anf = rco_exp(&p1);
+        println!("p1= {:#?} ", p1anf);
+    }
+
     #[test]
     fn cvar1() {
         use super::cvar_lang;
