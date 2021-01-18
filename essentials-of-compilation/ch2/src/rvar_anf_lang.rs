@@ -78,10 +78,11 @@ pub macro add {
 #[derive(Debug, Clone)]
 pub struct Program(Info, Expr);
 
-#[path = "./cvar_lang.rs"]
+#[path = "cvar_lang.rs"]
 mod cvar_lang;
 #[path = "./macros.rs"]
 mod macros;
+
 #[cfg(test)]
 mod rvar_anf_lang {
     #[test]
