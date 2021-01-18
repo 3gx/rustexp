@@ -6,6 +6,7 @@ pub type Env = Vec<(Label, Value)>;
 
 #[path = "macros.rs"]
 mod macros;
+use macros::r#match;
 
 #[path = "rvar_anf_lang.rs"]
 mod rvar_anf_lang;
@@ -42,42 +43,44 @@ pub trait IntoAtom {
 }
 
 #[derive(Debug, Clone)]
-pub enum Atm {
+pub enum Atom {
     Int(Int),
     Var(String),
 }
 pub macro int($e:expr) {
-    Atm::Int($e)
+    Atom::Int($e)
 }
 pub macro var {
     ($id:ident) => {
         var!(stringify!($id))
     },
     ($id:expr) => {
-        Atm::Var($id.to_string())
+        Atom::Var($id.to_string())
     }
 }
 impl IntoAtom for i64 {
-    type Output = Atm;
-    fn into_atom(&self) -> Atm {
+    type Output = Atom;
+    fn into_atom(&self) -> Atom {
         int!(*self)
     }
 }
 impl IntoAtom for &str {
-    type Output = Atm;
-    fn into_atom(&self) -> Atm {
+    type Output = Atom;
+    fn into_atom(&self) -> Atom {
         var!(self)
     }
 }
 
 #[derive(Debug, Clone)]
-pub enum Prim {
+pub enum Expr {
+    Atom(Atom),
     Read,
-    Neg(Atm),
-    Add(Atm, Atm),
+    Neg(Atom),
+    Add(Atom, Atom),
 }
+
 pub macro read() {
-    Prim::Read
+    Expr::Read
 }
 
 pub macro neg {
@@ -85,56 +88,51 @@ pub macro neg {
         neg!(var!($id))
     },
     ($e:expr) => {
-        Prim(Neg, $e.into_atom())
+        Expr::Neg($e.into_atom())
     },
 }
 
 pub macro add {
     ($i1:ident, $i2:ident) => {
-        Prim::Add(var!(stringify!($i1)), var!($i2))
+        Expr::Add(var!(stringify!($i1)), var!($i2))
     },
     ($i1:ident, $a2:expr) => {
-        Prim::Add(var!($i1), $a2.into_atom())
+        Expr::Add(var!($i1), $a2.into_atom())
     },
     ($a1:expr, $i2:ident) => {
-        Prim::Add($a1.into_atom(), var!($i2)),
+        Expr::Add($a1.into_atom(), var!($i2)),
     },
     ($a1:expr, $a2:expr) => {
-        Prim::Add($a1.into_atom(), $a2.into_atom())
+        Expr::Add($a1.into_atom(), $a2.into_atom())
     },
-}
-
-#[derive(Debug, Clone)]
-pub enum Exp {
-    Atm(Atm),
-    Prim(Prim),
 }
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
-    AssignVar(String, Exp),
+    AssignVar(String, Expr),
 }
 
 #[derive(Debug, Clone)]
 pub enum Tail {
-    Return(Exp),
+    Return(Expr),
     Seq(Stmt, Box<Tail>),
 }
 
 #[derive(Debug, Clone)]
 pub struct CProgram(Info, Vec<(Label, Tail)>);
 
-pub fn interp_atom(env: &Env, atom: &Atm) -> Value {
-    use Atm::*;
+pub fn interp_atom(env: &Env, atom: &Atom) -> Value {
+    use Atom::*;
     match atom {
         Int(n) => n.clone(),
         Var(x) => env_get(env, x).unwrap().clone(),
     }
 }
 
-pub fn interp_prim(env: &Env, prim: &Prim) -> Value {
-    use Prim::*;
-    match prim {
+pub fn interp_expr(env: &Env, e: &Expr) -> Value {
+    use Expr::*;
+    match e {
+        Atom(atom) => interp_atom(env, atom),
         Read => {
             let mut input = String::new();
             std::io::stdin().read_line(&mut input).unwrap();
@@ -145,23 +143,15 @@ pub fn interp_prim(env: &Env, prim: &Prim) -> Value {
     }
 }
 
-pub fn interp_exp(env: &Env, e: &Exp) -> Value {
-    use Exp::*;
-    match e {
-        Atm(atom) => interp_atom(env, atom),
-        Prim(prim) => interp_prim(env, prim),
-    }
-}
-
 pub fn interp_stmt(env: &Env, stmt: &Stmt) -> Env {
     match stmt {
-        Stmt::AssignVar(var, exp) => env_set(env, var, interp_exp(env, exp)),
+        Stmt::AssignVar(var, exp) => env_set(env, var, interp_expr(env, exp)),
     }
 }
 
 pub fn interp_tail(env: &Env, tail: &Tail) -> Value {
     match tail {
-        Tail::Return(exp) => interp_exp(env, exp),
+        Tail::Return(exp) => interp_expr(env, exp),
         Tail::Seq(stmt, tail) => {
             let new_env = interp_stmt(env, stmt);
             interp_tail(&new_env, tail)
@@ -171,7 +161,7 @@ pub fn interp_tail(env: &Env, tail: &Tail) -> Value {
 
 pub fn inter_prog(prog: &CProgram) -> Value {
     let CProgram(_, blocks) = prog;
-    macros::r#match! { [ &blocks[..] ]
+    r#match! { [ &blocks[..] ]
         [(s,tail)] if @{let "start" = &s[..]} =>  interp_tail(&env![], tail),
         _ => panic!("unhandled {:?}", blocks)
     }

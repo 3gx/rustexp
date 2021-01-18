@@ -9,8 +9,8 @@ mod cvar_lang {
         let v = var!(x);
         println!("v= {:?}", v);
 
-        let exp = Exp::Prim(add!(10, 32));
+        let exp = add!(10, 32);
         println!("expr= {:?}", exp);
-        println!("res= {}", interp_exp(&cvar_lang::env![], &exp));
+        println!("res= {}", interp_expr(&cvar_lang::env![], &exp));
     }
 }
