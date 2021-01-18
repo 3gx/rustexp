@@ -4,6 +4,14 @@ type Info = Vec<i64>;
 type Value = Int;
 pub type Env = Vec<(Label, Value)>;
 
+#[path = "macros.rs"]
+mod macros;
+
+#[path = "rvar_anf_lang.rs"]
+mod rvar_anf_lang;
+
+pub use rvar_anf_lang::rvar_lang;
+
 pub fn env_get<'a>(env: &'a Env, key: &str) -> Option<&'a Value> {
     env.iter()
         .rev()
@@ -160,9 +168,6 @@ pub fn interp_tail(env: &Env, tail: &Tail) -> Value {
         }
     }
 }
-
-#[path = "macros.rs"]
-mod macros;
 
 pub fn inter_prog(prog: &CProgram) -> Value {
     let CProgram(_, blocks) = prog;

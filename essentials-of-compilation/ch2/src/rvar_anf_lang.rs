@@ -3,8 +3,6 @@ type Label = String;
 type Info = Vec<i64>;
 type Value = Int;
 
-#[path = "cvar_lang.rs"]
-mod cvar_lang;
 #[path = "./macros.rs"]
 mod macros;
 #[path = "rvar_lang.rs"]
@@ -253,20 +251,6 @@ mod test {
 
         let p1anf = rco_exp(&p1);
         println!("p1= {:#?} ", p1anf);
-    }
-
-    #[test]
-    fn cvar1() {
-        use super::cvar_lang;
-        use super::cvar_lang::*;
-        let v = int!(42);
-        println!("v= {:?}", v);
-        let v = var!(x);
-        println!("v= {:?}", v);
-
-        let exp = Exp::Prim(add!(10, 32));
-        println!("expr= {:?}", exp);
-        println!("res= {}", interp_exp(&cvar_lang::env![], &exp));
     }
 
     #[test]
