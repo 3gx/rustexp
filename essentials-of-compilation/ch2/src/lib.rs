@@ -7,6 +7,7 @@
 #![feature(box_syntax)]
 
 pub mod cvar_lang;
+pub mod rvar_anf_lang;
 pub mod rvar_lang;
 pub mod rvar_lang_legacy;
 
