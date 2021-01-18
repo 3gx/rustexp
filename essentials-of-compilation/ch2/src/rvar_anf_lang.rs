@@ -75,16 +75,47 @@ pub macro add {
     },
 }
 
-#[derive(Debug, Clone)]
-pub struct Program(Info, Expr);
+pub fn remove_complex_operas() {
+    unimplemented!()
+}
 
 #[path = "cvar_lang.rs"]
 mod cvar_lang;
 #[path = "./macros.rs"]
 mod macros;
+#[path = "rvar_lang.rs"]
+mod rvar_lang;
+
+#[derive(Debug, Clone)]
+pub struct Program(Info, Expr);
+
+pub macro r#let {
+    ([$id:ident $e1:expr]  $e2:ident) => {
+        Term::Let(
+            stringify!($id).to_owned(),
+            Box::new($e1.into_term()),
+            Box::new(var!(stringify!($e2))),
+        )
+    },
+    ([$id:ident $e1:expr]  $e2:expr) => {
+        Term::Let(
+            stringify!($id).to_owned(),
+            Box::new($e1.into_term()),
+            Box::new($e2.into_term()),
+        )
+    }
+}
 
 #[cfg(test)]
 mod rvar_anf_lang {
+    #[test]
+    fn t1() {
+        let p1 = {
+            use super::rvar_lang::*;
+            r#let!([x add!(12, 20)]  add!(10, x))
+        };
+        println!("p1= {:?} ", p1);
+    }
     #[test]
     fn cvar1() {
         use super::cvar_lang;
