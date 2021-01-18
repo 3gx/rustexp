@@ -2,7 +2,6 @@ type Int = i64;
 type Label = String;
 type Info = Vec<i64>;
 type Value = Int;
-pub type Env = Vec<(Label, Value)>;
 
 #[derive(Debug, Clone)]
 pub enum Atom {
@@ -169,20 +168,77 @@ pub macro r#let {
     }
 }
 
+type SymTable<T> = Vec<(String, T)>;
+pub type Env = SymTable<Value>;
+
+pub macro sym {
+    () => {
+        Vec::new()
+    },
+    ($elem:expr; $n:expr) => {
+        vec::from_elem($elem, $n)
+    },
+    ($($x:expr),+ $(,)?) => {
+        <[_]>::into_vec(box [$($x),+])
+    },
+}
+
+pub fn sym_get<'a, T>(sym: &'a SymTable<T>, key: &str) -> Option<&'a T> {
+    sym.iter()
+        .rev()
+        .find_map(|x| if x.0 != key { None } else { Some(&x.1) })
+}
+
+pub fn sym_set<T: Clone>(sym: &SymTable<T>, key: &str, val: &T) -> SymTable<T> {
+    let mut sym = sym.clone();
+    sym.push((key.to_string(), val.clone()));
+    sym
+}
+
+pub fn interp_atom(env: &Env, e: &Atom) -> Value {
+    match e {
+        Atom::Int(n) => *n,
+        Atom::Var(x) => sym_get(env, &x).unwrap().clone(),
+    }
+}
+pub fn interp_exp(env: &Env, e: &Expr) -> Value {
+    match e {
+        Expr::Atom(atom) => interp_atom(env, atom),
+        Expr::Read => {
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input).unwrap();
+            input.trim().parse().unwrap()
+        }
+        Expr::Neg(e) => -interp_atom(env, e),
+        Expr::Add(e1, e2) => interp_atom(env, e1) + interp_atom(env, e2),
+        Expr::Let(x, e, body) => {
+            let new_env = sym_set(env, x, &interp_exp(env, e));
+            interp_exp(&new_env, body)
+        }
+    }
+}
+
 #[cfg(test)]
 mod rvar_anf_lang {
     #[test]
     fn t1() {
-        use super::rco_exp;
-        let p1 = {
+        use super::{interp_exp, rco_exp};
+        let (p1, v1) = {
             use super::rvar_lang::*;
-            r#let!([x add!(12, add!(neg!(20), neg!(add!(10,neg!(15)))))]
-                    add!(add!(30, neg!(15)), x))
+            let p1 = r#let!([x add!(12, add!(neg!(20), neg!(add!(10,neg!(15)))))]
+                    add!(add!(30, neg!(15)), x));
+            let v1 = interp_exp(&vec![], &p1);
+            (p1, v1)
         };
         println!("p1= {:#?} ", p1);
 
         let p1anf = rco_exp(&p1);
         println!("p1= {:#?} ", p1anf);
+
+        let v1anf = interp_exp(&vec![], &p1anf);
+
+        println!("v1anf= {}", v1anf);
+        assert_eq!(v1, v1anf);
     }
 
     #[test]
