@@ -107,6 +107,7 @@ fn gensym(x: &str) -> String {
     x.to_string() + &counter.to_string()
 }
 
+// remove-complex-opera* {opera* = operations|operands}
 pub fn rco_exp(e: &RVarTerm) -> Expr {
     fn is_atom(e: &RVarTerm) -> bool {
         match e {
