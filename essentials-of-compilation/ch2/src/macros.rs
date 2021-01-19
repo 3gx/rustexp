@@ -99,5 +99,12 @@ pub macro r#match {
             (@obj $obj)
             (@rules)
         )
+    },
+    (  $obj:expr, $($tail:tt)* ) => {
+        r#match!(
+            (@cases $($tail)*)
+            (@obj $obj)
+            (@rules)
+        )
     }
 }
