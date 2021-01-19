@@ -18,7 +18,7 @@ pub macro r#match {
         $($tt)*
     },
 
-    // generate terimal guard code for match
+    // generate terimal guard code for `if let` guard
     (@guard $cb:ident ($then:expr, $else:expr), let $pat:pat = $expr:expr $(,)?) => {
         r#match!(@$cb
             match $expr { $pat => $then, _ => $else }
@@ -26,7 +26,7 @@ pub macro r#match {
             )
     },
 
-    // generate recursive guard code for match
+    // generate recursive guard for pattern amtching `if let ..' guard
     (@guard $cb:ident ($then:expr, $else:expr), let $pat:pat = $expr:expr, $($tail:tt)*) => {
         r#match!(@$cb
 //          if let $pat = $expr { r#match!(@guard $cb ($then,$else), $($tail)*) } else { $else }
@@ -46,6 +46,7 @@ pub macro r#match {
         )
     },
 
+    // generate terimal guard code for boolean 'if {..}' guard
     (@guard $cb:ident ($then:expr, $_else:expr), true, $(,)?) => {
         $then
     },
@@ -61,7 +62,7 @@ pub macro r#match {
 //        if $guard { r#match!(@guard $cb ($then,$else), $($tail)*) } else { $else }
     },
 
-    // generate different cases for match with patter matching guard
+    // recursive cases with 'if @{..}' guard w/ or w/o `{ }` but with `,'
     ((@cases $($pat:pat)|+ $(if @{$($guard:tt)*})? => $result:expr, $($tail:tt)*)
      (@obj $($obj:tt)*)
      (@rules $($rules:tt)*)) => {
@@ -77,6 +78,8 @@ pub macro r#match {
                                       true, $($($guard)*)?) },
                           ))
     },
+
+    // recursive cases with 'if @{..}' guard but `{ }` rule w/o `,'
     ((@cases $($pat:pat)|+ $(if @{$($guard:tt)*})? => {$($result:tt)*} $($tail:tt)*)
      (@obj $($obj:tt)*)
      (@rules $($rules:tt)*)) => {
@@ -85,6 +88,8 @@ pub macro r#match {
                (@obj $($obj)*)
                (@rules $($rules)*))
     },
+
+    // single pattern with 'if @{..}' guard
     ((@cases $($pat:pat)|+ $(if @{$($guard:tt)*})? => $result:expr)
      (@obj $($obj:tt)*)
      (@rules $($rules:tt)*)) => {
@@ -94,7 +99,7 @@ pub macro r#match {
                (@rules $($rules)*))
     },
 
-    // generate different cases for match with conditional guard
+    // recursive cases with boolean 'if guard'
     ((@cases $($pat:pat)|+ $(if $guard:expr)? => $result:expr, $($tail:tt)*)
      (@obj $($obj:tt)*)
      (@rules $($rules:tt)*)) => {
@@ -103,7 +108,7 @@ pub macro r#match {
                (@obj $($obj)*)
                (@rules $($rules)* $($pat)|+ $(if $guard)? => $result,))
     },
-    /*
+    /* keep-it, maybe not needed. similar patter above for 'if @{..}' guard w/o ','
     ((@cases $($pat:pat)|+ $(if $guard:expr)? => {$($result:tt)*} $($tail:tt)*)
      (@obj $($obj:tt)*)
      (@rules $($rules:tt)*)) => {
@@ -113,6 +118,7 @@ pub macro r#match {
                (@rules $($rules)*))
     },
     */
+    // single pattern with boolean 'if guard'
     ((@cases $($pat:pat)|+ $(if $guard:expr)? => $result:expr)
      (@obj $($obj:tt)*)
      (@rules $($rules:tt)*)) => {
@@ -122,7 +128,7 @@ pub macro r#match {
                (@rules $($rules)*))
     },
 
-    // entry match code
+    // entry point: r#match!{ [expr] match }
     ( [ $obj:expr ] $($tail:tt)* ) => {
         r#match!(
             (@cases $($tail)*)
@@ -130,6 +136,8 @@ pub macro r#match {
             (@rules)
         )
     },
+
+    // alterantive entry point: r#match!{ expr, match }
     (  $obj:expr, $($tail:tt)* ) => {
         r#match!(
             (@cases $($tail)*)
