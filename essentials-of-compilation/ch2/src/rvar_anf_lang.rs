@@ -124,8 +124,8 @@ pub fn rco_exp(e: &RVarTerm) -> Expr {
         RVarTerm::Read => Expr::Read,
         RVarTerm::Add(e1, e2) => {
             let (a1, e1) = rco_atom(e1);
-            let (a2, e2) = rco_atom(e2);
-            rco_op((a1, e1), |x| rco_op((a2, e2), |y| Expr::Add(x, y)))
+            let ae2 = rco_atom(e2);
+            rco_op((a1, e1), |x| rco_op(ae2, |y| Expr::Add(x, y)))
         }
         RVarTerm::Neg(e) => rco_op(rco_atom(e), |x| Expr::Neg(x)),
         RVarTerm::Let(x, e, body) => Expr::Let(x.clone(), box rco_exp(e), box rco_exp(body)),
