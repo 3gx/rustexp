@@ -117,6 +117,11 @@ pub fn rco_exp(e: &RVarTerm) -> Expr {
         RVarTerm::Int(i) => Expr::Atom(int!(*i)),
         RVarTerm::Var(x) => Expr::Atom(var!(&x)),
         RVarTerm::Read => Expr::Read,
+        RVarTerm::Add(e1, e2) if false => {
+            let (a1, e1) = rco_atom1(e1);
+            let (a2, e2) = rco_atom1(e2);
+            mk_op(&a1,&e1, |x| mk_op(&a2,&e2, |y| Expr::Add(x,y)))
+        },
         RVarTerm::Add(e1, e2) => match (is_atom(e1),is_atom(e2)) {
             (true,true) => Expr::Add(rco_atom(e1), rco_atom(e2)),
             (false,true) => {
@@ -148,6 +153,16 @@ pub fn rco_atom(e: &RVarTerm) -> Atom {
         RVarTerm::Var(x) => var!(&x),
         _ => panic!("not an atomic expression {:?}", e)
     }
+}
+
+#[allow(unused_variables)]
+fn rco_atom1(e: &RVarTerm) -> (Atom, Option<Expr>) {
+    unimplemented!()
+}
+
+#[allow(unused_variables)]
+fn mk_op(a: &Atom, e: &Option<Expr>, f: impl FnOnce(Atom) -> Expr) -> Expr {
+    unimplemented!()
 }
 
 pub macro r#let {
