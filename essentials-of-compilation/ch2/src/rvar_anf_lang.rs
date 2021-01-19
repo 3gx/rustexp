@@ -79,6 +79,7 @@ pub macro add {
     },
 }
 
+#[allow(unused_imports)]
 use macros::r#match;
 
 #[derive(Debug, Clone)]
@@ -107,35 +108,35 @@ fn gensym(x: &str) -> String {
 
 // remove-complex-opera* {opera* = operations|operands}
 pub fn rco_exp(e: &RVarTerm) -> Expr {
-    r#match! { [e]
+    fn rco_op((a, e): (Atom, Option<Expr>), f: impl FnOnce(Atom) -> Expr) -> Expr {
+        match (a, e) {
+            (a, None) => f(a.clone()),
+            (Atom::Var(x), Some(e)) => {
+                let a = var!(&x);
+                Expr::Let(x, box e, box f(a))
+            }
+            x => panic!("unhandled {:?}", x),
+        }
+    }
+    match e {
         RVarTerm::Int(i) => Expr::Atom(int!(*i)),
         RVarTerm::Var(x) => Expr::Atom(var!(&x)),
         RVarTerm::Read => Expr::Read,
         RVarTerm::Add(e1, e2) => {
             let (a1, e1) = rco_atom(e1);
             let (a2, e2) = rco_atom(e2);
-            rco_op((a1,e1), |x| rco_op((a2,e2), |y| Expr::Add(x,y)))
-        },
+            rco_op((a1, e1), |x| rco_op((a2, e2), |y| Expr::Add(x, y)))
+        }
         RVarTerm::Neg(e) => rco_op(rco_atom(e), |x| Expr::Neg(x)),
         RVarTerm::Let(x, e, body) => Expr::Let(x.clone(), box rco_exp(e), box rco_exp(body)),
     }
 }
+
 fn rco_atom(e: &RVarTerm) -> (Atom, Option<Expr>) {
-    r#match! { [e]
+    match e {
         RVarTerm::Int(i) => (int!(*i), None),
         RVarTerm::Var(x) => (var!(&x), None),
-        e => (var!(gensym("tmp")), Some(rco_exp(e)))
-    }
-}
-
-fn rco_op((a, e): (Atom, Option<Expr>), f: impl FnOnce(Atom) -> Expr) -> Expr {
-    match (a, e) {
-        (a, None) => f(a.clone()),
-        (Atom::Var(x), Some(e)) => {
-            let a = var!(&x);
-            Expr::Let(x, box e, box f(a))
-        }
-        x => panic!("unhandled {:?}", x),
+        e => (var!(gensym("tmp")), Some(rco_exp(e))),
     }
 }
 
