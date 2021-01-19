@@ -107,21 +107,24 @@ fn gensym(x: &str) -> String {
 
 // remove-complex-opera* {opera* = operations|operands}
 pub fn rco_exp(e: &RVarTerm) -> Expr {
+    /*
     fn is_atom(e: &RVarTerm) -> bool {
         match e {
             RVarTerm::Int(_) | RVarTerm::Var(_) => true,
             _ => false,
         }
     }
+    */
     r#match! { [e]
         RVarTerm::Int(i) => Expr::Atom(int!(*i)),
         RVarTerm::Var(x) => Expr::Atom(var!(&x)),
         RVarTerm::Read => Expr::Read,
-        RVarTerm::Add(e1, e2) if false => {
+        RVarTerm::Add(e1, e2) => {
             let (a1, e1) = rco_atom1(e1);
             let (a2, e2) = rco_atom1(e2);
-            mk_op(&a1,&e1, |x| mk_op(&a2,&e2, |y| Expr::Add(x,y)))
+            mk_op((a1,e1), |x| mk_op((a2,e2), |y| Expr::Add(x,y)))
         },
+        /*
         RVarTerm::Add(e1, e2) => match (is_atom(e1),is_atom(e2)) {
             (true,true) => Expr::Add(rco_atom(e1), rco_atom(e2)),
             (false,true) => {
@@ -139,15 +142,19 @@ pub fn rco_exp(e: &RVarTerm) -> Expr {
                     box Expr::Let(t2.clone(), box rco_exp(e2), box Expr::Add(var!(&t1), var!(&t2))))
             },
         },
-        RVarTerm::Neg(e) if is_atom(e) => Expr::Neg(rco_atom(e)),
+        */
+        RVarTerm::Neg(e) => mk_op(rco_atom1(e), |x| Expr::Neg(x)),
+        /*
         RVarTerm::Neg(e) => {
             let t = gensym("tmp");
             Expr::Let(t.clone(), box rco_exp(e), box Expr::Neg(var!(&t)))
         },
+        */
         RVarTerm::Let(x, e, body) => Expr::Let(x.clone(), box rco_exp(e), box rco_exp(body)),
     }
 }
-pub fn rco_atom(e: &RVarTerm) -> Atom {
+/*
+fn rco_atom(e: &RVarTerm) -> Atom {
     r#match! { [e]
         RVarTerm::Int(i) => int!(*i),
         RVarTerm::Var(x) => var!(&x),
@@ -155,14 +162,21 @@ pub fn rco_atom(e: &RVarTerm) -> Atom {
     }
 }
 
-#[allow(unused_variables)]
+*/
 fn rco_atom1(e: &RVarTerm) -> (Atom, Option<Expr>) {
-    unimplemented!()
+    r#match! { [e]
+        RVarTerm::Int(i) => (int!(*i), None),
+        RVarTerm::Var(x) => (var!(&x), None),
+        e => (var!(gensym("tmp")), Some(rco_exp(e)))
+    }
 }
 
-#[allow(unused_variables)]
-fn mk_op(a: &Atom, e: &Option<Expr>, f: impl FnOnce(Atom) -> Expr) -> Expr {
-    unimplemented!()
+fn mk_op((a, e): (Atom, Option<Expr>), f: impl FnOnce(Atom) -> Expr) -> Expr {
+    r#match! { [e]
+        None => f(a),
+        Some(e) if @{let Atom::Var(x) = &a} => Expr::Let(x.clone(), box e, box f(a)),
+        _ => panic!("unhandled {:?}", e)
+    }
 }
 
 pub macro r#let {
