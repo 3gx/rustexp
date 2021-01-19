@@ -162,7 +162,7 @@ pub fn interp_tail(env: &Env, tail: &Tail) -> Value {
 pub fn inter_prog(prog: &CProgram) -> Value {
     let CProgram(_, blocks) = prog;
     r#match! { [ &blocks[..] ]
-        [(s,tail)] if @{let "start" = &s[..]} =>  interp_tail(&env![], tail),
+        [(s,tail)] if @{"start" = &s[..]} =>  interp_tail(&env![], tail),
         _ => panic!("unhandled {:?}", blocks)
     }
 

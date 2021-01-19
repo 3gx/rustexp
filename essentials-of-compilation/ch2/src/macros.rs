@@ -25,13 +25,6 @@ pub macro r#match {
             //if let $pat = $expr { $then } else {$else }
             )
     },
-    (@guard $cb:ident ($then:expr, $_else:expr), true, $(,)?) => {
-        $then
-    },
-    (@guard $cb:ident ($then:expr, $else:expr), $guard:expr $(,)?) => {
-        //if $guard { $then } else { $else }
-        match $guard { true => $then, _ => $else }
-    },
 
     // generate recursive guard code for match
     (@guard $cb:ident ($then:expr, $else:expr), let $pat:pat = $expr:expr, $($tail:tt)*) => {
@@ -40,7 +33,26 @@ pub macro r#match {
           match $expr { $pat => r#match!(@guard $cb ($then,$else), $($tail)*), _ => $else }
         )
     },
+    (@guard $cb:ident ($then:expr, $else:expr), $pat:pat = $expr:expr $(,)?) => {
+        r#match!(@$cb
+            match $expr { $pat => $then, _ => $else }
+            //if let $pat = $expr { $then } else {$else }
+            )
+    },
+    (@guard $cb:ident ($then:expr, $else:expr), $pat:pat = $expr:expr, $($tail:tt)*) => {
+        r#match!(@$cb
+//          if let $pat = $expr { r#match!(@guard $cb ($then,$else), $($tail)*) } else { $else }
+          match $expr { $pat => r#match!(@guard $cb ($then,$else), $($tail)*), _ => $else }
+        )
+    },
 
+    (@guard $cb:ident ($then:expr, $_else:expr), true, $(,)?) => {
+        $then
+    },
+    (@guard $cb:ident ($then:expr, $else:expr), $guard:expr $(,)?) => {
+        //if $guard { $then } else { $else }
+        match $guard { true => $then, _ => $else }
+    },
     (@guard $cb:ident ($then:expr,$else:expr), true, $($tail:tt)*) => {
         r#match!(@guard $cb ($then,$else), $($tail)*)
     },

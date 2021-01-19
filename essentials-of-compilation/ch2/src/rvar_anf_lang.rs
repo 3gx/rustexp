@@ -274,9 +274,9 @@ mod test {
         fn eval(e: &Expr) -> i64 {
             r#match! { [e]
                 Int(n) => *n,
-                Prim(Neg, v) if @{let [Int(m)] = v.as_slice()} => -*m,
-                Prim(Neg, v) if @{let [e] = &v[..]} => -eval(e),
-                Prim(Add, v) if @{let [e1,e2] = &v[..]} => eval(e1) + eval(e2),
+                Prim(Neg, v) if @{[Int(m)] = v.as_slice()} => -*m,
+                Prim(Neg, v) if @{[e] = &v[..]} => -eval(e),
+                Prim(Add, v) if @{[e1,e2] = &v[..]} => eval(e1) + eval(e2),
                 _ => panic!("unhandled {:?}", e)
             }
         }
