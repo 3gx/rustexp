@@ -129,10 +129,13 @@ fn rco_atom(e: &RVarTerm) -> (Atom, Option<Expr>) {
 }
 
 fn rco_op((a, e): (Atom, Option<Expr>), f: impl FnOnce(Atom) -> Expr) -> Expr {
-    r#match! { [e]
-        None => f(a),
-        Some(e) if @{let Atom::Var(x) = &a} => Expr::Let(x.clone(), box e, box f(a)),
-        _ => panic!("unhandled {:?}", e)
+    match (a, e) {
+        (a, None) => f(a.clone()),
+        (Atom::Var(x), Some(e)) => {
+            let a = var!(&x);
+            Expr::Let(x, box e, box f(a))
+        }
+        x => panic!("unhandled {:?}", x),
     }
 }
 

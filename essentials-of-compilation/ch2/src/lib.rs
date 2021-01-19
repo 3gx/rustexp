@@ -5,6 +5,7 @@
 //#![feature(associated_type_defaults)]
 #![feature(box_patterns)]
 #![feature(box_syntax)]
+//#![feature(bindings_after_at)]
 
 pub mod cvar_lang;
 pub mod macros;
