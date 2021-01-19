@@ -107,63 +107,20 @@ fn gensym(x: &str) -> String {
 
 // remove-complex-opera* {opera* = operations|operands}
 pub fn rco_exp(e: &RVarTerm) -> Expr {
-    /*
-    fn is_atom(e: &RVarTerm) -> bool {
-        match e {
-            RVarTerm::Int(_) | RVarTerm::Var(_) => true,
-            _ => false,
-        }
-    }
-    */
     r#match! { [e]
         RVarTerm::Int(i) => Expr::Atom(int!(*i)),
         RVarTerm::Var(x) => Expr::Atom(var!(&x)),
         RVarTerm::Read => Expr::Read,
         RVarTerm::Add(e1, e2) => {
-            let (a1, e1) = rco_atom1(e1);
-            let (a2, e2) = rco_atom1(e2);
-            mk_op((a1,e1), |x| mk_op((a2,e2), |y| Expr::Add(x,y)))
+            let (a1, e1) = rco_atom(e1);
+            let (a2, e2) = rco_atom(e2);
+            rco_op((a1,e1), |x| rco_op((a2,e2), |y| Expr::Add(x,y)))
         },
-        /*
-        RVarTerm::Add(e1, e2) => match (is_atom(e1),is_atom(e2)) {
-            (true,true) => Expr::Add(rco_atom(e1), rco_atom(e2)),
-            (false,true) => {
-                let t1 = gensym("tmp");
-                Expr::Let(t1.clone(), box rco_exp(e1), box Expr::Add(var!(&t1), rco_atom(e2)))
-            },
-            (true,false) => {
-                let t2 = gensym("tmp");
-                Expr::Let(t2.clone(), box rco_exp(e2), box Expr::Add(rco_atom(e1), var!(&t2)))
-            },
-            (false, false) => {
-                let t1 = gensym("tmp");
-                let t2 = gensym("tmp");
-                Expr::Let(t1.clone(), box rco_exp(e1),
-                    box Expr::Let(t2.clone(), box rco_exp(e2), box Expr::Add(var!(&t1), var!(&t2))))
-            },
-        },
-        */
-        RVarTerm::Neg(e) => mk_op(rco_atom1(e), |x| Expr::Neg(x)),
-        /*
-        RVarTerm::Neg(e) => {
-            let t = gensym("tmp");
-            Expr::Let(t.clone(), box rco_exp(e), box Expr::Neg(var!(&t)))
-        },
-        */
+        RVarTerm::Neg(e) => rco_op(rco_atom(e), |x| Expr::Neg(x)),
         RVarTerm::Let(x, e, body) => Expr::Let(x.clone(), box rco_exp(e), box rco_exp(body)),
     }
 }
-/*
-fn rco_atom(e: &RVarTerm) -> Atom {
-    r#match! { [e]
-        RVarTerm::Int(i) => int!(*i),
-        RVarTerm::Var(x) => var!(&x),
-        _ => panic!("not an atomic expression {:?}", e)
-    }
-}
-
-*/
-fn rco_atom1(e: &RVarTerm) -> (Atom, Option<Expr>) {
+fn rco_atom(e: &RVarTerm) -> (Atom, Option<Expr>) {
     r#match! { [e]
         RVarTerm::Int(i) => (int!(*i), None),
         RVarTerm::Var(x) => (var!(&x), None),
@@ -171,7 +128,7 @@ fn rco_atom1(e: &RVarTerm) -> (Atom, Option<Expr>) {
     }
 }
 
-fn mk_op((a, e): (Atom, Option<Expr>), f: impl FnOnce(Atom) -> Expr) -> Expr {
+fn rco_op((a, e): (Atom, Option<Expr>), f: impl FnOnce(Atom) -> Expr) -> Expr {
     r#match! { [e]
         None => f(a),
         Some(e) if @{let Atom::Var(x) = &a} => Expr::Let(x.clone(), box e, box f(a)),
