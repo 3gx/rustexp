@@ -109,12 +109,12 @@ fn gensym(x: &str) -> String {
 // remove-complex-opera* {opera* = operations|operands}
 pub fn rco_exp(e: &RVarTerm) -> Expr {
     fn rco_op((a, e): (Atom, Option<Expr>), f: impl FnOnce(Atom) -> Expr) -> Expr {
-        match (a, e) {
+        r#match! { (a, e),
             (a, None) => f(a.clone()),
             (Atom::Var(x), Some(e)) => {
                 let a = var!(&x);
                 Expr::Let(x, box e, box f(a))
-            }
+            },
             x => panic!("unhandled {:?}", x),
         }
     }
