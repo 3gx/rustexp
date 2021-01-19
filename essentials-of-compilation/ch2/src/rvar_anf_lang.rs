@@ -261,7 +261,7 @@ mod test {
         println!("p1= {:#?} ", p1);
 
         let p1anf = rco_exp(&p1);
-        println!("p1= {:#?} ", p1anf);
+        println!("p1anf= {:#?} ", p1anf);
 
         let v1anf = interp_exp(&vec![], &p1anf);
 
@@ -279,7 +279,7 @@ mod test {
         println!("p1= {:#?} ", p1);
 
         let p1anf = rco_exp(&p1);
-        println!("p1= {:#?} ", p1anf);
+        println!("p1anf= {:#?} ", p1anf);
     }
 
     #[test]
