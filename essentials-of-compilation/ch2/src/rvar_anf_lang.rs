@@ -114,7 +114,7 @@ pub fn rco_exp(e: &RVarTerm) -> Expr {
             (Atom::Var(x), Some(e)) => {
                 let a = var!(&x);
                 Expr::Let(x, box e, box f(a))
-            },
+            }
             x => panic!("unhandled {:?}", x),
         }
     }

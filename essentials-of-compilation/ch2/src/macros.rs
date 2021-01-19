@@ -65,6 +65,14 @@ pub macro r#match {
                                       true, $($($guard)*)?) },
                           ))
     },
+    ((@cases $($pat:pat)|+ $(if @{$($guard:tt)*})? => {$($result:tt)*} $($tail:tt)*)
+     (@obj $($obj:tt)*)
+     (@rules $($rules:tt)*)) => {
+          r#match!(
+               (@cases $($pat)|+ $(if @{$($guard)*})? => {$($result)*}, $($tail)*)
+               (@obj $($obj)*)
+               (@rules $($rules)*))
+    },
     ((@cases $($pat:pat)|+ $(if @{$($guard:tt)*})? => $result:expr)
      (@obj $($obj:tt)*)
      (@rules $($rules:tt)*)) => {
@@ -83,6 +91,16 @@ pub macro r#match {
                (@obj $($obj)*)
                (@rules $($rules)* $($pat)|+ $(if $guard)? => $result,))
     },
+    /*
+    ((@cases $($pat:pat)|+ $(if $guard:expr)? => {$($result:tt)*} $($tail:tt)*)
+     (@obj $($obj:tt)*)
+     (@rules $($rules:tt)*)) => {
+          r#match!(
+               (@cases $($pat)|+ $(if $guard)? => {$($result)*}, $($tail)*)
+               (@obj $($obj)*)
+               (@rules $($rules)*))
+    },
+    */
     ((@cases $($pat:pat)|+ $(if $guard:expr)? => $result:expr)
      (@obj $($obj:tt)*)
      (@rules $($rules:tt)*)) => {
