@@ -171,7 +171,26 @@ pub fn inter_prog(prog: &CProgram) -> Value {
 
 #[allow(unused_variables)]
 pub fn explicate_tail(e: &RVarAnf::Expr) -> (Tail, Vec<String>) {
-    unimplemented!()
+    fn from_atom(a: &RVarAnf::Atom) -> Atom {
+        match a {
+            RVarAnf::Atom::Int(n) => Atom::Int(*n),
+            RVarAnf::Atom::Var(v) => Atom::Var(v.clone()),
+        }
+    }
+    match e {
+        RVarAnf::Expr::Atom(a) => (Tail::Return(Expr::Atom(from_atom(a))), vec![]),
+        RVarAnf::Expr::Read => (Tail::Return(Expr::Read), vec![]),
+        RVarAnf::Expr::Neg(a) => (Tail::Return(Expr::Neg(from_atom(a))), vec![]),
+        RVarAnf::Expr::Add(a1, a2) => (
+            Tail::Return(Expr::Add(from_atom(a1), from_atom(a2))),
+            vec![],
+        ),
+        RVarAnf::Expr::Let(var, e_not_tail, e_tail) => {
+            let (tail, vars) = explicate_tail(e_tail);
+            let (tail, vars) = explicate_assign(e_not_tail, var, &tail);
+            unimplemented!()
+        }
+    }
 }
 
 #[allow(unused_variables)]
