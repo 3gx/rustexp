@@ -46,5 +46,9 @@ mod cvar_lang {
         let (tail, vars) = cvar_lang::explicate_tail(&p1anf);
         println!("vars= {:?}", vars);
         println!("tail= {:#?}", tail);
+
+        let v1clang = cvar_lang::interp_tail(&vec![], &tail);
+        println!("v1clang= {}", v1clang);
+        assert_eq!(v1anf, v1clang);
     }
 }
