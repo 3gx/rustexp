@@ -11,6 +11,7 @@ use macros::r#match;
 #[path = "rvar_anf_lang.rs"]
 mod rvar_anf_lang;
 
+use rvar_anf_lang as RVarAnf;
 pub use rvar_anf_lang::rvar_lang;
 
 pub fn env_get<'a>(env: &'a Env, key: &str) -> Option<&'a Value> {
@@ -166,4 +167,14 @@ pub fn inter_prog(prog: &CProgram) -> Value {
                             => interp_tail(&env![], tail),
         _ => panic!("unhandled {:?}", prog),
     }
+}
+
+#[allow(unused_variables)]
+pub fn explicate_tail(e: &RVarAnf::Expr) -> (Tail, Vec<String>) {
+    unimplemented!()
+}
+
+#[allow(unused_variables)]
+pub fn explicate_assign(e: &RVarAnf::Expr, var: &str, tail: &Tail) -> (Tail, Vec<String>) {
+    unimplemented!()
 }
