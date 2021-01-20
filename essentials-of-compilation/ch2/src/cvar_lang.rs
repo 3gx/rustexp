@@ -9,7 +9,7 @@ mod macros;
 use macros::r#match;
 
 #[path = "rvar_anf_lang.rs"]
-mod rvar_anf_lang;
+pub mod rvar_anf_lang;
 
 use rvar_anf_lang as RVarAnf;
 pub use rvar_anf_lang::rvar_lang;
