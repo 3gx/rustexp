@@ -1,6 +1,6 @@
 type Int = i64;
 type Label = String;
-type Info = Vec<i64>;
+type Info = Vec<String>;
 type Value = Int;
 pub type Env = Vec<(Label, Value)>;
 
@@ -160,7 +160,7 @@ pub fn interp_tail(env: &Env, tail: &Tail) -> Value {
     }
 }
 
-pub fn inter_prog(prog: &CProgram) -> Value {
+pub fn interp_prog(prog: &CProgram) -> Value {
     r#match! { prog,
         CProgram(_, blocks) if @{[(label, tail),..] = &blocks[..],
                                   "start" == label}
@@ -207,9 +207,9 @@ pub fn explicate_assign(e: &RVarAnf::Expr, var: &str, tail: &Tail) -> (Tail, Vec
         RVarAnf::Expr::Read => (assign(Expr::Read), vec![]),
         RVarAnf::Expr::Neg(a) => (assign(Expr::Neg(from_atom(a))), vec![]),
         RVarAnf::Expr::Add(a1, a2) => (assign(Expr::Add(from_atom(a1), from_atom(a2))), vec![]),
-        RVarAnf::Expr::Let(x, e1, e2) => {
-            let (tail, vars1) = explicate_assign(e1, x, tail);
-            let (tail, vars2) = explicate_assign(e2, var, &tail);
+        RVarAnf::Expr::Let(x, expr, body) => {
+            let (tail, vars1) = explicate_assign(body, var, tail);
+            let (tail, vars2) = explicate_assign(expr, x, &tail);
             let mut vars = vec![x.clone()];
             for v in vars1.iter() {
                 vars.push(v.clone());

@@ -17,7 +17,7 @@ mod cvar_lang {
 
         let prog = CProgram(vec![], vec![("start".to_string(), Tail::Return(exp))]);
         println!("prog= {:?}", prog);
-        println!("eval= {:?}", inter_prog(&prog));
+        println!("eval= {:?}", interp_prog(&prog));
     }
 
     #[test]
@@ -47,7 +47,9 @@ mod cvar_lang {
         println!("vars= {:?}", vars);
         println!("tail= {:#?}", tail);
 
-        let v1clang = cvar_lang::interp_tail(&vec![], &tail);
+        let cprog = cvar_lang::CProgram(vars, vec![("start".to_string(), tail)]);
+
+        let v1clang = cvar_lang::interp_prog(&cprog);
         println!("v1clang= {}", v1clang);
         assert_eq!(v1anf, v1clang);
     }
