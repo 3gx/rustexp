@@ -162,7 +162,8 @@ pub fn interp_tail(env: &Env, tail: &Tail) -> Value {
 pub fn inter_prog(prog: &CProgram) -> Value {
     r#match! { prog,
         CProgram(_, blocks) if @{[(label, tail),..] = &blocks[..],
-                                  "start" == label} => interp_tail(&env![], tail),
+                                  "start" == label}
+                            => interp_tail(&env![], tail),
         _ => panic!("unhandled {:?}", prog),
     }
 }
