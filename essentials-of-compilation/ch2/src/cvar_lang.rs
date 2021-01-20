@@ -169,13 +169,14 @@ pub fn inter_prog(prog: &CProgram) -> Value {
     }
 }
 
-pub fn explicate_tail(e: &RVarAnf::Expr) -> (Tail, Vec<String>) {
-    fn from_atom(a: &RVarAnf::Atom) -> Atom {
-        match a {
-            RVarAnf::Atom::Int(n) => Atom::Int(*n),
-            RVarAnf::Atom::Var(v) => Atom::Var(v.clone()),
-        }
+fn from_atom(a: &RVarAnf::Atom) -> Atom {
+    match a {
+        RVarAnf::Atom::Int(n) => Atom::Int(*n),
+        RVarAnf::Atom::Var(v) => Atom::Var(v.clone()),
     }
+}
+
+pub fn explicate_tail(e: &RVarAnf::Expr) -> (Tail, Vec<String>) {
     match e {
         RVarAnf::Expr::Atom(a) => (Tail::Return(Expr::Atom(from_atom(a))), vec![]),
         RVarAnf::Expr::Read => (Tail::Return(Expr::Read), vec![]),
@@ -193,7 +194,24 @@ pub fn explicate_tail(e: &RVarAnf::Expr) -> (Tail, Vec<String>) {
 }
 
 pub fn explicate_assign(e: &RVarAnf::Expr, var: &str, tail: &Tail) -> (Tail, Vec<String>) {
-    match e {
-        _ => unimplemented!(),
-    }
+    let mut vars = vec![];
+    let expr = match e {
+        RVarAnf::Expr::Atom(a) => Expr::Atom(from_atom(a)),
+        RVarAnf::Expr::Read => Expr::Read,
+        RVarAnf::Expr::Neg(a) => Expr::Neg(from_atom(a)),
+        RVarAnf::Expr::Add(a1, a2) => Expr::Add(from_atom(a1), from_atom(a2)),
+        RVarAnf::Expr::Let(x, e1, e2) => {
+            let (tail1, vars1) = explicate_assign(e1, x, tail);
+            let (tail2, vars2) = explicate_assign(e1, var, &tail1);
+            unimplemented!()
+        }
+    };
+    vars.push(var.to_string());
+    (
+        Tail::Seq(
+            Stmt::AssignVar(var.to_string(), expr),
+            Box::new(tail.clone()),
+        ),
+        vars,
+    )
 }
