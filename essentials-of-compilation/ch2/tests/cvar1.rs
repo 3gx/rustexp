@@ -12,5 +12,9 @@ mod cvar_lang {
         let exp = add!(10, 32);
         println!("expr= {:?}", exp);
         println!("res= {}", interp_expr(&cvar_lang::env![], &exp));
+
+        let prog = CProgram(vec![], vec![("start".to_string(), Tail::Return(exp))]);
+        println!("prog= {:?}", prog);
+        println!("eval= {:?}", inter_prog(&prog));
     }
 }

@@ -119,7 +119,7 @@ pub enum Tail {
 }
 
 #[derive(Debug, Clone)]
-pub struct CProgram(Info, Vec<(Label, Tail)>);
+pub struct CProgram(pub Info, pub Vec<(Label, Tail)>);
 
 pub fn interp_atom(env: &Env, atom: &Atom) -> Value {
     use Atom::*;
@@ -160,28 +160,9 @@ pub fn interp_tail(env: &Env, tail: &Tail) -> Value {
 }
 
 pub fn inter_prog(prog: &CProgram) -> Value {
-    let CProgram(_, blocks) = prog;
     r#match! { prog,
         CProgram(_, blocks) if @{[(label, tail),..] = &blocks[..],
                                   "start" == label} => interp_tail(&env![], tail),
-        _ => panic!("unhandled {:?}", blocks)
+        _ => panic!("unhandled {:?}", prog),
     }
-
-    /*
-    match prog {
-        case!(CProgram(_, Vec[(String("start"), tail)]) => interp_tail(&env![], tail)),
-        _ => panic!("unhandled {:?}", blocks)
-    }
-
-    becomes
-
-    match prog {
-        CProgram(_, vec) => match &vec[..] {
-            &[str, tail] => match &str[..] {
-                "start" => yay!
-            },
-        },
-        _ => panic!("unhandled {:?}", blocks)
-    }
-    */
 }
