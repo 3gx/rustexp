@@ -169,7 +169,6 @@ pub fn inter_prog(prog: &CProgram) -> Value {
     }
 }
 
-#[allow(unused_variables)]
 pub fn explicate_tail(e: &RVarAnf::Expr) -> (Tail, Vec<String>) {
     fn from_atom(a: &RVarAnf::Atom) -> Atom {
         match a {
@@ -193,7 +192,8 @@ pub fn explicate_tail(e: &RVarAnf::Expr) -> (Tail, Vec<String>) {
     }
 }
 
-#[allow(unused_variables)]
 pub fn explicate_assign(e: &RVarAnf::Expr, var: &str, tail: &Tail) -> (Tail, Vec<String>) {
-    unimplemented!()
+    match e {
+        _ => unimplemented!(),
+    }
 }
