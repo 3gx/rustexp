@@ -8,58 +8,36 @@ pub macro r#match {
            }
     },
 
-    // inject token-tree with attributes
-    (@allow_unused $($tt:tt)*) => {
-//        #[allow(unused_variables)]
-        $($tt)*
-    },
-    /* carbon_copy */
-    (@carbon_copy $($tt:tt)*) => {
-        $($tt)*
-    },
-
     // generate terimal guard code for `if let` guard
-    (@guard $cb:ident ($then:expr, $else:expr), let $pat:pat = $expr:expr $(,)?) => {
-        r#match!(@$cb
-            match $expr { $pat => $then, _ => $else }
-            //if let $pat = $expr { $then } else {$else }
-            )
+    (@guard ($then:expr, $else:expr), let $pat:pat = $expr:expr $(,)?) => {
+        match $expr { $pat => $then, _ => $else }
     },
 
     // generate recursive guard for pattern amtching `if let ..' guard
-    (@guard $cb:ident ($then:expr, $else:expr), let $pat:pat = $expr:expr, $($tail:tt)*) => {
-        r#match!(@$cb
-          match $expr { $pat => r#match!(@guard $cb ($then,$else), $($tail)*), _ => $else }
-//          if let $pat = $expr { r#match!(@guard $cb ($then,$else), $($tail)*) } else { $else }
-        )
+    (@guard ($then:expr, $else:expr), let $pat:pat = $expr:expr, $($tail:tt)*) => {
+        match $expr { $pat => r#match!(@guard ($then,$else), $($tail)*), _ => $else }
     },
-    (@guard $cb:ident ($then:expr, $else:expr), $pat:pat = $expr:expr $(,)?) => {
-        r#match!(@$cb
-           match $expr { $pat => $then, _ => $else }
-//            if let $pat = $expr { $then } else {$else }
-            )
+
+    // same but w/o let keyword
+    (@guard ($then:expr, $else:expr), $pat:pat = $expr:expr $(,)?) => {
+        match $expr { $pat => $then, _ => $else }
     },
-    (@guard $cb:ident ($then:expr, $else:expr), $pat:pat = $expr:expr, $($tail:tt)*) => {
-        r#match!(@$cb
-          match $expr { $pat => r#match!(@guard $cb ($then,$else), $($tail)*), _ => $else }
-//          if let $pat = $expr { r#match!(@guard $cb ($then,$else), $($tail)*) } else { $else }
-        )
+    (@guard ($then:expr, $else:expr), $pat:pat = $expr:expr, $($tail:tt)*) => {
+        match $expr { $pat => r#match!(@guard ($then,$else), $($tail)*), _ => $else }
     },
 
     // generate terimal guard code for boolean 'if {..}' guard
-    (@guard $cb:ident ($then:expr, $_else:expr), true, $(,)?) => {
+    (@guard ($then:expr, $_else:expr), true, $(,)?) => {
         $then
     },
-    (@guard $cb:ident ($then:expr, $else:expr), $guard:expr $(,)?) => {
+    (@guard ($then:expr, $else:expr), $guard:expr $(,)?) => {
         match $guard { true => $then, _ => $else }
-        //if $guard { $then } else { $else }
     },
-    (@guard $cb:ident ($then:expr,$else:expr), true, $($tail:tt)*) => {
-        r#match!(@guard $cb ($then,$else), $($tail)*)
+    (@guard ($then:expr,$else:expr), true, $($tail:tt)*) => {
+        r#match!(@guard ($then,$else), $($tail)*)
     },
-    (@guard $cb:ident ($then:expr,$else:expr), $guard:expr, $($tail:tt)*) => {
-       match $guard { true => r#match!(@guard $cb ($then,$else), $($tail)*), _ => $else }
-//        if $guard { r#match!(@guard $cb ($then,$else), $($tail)*) } else { $else }
+    (@guard  ($then:expr,$else:expr), $guard:expr, $($tail:tt)*) => {
+       match $guard { true => r#match!(@guard ($then,$else), $($tail)*), _ => $else }
     },
 
     // recursive cases with 'if @{..}' guard w/ or w/o `{ }` but with `,'
@@ -71,11 +49,8 @@ pub macro r#match {
                (@obj $($obj)*)
                (@rules $($rules)* $($pat)|+
                     $(if {{#![allow(unused_variables)]
-                           r#match!(@guard allow_unused
-                                    (true,false), $($guard)*) }}
-                     )? => {r#match!(@guard carbon_copy
-                                      ($result,
-                                       panic!("unreachable")),
+                           r#match!(@guard (true,false), $($guard)*) }}
+                     )? => {r#match!(@guard ($result, panic!("unreachable")),
                                       true, $($($guard)*)?) },
                           ))
     },
