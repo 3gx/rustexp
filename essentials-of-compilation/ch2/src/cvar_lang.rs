@@ -185,33 +185,39 @@ pub fn explicate_tail(e: &RVarAnf::Expr) -> (Tail, Vec<String>) {
             Tail::Return(Expr::Add(from_atom(a1), from_atom(a2))),
             vec![],
         ),
-        RVarAnf::Expr::Let(var, e_not_tail, e_tail) => {
-            let (tail, vars) = explicate_tail(e_tail);
-            let (tail, vars) = explicate_assign(e_not_tail, var, &tail);
-            unimplemented!()
+        RVarAnf::Expr::Let(x, e_not_tail, e_tail) => {
+            let (tail, vars1) = explicate_tail(e_tail);
+            let (tail, vars2) = explicate_assign(e_not_tail, x, &tail);
+            let mut vars = vec![x.clone()];
+            for v in vars1.iter() {
+                vars.push(v.clone());
+            }
+            for v in vars2.iter() {
+                vars.push(v.clone());
+            }
+            (tail, vars)
         }
     }
 }
 
 pub fn explicate_assign(e: &RVarAnf::Expr, var: &str, tail: &Tail) -> (Tail, Vec<String>) {
-    let mut vars = vec![];
-    let expr = match e {
-        RVarAnf::Expr::Atom(a) => Expr::Atom(from_atom(a)),
-        RVarAnf::Expr::Read => Expr::Read,
-        RVarAnf::Expr::Neg(a) => Expr::Neg(from_atom(a)),
-        RVarAnf::Expr::Add(a1, a2) => Expr::Add(from_atom(a1), from_atom(a2)),
+    let assign = |e: Expr| Tail::Seq(Stmt::AssignVar(var.to_string(), e), Box::new(tail.clone()));
+    match e {
+        RVarAnf::Expr::Atom(a) => (assign(Expr::Atom(from_atom(a))), vec![]),
+        RVarAnf::Expr::Read => (assign(Expr::Read), vec![]),
+        RVarAnf::Expr::Neg(a) => (assign(Expr::Neg(from_atom(a))), vec![]),
+        RVarAnf::Expr::Add(a1, a2) => (assign(Expr::Add(from_atom(a1), from_atom(a2))), vec![]),
         RVarAnf::Expr::Let(x, e1, e2) => {
-            let (tail1, vars1) = explicate_assign(e1, x, tail);
-            let (tail2, vars2) = explicate_assign(e1, var, &tail1);
-            unimplemented!()
+            let (tail, vars1) = explicate_assign(e1, x, tail);
+            let (tail, vars2) = explicate_assign(e2, var, &tail);
+            let mut vars = vec![x.clone()];
+            for v in vars1.iter() {
+                vars.push(v.clone());
+            }
+            for v in vars2.iter() {
+                vars.push(v.clone());
+            }
+            (tail, vars)
         }
-    };
-    vars.push(var.to_string());
-    (
-        Tail::Seq(
-            Stmt::AssignVar(var.to_string(), expr),
-            Box::new(tail.clone()),
-        ),
-        vars,
-    )
+    }
 }
