@@ -29,20 +29,20 @@ pub macro r#match {
     // generate recursive guard for pattern amtching `if let ..' guard
     (@guard $cb:ident ($then:expr, $else:expr), let $pat:pat = $expr:expr, $($tail:tt)*) => {
         r#match!(@$cb
-//          if let $pat = $expr { r#match!(@guard $cb ($then,$else), $($tail)*) } else { $else }
-          match $expr { $pat => r#match!(@guard $cb ($then,$else), $($tail)*), _ => $else }
+          if let $pat = $expr { r#match!(@guard $cb ($then,$else), $($tail)*) } else { $else }
+//          match $expr { $pat => r#match!(@guard $cb ($then,$else), $($tail)*), _ => $else }
         )
     },
     (@guard $cb:ident ($then:expr, $else:expr), $pat:pat = $expr:expr $(,)?) => {
         r#match!(@$cb
-            match $expr { $pat => $then, _ => $else }
-            //if let $pat = $expr { $then } else {$else }
+//           match $expr { $pat => $then, _ => $else }
+            if let $pat = $expr { $then } else {$else }
             )
     },
     (@guard $cb:ident ($then:expr, $else:expr), $pat:pat = $expr:expr, $($tail:tt)*) => {
         r#match!(@$cb
-//          if let $pat = $expr { r#match!(@guard $cb ($then,$else), $($tail)*) } else { $else }
-          match $expr { $pat => r#match!(@guard $cb ($then,$else), $($tail)*), _ => $else }
+          if let $pat = $expr { r#match!(@guard $cb ($then,$else), $($tail)*) } else { $else }
+//          match $expr { $pat => r#match!(@guard $cb ($then,$else), $($tail)*), _ => $else }
         )
     },
 
@@ -58,8 +58,8 @@ pub macro r#match {
         r#match!(@guard $cb ($then,$else), $($tail)*)
     },
     (@guard $cb:ident ($then:expr,$else:expr), $guard:expr, $($tail:tt)*) => {
-        match $guard { true => r#match!(@guard $cb ($then,$else), $($tail)*), _ => $else }
-//        if $guard { r#match!(@guard $cb ($then,$else), $($tail)*) } else { $else }
+ //       match $guard { true => r#match!(@guard $cb ($then,$else), $($tail)*), _ => $else }
+        if $guard { r#match!(@guard $cb ($then,$else), $($tail)*) } else { $else }
     },
 
     // recursive cases with 'if @{..}' guard w/ or w/o `{ }` but with `,'
