@@ -26,5 +26,10 @@ mod rvar_anf_tests {
 
         println!("v1anf= {}", v1anf);
         assert_eq!(v1, v1anf);
+        let v1 = vec![3, 4];
+        let v2 = vec![5, 6];
+        let mut a = [&v1[..], &v2[..]].concat();
+        a.push(42);
+        println!("a={:#?}", a);
     }
 }

@@ -169,7 +169,7 @@ fn main() {
         )];
         println!("p1= {:?} ", p1);
         let t = true;
-        let t = if t { false } else { true };
+        let t = !t;
         if t {
             println!("inter 52<enter>, 10<enter>, should get 42");
             let v1 = interp_program(&p1);
@@ -268,7 +268,7 @@ fn main() {
                                     return true;
                                 }
                             }
-                            return false;
+                            false
                         };
                         guard()
                     } =>
@@ -301,7 +301,7 @@ fn main() {
                             if let T::B(_s1) = &**s {
                                 return true;
                             }
-                            return false;
+                            false
                         })()
                     } =>
                 {
