@@ -177,15 +177,22 @@ fn from_atom(a: &RVarAnf::Atom) -> Atom {
 }
 
 pub fn explicate_impl(e: &RVarAnf::Expr, var_tail: Option<(&str, &Tail)>) -> (Tail, Vec<String>) {
-    let mk_tail = |e: Expr| match var_tail {
-        Some((var, tail)) => Tail::Seq(Stmt::AssignVar(var.to_string(), e), Box::new(tail.clone())),
-        None => Tail::Return(e),
+    let mk_tail = |e: Expr| {
+        (
+            match var_tail {
+                Some((var, tail)) => {
+                    Tail::Seq(Stmt::AssignVar(var.to_string(), e), Box::new(tail.clone()))
+                }
+                None => Tail::Return(e),
+            },
+            vec![],
+        )
     };
     match e {
-        RVarAnf::Expr::Atom(a) => (mk_tail(Expr::Atom(from_atom(a))), vec![]),
-        RVarAnf::Expr::Read => (mk_tail(Expr::Read), vec![]),
-        RVarAnf::Expr::Neg(a) => (mk_tail(Expr::Neg(from_atom(a))), vec![]),
-        RVarAnf::Expr::Add(a1, a2) => (mk_tail(Expr::Add(from_atom(a1), from_atom(a2))), vec![]),
+        RVarAnf::Expr::Atom(a) => mk_tail(Expr::Atom(from_atom(a))),
+        RVarAnf::Expr::Read => mk_tail(Expr::Read),
+        RVarAnf::Expr::Neg(a) => mk_tail(Expr::Neg(from_atom(a))),
+        RVarAnf::Expr::Add(a1, a2) => mk_tail(Expr::Add(from_atom(a1), from_atom(a2))),
         RVarAnf::Expr::Let(x, expr, body) => {
             let (tail, vars1) = match var_tail {
                 Some((var, tail)) => explicate_impl(body, Some((var, tail))),
