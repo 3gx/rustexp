@@ -169,14 +169,13 @@ pub fn interp_prog(prog: &CProgram) -> Value {
     }
 }
 
-fn from_atom(a: &RVarAnf::Atom) -> Atom {
-    match a {
-        RVarAnf::Atom::Int(n) => Atom::Int(*n),
-        RVarAnf::Atom::Var(v) => Atom::Var(v.clone()),
-    }
-}
-
 pub fn explicate_impl(e: &RVarAnf::Expr, var_tail: Option<(&str, &Tail)>) -> (Tail, Vec<String>) {
+    fn from_atom(a: &RVarAnf::Atom) -> Atom {
+        match a {
+            RVarAnf::Atom::Int(n) => Atom::Int(*n),
+            RVarAnf::Atom::Var(v) => Atom::Var(v.clone()),
+        }
+    }
     let mk_tail = |e: Expr| {
         (
             match var_tail {
