@@ -176,6 +176,42 @@ fn from_atom(a: &RVarAnf::Atom) -> Atom {
     }
 }
 
+pub fn explicate_impl(e: &RVarAnf::Expr, var_tail: Option<(&str, &Tail)>) -> (Tail, Vec<String>) {
+    let mk_tail = |e: Expr| match var_tail {
+        Some((var, tail)) => Tail::Seq(Stmt::AssignVar(var.to_string(), e), Box::new(tail.clone())),
+        None => Tail::Return(e),
+    };
+    match e {
+        RVarAnf::Expr::Atom(a) => (mk_tail(Expr::Atom(from_atom(a))), vec![]),
+        RVarAnf::Expr::Read => (mk_tail(Expr::Read), vec![]),
+        RVarAnf::Expr::Neg(a) => (mk_tail(Expr::Neg(from_atom(a))), vec![]),
+        RVarAnf::Expr::Add(a1, a2) => (mk_tail(Expr::Add(from_atom(a1), from_atom(a2))), vec![]),
+        RVarAnf::Expr::Let(x, expr, body) => {
+            let (tail, vars1) = match var_tail {
+                Some((var, tail)) => explicate_impl(body, Some((var, tail))),
+                None => explicate_impl(body, None),
+            };
+            let (tail, vars2) = explicate_impl(expr, Some((x, &tail)));
+            let mut vars = vec![x.clone()];
+            for v in vars1.iter() {
+                vars.push(v.clone());
+            }
+            for v in vars2.iter() {
+                vars.push(v.clone());
+            }
+            (tail, vars)
+        }
+    }
+}
+
+pub fn explicate_tail(e: &RVarAnf::Expr) -> (Tail, Vec<String>) {
+    explicate_impl(e, None)
+}
+pub fn explicate_assign(e: &RVarAnf::Expr, var: &str, tail: &Tail) -> (Tail, Vec<String>) {
+    explicate_impl(e, Some((var, tail)))
+}
+
+/*
 pub fn explicate_tail(e: &RVarAnf::Expr) -> (Tail, Vec<String>) {
     match e {
         RVarAnf::Expr::Atom(a) => (Tail::Return(Expr::Atom(from_atom(a))), vec![]),
@@ -199,7 +235,6 @@ pub fn explicate_tail(e: &RVarAnf::Expr) -> (Tail, Vec<String>) {
         }
     }
 }
-
 pub fn explicate_assign(e: &RVarAnf::Expr, var: &str, tail: &Tail) -> (Tail, Vec<String>) {
     let assign = |e: Expr| Tail::Seq(Stmt::AssignVar(var.to_string(), e), Box::new(tail.clone()));
     match e {
@@ -221,3 +256,4 @@ pub fn explicate_assign(e: &RVarAnf::Expr, var: &str, tail: &Tail) -> (Tail, Vec
         }
     }
 }
+*/
