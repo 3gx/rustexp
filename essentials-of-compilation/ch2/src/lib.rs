@@ -12,6 +12,7 @@ pub mod macros;
 pub mod rvar_anf_lang;
 pub mod rvar_lang;
 pub mod rvar_lang_legacy;
+pub mod x86var_lang;
 
 #[cfg(test)]
 mod tests {

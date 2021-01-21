@@ -11,26 +11,26 @@ pub enum Term {
 pub macro add {
     ($e1:ident, $e2:ident) => {
         Term::Add(
-            box var!(stringify!($e1)), box var!(stringify!($id))
+            Box::new(var!(stringify!($e1))), Box::new(var!(stringify!($id)))
         )
     },
     ($e1:ident, $e2:expr) => {
-        Term::Add(box var!($e1), box $e2.into_term())
+        Term::Add(Box::new(var!($e1)), Box::new($e2.into_term()))
     },
     ($e1:expr, $id:ident) => {
-        Term::Add(box $e1.into_term(), box var!(stringify!($id)))
+        Term::Add(Box::new($e1.into_term()), Box::new(var!(stringify!($id))))
     },
     ($e1:expr, $e2:expr) => {
-        Term::Add(box $e1.into_term(), box $e2.into_term())
+        Term::Add(Box::new($e1.into_term()), Box::new($e2.into_term()))
     },
 }
 
 pub macro neg {
     ($id:ident) => {
-        neg!(box var!($id))
+        neg!(Box::new(var!($id)))
     },
     ($e:expr) => {
-        Term::Neg(box $e.into_term())
+        Term::Neg(Box::new($e.into_term()))
     },
 }
 
@@ -110,7 +110,7 @@ pub macro sym {
         vec::from_elem($elem, $n)
     },
     ($($x:expr),+ $(,)?) => {
-        <[_]>::into_vec(box [$($x),+])
+        <[_]>::into_vec(Box::new([$($x),+]))
     },
 }
 

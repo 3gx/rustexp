@@ -34,7 +34,7 @@ pub macro env {
         vec::from_elem($elem, $n)
     },
     ($($x:expr),+ $(,)?) => {
-        <[_]>::into_vec(box [$($x),+])
+        <[_]>::into_vec(Box::new([$($x),+]))
     },
 }
 
