@@ -9,7 +9,7 @@ pub use cvar_lang::rvar_anf_lang::rvar_lang;
 
 use cvar_lang as CVarLang;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum Reg {
     rsp,
@@ -28,6 +28,7 @@ pub enum Reg {
     r13,
     r14,
     r15,
+    Var(String),
 }
 
 type Int = i64;
@@ -36,7 +37,6 @@ pub enum Arg {
     Imm(Int),
     Reg(Reg),
     Deref(Reg, Int),
-    Var(String),
 }
 
 type Label = String;
@@ -59,7 +59,7 @@ pub struct Block(Vec<String>, Vec<Inst>);
 pub fn select_inst_atom(a: &CVarLang::Atom) -> Arg {
     match a {
         CVarLang::Atom::Int(n) => Arg::Imm(*n),
-        CVarLang::Atom::Var(x) => Arg::Var(x.clone()),
+        CVarLang::Atom::Var(x) => Arg::Reg(Reg::Var(x.clone())),
     }
 }
 
@@ -80,7 +80,7 @@ pub fn select_inst_assign(dst: Arg, e: &CVarLang::Expr) -> Vec<Inst> {
 pub fn select_inst_stmt(s: &CVarLang::Stmt) -> Vec<Inst> {
     use CVarLang::Stmt;
     match s {
-        Stmt::AssignVar(x, e) => select_inst_assign(Arg::Var(x.clone()), e),
+        Stmt::AssignVar(x, e) => select_inst_assign(Arg::Reg(Reg::Var(x.clone())), e),
     }
 }
 
@@ -105,4 +105,47 @@ pub fn select_inst_tail(t: &CVarLang::Tail, block: Block) -> Block {
             select_inst_tail(tail, Block(info, list))
         }
     }
+}
+
+type Value = Int;
+pub type Env = Vec<(Reg, Int)>;
+fn env_get<'a>(env: &'a Env, reg: &Reg) -> Option<&'a Value> {
+    env.iter()
+        .rev()
+        .find_map(|x| if &x.0 != reg { None } else { Some(&x.1) })
+}
+
+fn env_set(mut env: Env, reg: Reg, val: Value) -> Env {
+    env.push((reg, val));
+    env
+}
+
+fn interp_arg(env: &Env, arg: &Arg) -> Value {
+    unimplemented!()
+}
+
+pub fn interp_inst(env: Env, inst: &Inst) -> Env {
+    use Inst::*;
+    use Reg::*;
+    fn get_reg(arg: &Arg) -> &Reg {
+        match arg {
+            Arg::Reg(reg) => reg,
+            _ => panic!("must be reg"),
+        }
+    }
+    match inst {
+        Addq(arg1, arg2) => {
+            let result = interp_arg(&env, arg1) + interp_arg(&env, arg2);
+            env_set(env, get_reg(arg2).clone(), result)
+        }
+        _ => unimplemented!(),
+    }
+}
+pub fn interp_block(block: &Block) -> Value {
+    let Block(_, list) = block;
+    let mut env: Env = vec![];
+    for inst in list {
+        env = interp_inst(env, inst);
+    }
+    42
 }
