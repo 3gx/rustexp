@@ -74,7 +74,7 @@ impl IntoAtom for &str {
 
 #[derive(Debug, Clone)]
 pub enum Expr {
-    //    Atom(Atom),
+    Atom(Atom),
     Read,
     Neg(Atom),
     Add(Atom, Atom),
@@ -133,7 +133,7 @@ pub fn interp_atom(env: &Env, atom: &Atom) -> Value {
 pub fn interp_expr(env: &Env, e: &Expr) -> Value {
     use Expr::*;
     match e {
-        //        Atom(atom) => interp_atom(env, atom),
+        Atom(atom) => interp_atom(env, atom),
         Read => {
             let mut input = String::new();
             std::io::stdin().read_line(&mut input).unwrap();
@@ -188,7 +188,7 @@ pub fn explicate_impl(e: &RVarAnf::Expr, var_tail: Option<(&str, &Tail)>) -> (Ta
         )
     };
     match e {
-        //        RVarAnf::Expr::Atom(a) => mk_tail(Expr::Atom(from_atom(a))),
+        RVarAnf::Expr::Atom(a) => mk_tail(Expr::Atom(from_atom(a))),
         RVarAnf::Expr::Read => mk_tail(Expr::Read),
         RVarAnf::Expr::Neg(a) => mk_tail(Expr::Neg(from_atom(a))),
         RVarAnf::Expr::Add(a1, a2) => mk_tail(Expr::Add(from_atom(a1), from_atom(a2))),

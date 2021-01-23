@@ -44,7 +44,7 @@ impl IntoAtom for &str {
 
 #[derive(Debug, Clone)]
 pub enum Expr {
-    //    Atom(Atom),
+    Atom(Atom),
     Read,
     Neg(Atom),
     Add(Atom, Atom),
@@ -119,8 +119,8 @@ pub fn rco_exp(e: &RVarTerm) -> Expr {
         }
     }
     match e {
-        //        RVarTerm::Int(i) => Expr::Atom(int!(*i)),
-        //       RVarTerm::Var(x) => Expr::Atom(var!(&x)),
+        RVarTerm::Int(i) => Expr::Atom(int!(*i)),
+        RVarTerm::Var(x) => Expr::Atom(var!(&x)),
         RVarTerm::Read => Expr::Read,
         RVarTerm::Add(e1, e2) => {
             let (a1, e1) = rco_atom(e1);
@@ -129,7 +129,6 @@ pub fn rco_exp(e: &RVarTerm) -> Expr {
         }
         RVarTerm::Neg(e) => rco_op(rco_atom(e), |x| Expr::Neg(x)),
         RVarTerm::Let(x, e, body) => Expr::Let(x.clone(), box rco_exp(e), box rco_exp(body)),
-        _ => panic!("unhandled {:?}", e),
     }
 }
 
@@ -193,7 +192,7 @@ pub fn interp_atom(env: &Env, e: &Atom) -> Value {
 }
 pub fn interp_exp(env: &Env, e: &Expr) -> Value {
     match e {
-        //        Expr::Atom(atom) => interp_atom(env, atom),
+        Expr::Atom(atom) => interp_atom(env, atom),
         Expr::Read => {
             let mut input = String::new();
             std::io::stdin().read_line(&mut input).unwrap();
