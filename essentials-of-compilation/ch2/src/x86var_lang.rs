@@ -56,6 +56,12 @@ pub enum Inst {
 #[derive(Debug, Clone)]
 pub struct Block(Vec<String>, Vec<Inst>);
 
+impl Block {
+    pub fn new() -> Block {
+        Block(vec![], vec![])
+    }
+}
+
 pub fn select_inst_atom(a: &CVarLang::Atom) -> Arg {
     match a {
         CVarLang::Atom::Int(n) => Arg::Imm(*n),
@@ -142,7 +148,20 @@ pub fn interp_inst(env: Env, inst: &Inst) -> Env {
             let result = interp_arg(&env, arg1) + interp_arg(&env, arg2);
             env_set(env, get_reg(arg2).clone(), result)
         }
-        _ => unimplemented!(),
+        Movq(arg1, arg2) => {
+            let result = interp_arg(&env, arg1);
+            env_set(env, get_reg(arg2).clone(), result)
+        }
+        Subq(..) => panic!("unsupported instruction{:?}", inst),
+        Negq(arg) => {
+            let result = -interp_arg(&env, arg);
+            env_set(env, get_reg(arg).clone(), result)
+        }
+        Callq(..) => panic!("unsupported instruction{:?}", inst),
+        Pushq(..) => panic!("unsupported instruction{:?}", inst),
+        Popq(..) => panic!("unsupported instruction{:?}", inst),
+        Jmp(..) => panic!("unsupported instruction{:?}", inst),
+        Retq => env,
     }
 }
 pub fn interp_block(block: &Block) -> Value {
@@ -151,5 +170,5 @@ pub fn interp_block(block: &Block) -> Value {
     for inst in list {
         env = interp_inst(env, inst);
     }
-    42
+    *env_get(&env, &Reg::rax).unwrap()
 }
