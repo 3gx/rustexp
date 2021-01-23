@@ -38,7 +38,7 @@ pub enum Arg {
 }
 
 type Label = String;
-pub enum Instr {
+pub enum Inst {
     Addq(Arg, Arg),
     Subq(Arg, Arg),
     Movq(Arg, Arg),
@@ -50,5 +50,30 @@ pub enum Instr {
     Jmp(Label),
 }
 
-type Info = Vec<i64>;
-pub struct Block(Info, Vec<Instr>);
+type Info = Vec<String>;
+pub struct Block(Info, Vec<Inst>);
+
+pub fn select_inst_atom(a: &CVarLang::Atom) -> Arg {
+    match a {
+        CVarLang::Atom::Int(n) => Arg::Imm(*n),
+        CVarLang::Atom::Var(x) => Arg::Var(x.clone()),
+    }
+}
+
+pub fn select_inst_expr(e: &CVarLang::Expr) -> Inst {
+    use CVarLang::Expr;
+    /*
+    match e {
+        Expr::Atom(a)
+    }
+    */
+    unimplemented!()
+}
+
+pub fn select_inst_stmt(s: &CVarLang::Stmt) -> Inst {
+    unimplemented!()
+}
+
+pub fn select_inst_tail(t: &CVarLang::Tail, block: &Block) -> Block {
+    unimplemented!()
+}
