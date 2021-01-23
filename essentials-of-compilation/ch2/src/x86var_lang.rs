@@ -53,9 +53,8 @@ pub enum Inst {
     Jmp(Label),
 }
 
-type Info = Vec<String>;
 #[derive(Debug, Clone)]
-pub struct Block(Info, Vec<Inst>);
+pub struct Block(Vec<String>, Vec<Inst>);
 
 pub fn select_inst_atom(a: &CVarLang::Atom) -> Arg {
     match a {
@@ -79,8 +78,9 @@ pub fn select_inst_assign(dst: Arg, e: &CVarLang::Expr) -> Vec<Inst> {
     }
 }
 pub fn select_inst_stmt(s: &CVarLang::Stmt) -> Vec<Inst> {
+    use CVarLang::Stmt;
     match s {
-        CVarLang::Stmt::AssignVar(x, e) => select_inst_assign(Arg::Var(x.clone()), e),
+        Stmt::AssignVar(x, e) => select_inst_assign(Arg::Var(x.clone()), e),
     }
 }
 
