@@ -121,12 +121,16 @@ fn env_set(mut env: Env, reg: Reg, val: Value) -> Env {
 }
 
 fn interp_arg(env: &Env, arg: &Arg) -> Value {
-    unimplemented!()
+    use Arg::*;
+    match arg {
+        Imm(n) => *n,
+        Reg(reg) => *env_get(env, reg).unwrap(),
+        Deref(..) => panic!("unimplemented {:?}", arg),
+    }
 }
 
 pub fn interp_inst(env: Env, inst: &Inst) -> Env {
     use Inst::*;
-    use Reg::*;
     fn get_reg(arg: &Arg) -> &Reg {
         match arg {
             Arg::Reg(reg) => reg,
