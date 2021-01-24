@@ -261,7 +261,7 @@ pub fn patch_x86(block: &BlockStack) -> BlockStack {
 
 fn print_x86arg(arg: &Arg) -> String {
     match arg {
-        Arg::Imm(n) => format!("{}", n),
+        Arg::Imm(n) => format!("${}", n),
         Arg::Reg(Reg::Var(_)) => panic!(),
         Arg::Reg(reg) => format!("%{:?}", reg),
         Arg::Deref(reg, idx) => format!("{}(%{:?})", idx, reg),
