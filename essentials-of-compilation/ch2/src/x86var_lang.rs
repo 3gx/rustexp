@@ -97,7 +97,7 @@ pub fn select_inst_stmt(s: &CVarLang::Stmt) -> Vec<Inst> {
 
 pub fn select_inst_tail(t: &CVarLang::Tail, block: Block) -> Block {
     use CVarLang::Tail;
-    use {Inst::*, Reg::*};
+    use Reg::*;
 
     match t {
         Tail::Return(expr) => {
@@ -105,7 +105,7 @@ pub fn select_inst_tail(t: &CVarLang::Tail, block: Block) -> Block {
             for inst in select_inst_assign(Arg::Reg(rax), expr) {
                 list.push(inst)
             }
-            list.push(Retq);
+            //list.push(Retq);
             Block(info, list)
         }
         Tail::Seq(stmt, tail) => {
@@ -273,7 +273,7 @@ fn print_x86inst(inst: &Inst) -> String {
         Addq(arg1, arg2) => format!("addq\t{}, {}", print_x86arg(arg1), print_x86arg(arg2)),
         Movq(arg1, arg2) => format!("movq\t{}, {}", print_x86arg(arg1), print_x86arg(arg2)),
         Negq(arg) => format!("negq\t{}", print_x86arg(arg)),
-        Retq => format!("retq"),
+        //Retq => format!("retq"),
         _ => panic!("unhanded {:?}", inst),
     }
 }
@@ -284,14 +284,23 @@ pub fn print_x86(block: &BlockStack) -> String {
         x86block.push(print_x86inst(inst))
     }
 
-    let mut x86prog = vec![];
-    for inst in x86block {
-        x86prog.push(inst)
-    }
-
     let mut prog = String::new();
-    for inst in x86prog {
-        prog.push_str(&(inst + "\n"));
+    prog.push_str("start:\n");
+    for inst in x86block {
+        prog.push_str(&("\t".to_string() + &inst + "\n"));
     }
+    prog.push_str("\tjmp\tconclusion\n");
+    prog.push_str("\n");
+    prog.push_str("\t.globl _main\n");
+    prog.push_str("_main:\n");
+    prog.push_str("\tpush %rbp\n");
+    prog.push_str("\tmovq\t%rsp,%rbp\n");
+    prog.push_str(format!("\tsubq\t${},%rsp\n", stack_size).as_str());
+    prog.push_str("\tjmp start\n");
+    prog.push_str("\n");
+    prog.push_str("conclusion:\n");
+    prog.push_str(format!("\taddq\t ${}, %rsp\n", stack_size).as_str());
+    prog.push_str("\tpopq\t%rbp\n");
+    prog.push_str("\tretq\n");
     prog
 }
