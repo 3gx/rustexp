@@ -259,7 +259,39 @@ pub fn patch_x86(block: &BlockStack) -> BlockStack {
     BlockStack(*stack_size, list1)
 }
 
-pub fn print_x86(block: &BlockStack) -> Vec<String> {
+fn print_x86arg(arg: &Arg) -> String {
+    match arg {
+        Arg::Imm(n) => format!("{}", n),
+        Arg::Reg(Reg::Var(_)) => panic!(),
+        Arg::Reg(reg) => format!("%{:?}", reg),
+        Arg::Deref(reg, idx) => format!("{}(%{:?})", idx, reg),
+    }
+}
+fn print_x86inst(inst: &Inst) -> String {
+    use Inst::*;
+    match inst {
+        Addq(arg1, arg2) => format!("addq\t{}, {}", print_x86arg(arg1), print_x86arg(arg2)),
+        Movq(arg1, arg2) => format!("movq\t{}, {}", print_x86arg(arg1), print_x86arg(arg2)),
+        Negq(arg) => format!("negq\t{}", print_x86arg(arg)),
+        Retq => format!("retq"),
+        _ => panic!("unhanded {:?}", inst),
+    }
+}
+pub fn print_x86(block: &BlockStack) -> String {
     let BlockStack(stack_size, list) = block;
-    vec![]
+    let mut x86block = vec![];
+    for inst in list {
+        x86block.push(print_x86inst(inst))
+    }
+
+    let mut x86prog = vec![];
+    for inst in x86block {
+        x86prog.push(inst)
+    }
+
+    let mut prog = String::new();
+    for inst in x86prog {
+        prog.push_str(&(inst + "\n"));
+    }
+    prog
 }

@@ -55,6 +55,6 @@ mod x86var_lang {
         let val_x86var_patched = x86var_lang::interp_block_stack(&x86var_patched);
         assert_eq!(v1, val_x86var_patched);
 
-        println!("{:?}", x86var_lang::print_x86(&x86var_patched));
+        println!("\n{}", x86var_lang::print_x86(&x86var_patched).as_str());
     }
 }
