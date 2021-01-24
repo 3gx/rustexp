@@ -28,16 +28,26 @@ mod x86var_lang {
         println!("vars= {:?}", vars);
         println!("tail= {:#?}", tail);
 
-        let cprog = cvar_lang::CProgram(vars, vec![("start".to_string(), tail.clone())]);
+        let cprog = cvar_lang::CProgram(vars.clone(), vec![("start".to_string(), tail.clone())]);
 
         let v1clang = cvar_lang::interp_prog(&cprog);
         println!("v1clang= {}", v1clang);
         assert_eq!(v1anf, v1clang);
 
-        let x86var = x86var_lang::select_inst_tail(&tail, x86var_lang::Block::new());
+        let x86var = x86var_lang::select_inst_tail(&tail, x86var_lang::Block::with_vars(vars));
         println!("x86var= {:?}", x86var);
         let val_x86var = x86var_lang::interp_block(&x86var);
-        println!("eval(x86var)= {}", x86var_lang::interp_block(&x86var));
-        assert_eq!(v1, val_x86var)
+        println!("eval(x86var)= {}", val_x86var);
+        assert_eq!(v1, val_x86var);
+
+        let x86var_lang::Block(vars, _) = &x86var;
+        println!("vars= {:?}", vars);
+
+        let x86var_home = x86var_lang::assign_homes(&x86var);
+        println!("assgned_homes= {:?}", x86var_home);
+
+        let val_x86var_stack = x86var_lang::interp_block_stack(&x86var_home);
+        println!("eval(x86var_home)= {}", val_x86var_stack);
+        assert_eq!(v1, val_x86var_stack);
     }
 }

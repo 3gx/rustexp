@@ -54,11 +54,16 @@ pub enum Inst {
 }
 
 #[derive(Debug, Clone)]
-pub struct Block(Vec<String>, Vec<Inst>);
+pub struct Block(pub Vec<String>, pub Vec<Inst>);
+#[derive(Debug, Clone)]
+pub struct BlockStack(pub Int, pub Vec<Inst>);
 
 impl Block {
-    pub fn new() -> Block {
+    pub fn empty() -> Block {
         Block(vec![], vec![])
+    }
+    pub fn with_vars(vars: Vec<String>) -> Block {
+        Block(vars, vec![])
     }
 }
 
@@ -126,36 +131,41 @@ fn env_set(mut env: Env, reg: Reg, val: Value) -> Env {
     env
 }
 
-fn interp_arg(env: &Env, arg: &Arg) -> Value {
-    use Arg::*;
+fn interp_arg(frame: &Vec<Value>, env: &Env, arg: &Arg) -> Value {
     match arg {
-        Imm(n) => *n,
-        Reg(reg) => *env_get(env, reg).unwrap(),
-        Deref(..) => panic!("unimplemented {:?}", arg),
+        Arg::Imm(n) => *n,
+        Arg::Reg(reg) => *env_get(env, reg).unwrap(),
+        Arg::Deref(Reg::rbp, idx) => frame[-idx as usize],
+        Arg::Deref(..) => panic!("unimplemented {:?}", arg),
     }
 }
 
-pub fn interp_inst(env: Env, inst: &Inst) -> Env {
+pub fn interp_inst(frame: &mut Vec<Value>, env: Env, inst: &Inst) -> Env {
     use Inst::*;
-    fn get_reg(arg: &Arg) -> &Reg {
+
+    fn assign(frame: &mut Vec<Value>, env: Env, arg: &Arg, result: Value) -> Env {
         match arg {
-            Arg::Reg(reg) => reg,
-            _ => panic!("must be reg"),
+            Arg::Reg(reg) => env_set(env, reg.clone(), result),
+            Arg::Deref(Reg::rbp, idx) => {
+                frame[-idx as usize] = result;
+                env
+            }
+            _ => panic!("unhanled {:?}", arg),
         }
     }
     match inst {
         Addq(arg1, arg2) => {
-            let result = interp_arg(&env, arg1) + interp_arg(&env, arg2);
-            env_set(env, get_reg(arg2).clone(), result)
+            let result = interp_arg(frame, &env, arg1) + interp_arg(frame, &env, arg2);
+            assign(frame, env, arg2, result)
         }
         Movq(arg1, arg2) => {
-            let result = interp_arg(&env, arg1);
-            env_set(env, get_reg(arg2).clone(), result)
+            let result = interp_arg(frame, &env, arg1);
+            assign(frame, env, arg2, result)
         }
         Subq(..) => panic!("unsupported instruction{:?}", inst),
         Negq(arg) => {
-            let result = -interp_arg(&env, arg);
-            env_set(env, get_reg(arg).clone(), result)
+            let result = -interp_arg(frame, &env, arg);
+            assign(frame, env, arg, result)
         }
         Callq(..) => panic!("unsupported instruction{:?}", inst),
         Pushq(..) => panic!("unsupported instruction{:?}", inst),
@@ -167,8 +177,58 @@ pub fn interp_inst(env: Env, inst: &Inst) -> Env {
 pub fn interp_block(block: &Block) -> Value {
     let Block(_, list) = block;
     let mut env: Env = vec![];
+    let mut frame = vec![];
     for inst in list {
-        env = interp_inst(env, inst);
+        env = interp_inst(&mut frame, env, inst);
+    }
+    *env_get(&env, &Reg::rax).unwrap()
+}
+
+use std::collections::HashMap;
+pub fn assign_homes(block: &Block) -> BlockStack {
+    let Block(vars, list) = block;
+    let mut var2idx: HashMap<String, Int> = HashMap::new();
+    let mut stack_size = 0;
+    for var in vars {
+        assert!(!var2idx.contains_key(var));
+        stack_size += 8;
+        var2idx.insert(var.clone(), stack_size);
+    }
+    stack_size += 8;
+
+    let home = |arg: &Arg| match arg {
+        Arg::Reg(Reg::Var(x)) => {
+            let idx = var2idx.get(x).unwrap();
+            Arg::Deref(Reg::rbp, -idx)
+        }
+        _ => arg.clone(),
+    };
+    let mut list1 = vec![];
+    for inst in list {
+        use Inst::*;
+        let inst1 = match inst {
+            Addq(arg1, arg2) => Addq(home(arg1), home(arg2)),
+            Subq(arg1, arg2) => Subq(home(arg1), home(arg2)),
+            Movq(arg1, arg2) => Movq(home(arg1), home(arg2)),
+            Negq(arg) => Negq(home(arg)),
+            Retq => Retq,
+            Pushq(_) => unimplemented!(),
+            Popq(_) => unimplemented!(),
+            Jmp(_) => unimplemented!(),
+            Callq(_, _) => unimplemented!(),
+        };
+        list1.push(inst1);
+    }
+    BlockStack(stack_size, list1)
+}
+
+pub fn interp_block_stack(block: &BlockStack) -> Value {
+    let BlockStack(stack_size, list) = block;
+    let mut env: Env = vec![];
+    let mut frame = vec![];
+    frame.resize(*stack_size as usize, 0xDEADBEEF);
+    for inst in list {
+        env = interp_inst(&mut frame, env, inst);
     }
     *env_get(&env, &Reg::rax).unwrap()
 }
