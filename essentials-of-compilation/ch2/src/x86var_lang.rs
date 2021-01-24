@@ -135,7 +135,7 @@ fn interp_arg(frame: &Vec<Value>, env: &Env, arg: &Arg) -> Value {
     match arg {
         Arg::Imm(n) => *n,
         Arg::Reg(reg) => *env_get(env, reg).unwrap(),
-        Arg::Deref(Reg::rbp, idx) => frame[-idx as usize],
+        Arg::Deref(Reg::rbp, idx) => frame[(-idx - 8) as usize],
         Arg::Deref(..) => panic!("unimplemented {:?}", arg),
     }
 }
@@ -147,7 +147,7 @@ pub fn interp_inst(frame: &mut Vec<Value>, env: Env, inst: &Inst) -> Env {
         match arg {
             Arg::Reg(reg) => env_set(env, reg.clone(), result),
             Arg::Deref(Reg::rbp, idx) => {
-                frame[-idx as usize] = result;
+                frame[(-idx - 8) as usize] = result;
                 env
             }
             _ => panic!("unhanled {:?}", arg),
