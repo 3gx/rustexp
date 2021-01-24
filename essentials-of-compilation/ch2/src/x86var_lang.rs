@@ -258,3 +258,8 @@ pub fn patch_x86(block: &BlockStack) -> BlockStack {
     }
     BlockStack(*stack_size, list1)
 }
+
+pub fn print_x86(block: &BlockStack) -> Vec<String> {
+    let BlockStack(stack_size, list) = block;
+    vec![]
+}
