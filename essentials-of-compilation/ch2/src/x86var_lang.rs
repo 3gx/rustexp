@@ -194,7 +194,6 @@ pub fn assign_homes(block: &Block) -> BlockStack {
         stack_size += 8;
         var2idx.insert(var.clone(), stack_size);
     }
-    stack_size += 8;
 
     let home = |arg: &Arg| match arg {
         Arg::Reg(Reg::Var(x)) => {
