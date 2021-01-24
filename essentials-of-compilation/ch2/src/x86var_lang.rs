@@ -231,3 +231,13 @@ pub fn interp_block_stack(block: &BlockStack) -> Value {
     }
     *env_get(&env, &Reg::rax).unwrap()
 }
+
+pub fn patch_x86(block: &BlockStack) -> BlockStack {
+    let BlockStack(stack_size, list) = block;
+    let mut list1 = vec![];
+    for inst in list {
+        list1.push(inst.clone())
+        //
+    }
+    BlockStack(*stack_size, list1)
+}
