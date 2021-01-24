@@ -236,8 +236,25 @@ pub fn patch_x86(block: &BlockStack) -> BlockStack {
     let BlockStack(stack_size, list) = block;
     let mut list1 = vec![];
     for inst in list {
-        list1.push(inst.clone())
-        //
+        use Inst::*;
+        let insts1 = match inst {
+            Addq(Arg::Deref(Reg::rbp, idx1), Arg::Deref(Reg::rbp, idx2)) => vec![
+                Movq(Arg::Deref(Reg::rbp, *idx1), Arg::Reg(Reg::rax)),
+                Addq(Arg::Reg(Reg::rax), Arg::Deref(Reg::rbp, *idx2)),
+            ],
+            Subq(Arg::Deref(Reg::rbp, idx1), Arg::Deref(Reg::rbp, idx2)) => vec![
+                Movq(Arg::Deref(Reg::rbp, *idx1), Arg::Reg(Reg::rax)),
+                Subq(Arg::Reg(Reg::rax), Arg::Deref(Reg::rbp, *idx2)),
+            ],
+            Movq(Arg::Deref(Reg::rbp, idx1), Arg::Deref(Reg::rbp, idx2)) => vec![
+                Movq(Arg::Deref(Reg::rbp, *idx1), Arg::Reg(Reg::rax)),
+                Movq(Arg::Reg(Reg::rax), Arg::Deref(Reg::rbp, *idx2)),
+            ],
+            _ => vec![inst.clone()],
+        };
+        for inst in insts1 {
+            list1.push(inst)
+        }
     }
     BlockStack(*stack_size, list1)
 }
