@@ -1,9 +1,8 @@
-use crate::rvar_lang::*;
-
 #[cfg(test)]
 mod rvar_lang {
     #[test]
     fn t0() {
+        use ch3::rvar_lang::*;
         let p1 = program![r#let!([x add!(12, 20)]  add!(10, x))];
         println!("p1= {:?} ", p1);
         let v1 = interp_program(&p1);
