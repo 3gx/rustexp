@@ -8,6 +8,22 @@ pub enum Term {
     Let(String, Box<Term>, Box<Term>),
 }
 
+pub macro add1 {
+    ($e1:ident, $e2:ident) => {
+        Term::Add(
+            Box::new(var!(stringify!($e1))), Box::new(var!(stringify!($id)))
+        )
+    },
+    ($e1:ident, $e2:expr) => {
+        Term::Add(Box::new(var!($e1)), Box::new($e2.into_term()))
+    },
+    ($e1:expr, $id:ident) => {
+        Term::Add(Box::new($e1.into_term()), Box::new(var!(stringify!($id))))
+    },
+    ($e1:expr, $e2:expr) => {
+        Term::Add(Box::new($e1.into_term()), Box::new($e2.into_term()))
+    },
+}
 pub macro add {
     ($e1:ident, $e2:ident) => {
         Term::Add(
