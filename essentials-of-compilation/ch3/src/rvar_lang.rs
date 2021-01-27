@@ -1,6 +1,7 @@
+type Int = i64;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
-    Int(i64),
+    Int(Int),
     Read,
     Neg(Box<Expr>),
     Add(Box<Expr>, Box<Expr>),
@@ -60,20 +61,17 @@ pub macro r#let {
 }
 
 #[derive(Debug, Clone)]
-pub struct Options;
-
-#[derive(Debug, Clone)]
-pub struct Program(pub Vec<Options>, pub Expr);
+pub struct Program(pub Expr);
 
 pub macro program($e:expr) {
-    Program(vec![], $e.into_term())
+    Program($e.into_term())
 }
 
 pub trait IntoTerm {
     fn into_term(&self) -> Expr;
 }
 
-impl IntoTerm for i64 {
+impl IntoTerm for Int {
     fn into_term(&self) -> Expr {
         int!(*self)
     }
@@ -89,9 +87,8 @@ impl IntoTerm for &str {
     }
 }
 
-type Value = i64;
 type SymTable<T> = Vec<(String, T)>;
-pub type Env = SymTable<Value>;
+pub type Env = SymTable<Int>;
 
 pub macro sym {
     () => {
@@ -117,9 +114,14 @@ pub fn sym_set<T: Clone>(sym: &SymTable<T>, key: &str, val: &T) -> SymTable<T> {
     sym
 }
 
-pub fn interp_exp(env: &Env, e: &Expr) -> Value {
+#[path = "./macros.rs"]
+mod macros;
+#[allow(unused_imports)]
+use macros::r#match;
+
+pub fn interp_exp(env: &Env, e: &Expr) -> Int {
     use Expr::*;
-    match e {
+    r#match! { [e]
         Int(n) => n.clone(),
         Read => {
             let mut input = String::new();
@@ -136,9 +138,9 @@ pub fn interp_exp(env: &Env, e: &Expr) -> Value {
     }
 }
 
-pub fn interp_program(p: &Program) -> Value {
+pub fn interp_program(p: &Program) -> Int {
     match p {
-        Program(_, e) => interp_exp(&vec![], e),
+        Program(e) => interp_exp(&vec![], e),
     }
 }
 
@@ -184,6 +186,6 @@ pub fn uniquify_expr(umap: &UMap, expr: &Expr) -> Expr {
 
 pub fn uniquify(p: Program) -> Program {
     match p {
-        Program(v, e) => Program(v, uniquify_expr(&sym![], &e)),
+        Program(e) => Program(uniquify_expr(&sym![], &e)),
     }
 }
