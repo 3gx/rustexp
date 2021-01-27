@@ -8,6 +8,29 @@ pub enum Term {
     Let(String, Box<Term>, Box<Term>),
 }
 
+pub macro unary_op {
+    ($cb:ident, $id:ident) => {$cb!(Box::new(var!(stringify!($id))))},
+    ($cb:ident, $e:expr) => {$cb!(Box::new($e.into_term()))},
+}
+pub macro binary_op {
+    ((@ctor $($ctor:tt)*), $i1:ident, $i2:ident) => {
+        $($ctor)*(Box::new(var!(stringify!($i1))),
+                 Box::new(var!(stringify!($i2))))},
+    ((@ctor $($ctor:tt)*), $i1:ident, $e2:expr) => {
+        $($ctor)*(Box::new(var!(stringify!($i1))),
+                 Box::new($e2.into_term()))},
+    ((@ctor $($ctor:tt)*), $e1:expr, $i2:ident) => {
+        $($ctor)*(Box::new($e1.into_term()),
+                Box::new(var!(stringify!($i2))))},
+    ((@ctor $($ctor:tt)*), $e1:expr, $e2:expr) => {
+        $($ctor)*(Box::new($e1.into_term()),
+                Box::new($e2.into_term()))},
+}
+
+pub macro add {
+    ($($tt:tt)*) => {binary_op!((@ctor Term::Add), $($tt)*)},
+}
+/*
 pub macro add1 {
     ($e1:ident, $e2:ident) => {
         Term::Add(
@@ -24,22 +47,7 @@ pub macro add1 {
         Term::Add(Box::new($e1.into_term()), Box::new($e2.into_term()))
     },
 }
-pub macro add {
-    ($e1:ident, $e2:ident) => {
-        Term::Add(
-            Box::new(var!(stringify!($e1))), Box::new(var!(stringify!($id)))
-        )
-    },
-    ($e1:ident, $e2:expr) => {
-        Term::Add(Box::new(var!($e1)), Box::new($e2.into_term()))
-    },
-    ($e1:expr, $id:ident) => {
-        Term::Add(Box::new($e1.into_term()), Box::new(var!(stringify!($id))))
-    },
-    ($e1:expr, $e2:expr) => {
-        Term::Add(Box::new($e1.into_term()), Box::new($e2.into_term()))
-    },
-}
+*/
 
 pub macro neg {
     ($id:ident) => {
