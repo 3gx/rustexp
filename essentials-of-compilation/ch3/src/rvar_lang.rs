@@ -8,7 +8,7 @@ pub enum Expr {
     Let(String, Box<Expr>, Box<Expr>),
 }
 
-pub macro __mk_op {
+macro __mk_op {
     ( (@args) (@expr (@ctor $($ctor:tt)*) $($tt:tt)*) ) => { $($ctor)*($($tt)*) },
     ( (@args $i:ident)  (@expr $($tt:tt)*) ) => {
         __mk_op!((@args)
