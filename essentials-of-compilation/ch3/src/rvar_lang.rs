@@ -1,100 +1,91 @@
 #[derive(Debug, Clone, PartialEq)]
-pub enum Term {
+pub enum Expr {
     Int(i64),
     Read,
-    Neg(Box<Term>),
-    Add(Box<Term>, Box<Term>),
+    Neg(Box<Expr>),
+    Add(Box<Expr>, Box<Expr>),
     Var(String),
-    Let(String, Box<Term>, Box<Term>),
+    Let(String, Box<Expr>, Box<Expr>),
 }
 
 pub macro __mk_op {
     ( (@args) (@expr (@ctor $($ctor:tt)*) $($tt:tt)*) ) => { $($ctor)*($($tt)*) },
     ( (@args $i:ident)  (@expr $($tt:tt)*) ) => {
         __mk_op!((@args)
-                 (@expr $($tt)* Box::new(Term::Var(stringify!($i).to_string()))))
+                 (@expr $($tt)* Box::new(Expr::Var(stringify!($i).to_string()))))
     },
     ( (@args $e:expr)  (@expr $($tt:tt)*) ) => {
         __mk_op!((@args) (@expr $($tt)* Box::new($e.into_term())))
     },
     ( (@args $i:ident, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
         __mk_op!((@args $($tail)*)
-                 (@expr $($tt)* Box::new(Term::Var(stringify!($i).to_string())),))
+                 (@expr $($tt)* Box::new(Expr::Var(stringify!($i).to_string())),))
     },
     ( (@args $e:expr, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
         __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new($e.into_term()),))
     },
 }
 
+macro bx {
+    ($($tt:tt)*) => {Box::new($($tt)*)},
+}
+
 pub macro add {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Term::Add)))},
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Add)))},
 }
 
 pub macro neg {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Term::Neg)))},
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Neg)))},
 }
 
 pub macro read() {
-    Term::Read
+    Expr::Read
 }
 
 pub macro int($e:expr) {
-    Term::Int($e)
+    Expr::Int($e)
 }
 
-pub macro var {
-    ($id:ident) => {
-        var!(stringify!($id))
-    },
-    ($id:expr) => {
-        Term::Var($id.to_string())
-    }
+/*
+pub macro var($id:ident) {
+    Expr::Var(stringify!($id).to_string())
 }
+*/
 
 pub macro r#let {
-    ([$id:ident $e1:expr]  $e2:ident) => {
-        Term::Let(
-            stringify!($id).to_owned(),
-            Box::new($e1.into_term()),
-            Box::new(var!(stringify!($e2))),
-        )
+    ([$id:ident $($expr:tt)*] $($body:tt)*) => {
+       __mk_op!((@args $($expr)*, $($body)*)
+                (@expr (@ctor Expr::Let) stringify!($id).to_string(),))
     },
-    ([$id:ident $e1:expr]  $e2:expr) => {
-        Term::Let(
-            stringify!($id).to_owned(),
-            Box::new($e1.into_term()),
-            Box::new($e2.into_term()),
-        )
-    }
 }
 
 #[derive(Debug, Clone)]
 pub struct Options;
 
 #[derive(Debug, Clone)]
-pub struct Program(pub Vec<Options>, pub Term);
+pub struct Program(pub Vec<Options>, pub Expr);
 
 pub macro program($e:expr) {
     Program(vec![], $e.into_term())
 }
 
 pub trait IntoTerm {
-    fn into_term(&self) -> Term;
+    fn into_term(&self) -> Expr;
 }
 
 impl IntoTerm for i64 {
-    fn into_term(&self) -> Term {
+    fn into_term(&self) -> Expr {
         int!(*self)
     }
 }
-impl IntoTerm for Term {
-    fn into_term(&self) -> Term {
+impl IntoTerm for Expr {
+    fn into_term(&self) -> Expr {
         self.clone()
     }
 }
 impl IntoTerm for &str {
-    fn into_term(&self) -> Term {
-        var!(self)
+    fn into_term(&self) -> Expr {
+        Expr::Var(self.to_string())
     }
 }
 
@@ -126,8 +117,8 @@ pub fn sym_set<T: Clone>(sym: &SymTable<T>, key: &str, val: &T) -> SymTable<T> {
     sym
 }
 
-pub fn interp_exp(env: &Env, e: &Term) -> Value {
-    use Term::*;
+pub fn interp_exp(env: &Env, e: &Expr) -> Value {
+    use Expr::*;
     match e {
         Int(n) => n.clone(),
         Read => {
@@ -171,8 +162,8 @@ fn gensym(x: &String) -> String {
 }
 
 type UMap = SymTable<String>;
-pub fn uniquify_expr(umap: &UMap, expr: &Term) -> Term {
-    use Term::*;
+pub fn uniquify_expr(umap: &UMap, expr: &Expr) -> Expr {
+    use Expr::*;
     match expr {
         Var(x) => Var(sym_get(umap, x).unwrap().clone()),
         Int(n) => Int(*n),
@@ -181,15 +172,12 @@ pub fn uniquify_expr(umap: &UMap, expr: &Term) -> Term {
             let umap = sym_set(umap, x, &newvar);
             Let(
                 newvar,
-                Box::new(uniquify_expr(&umap, e)),
-                Box::new(uniquify_expr(&umap, body)),
+                bx![uniquify_expr(&umap, e)],
+                bx![uniquify_expr(&umap, body)],
             )
         }
-        Neg(e) => Neg(Box::new(uniquify_expr(umap, e))),
-        Add(e1, e2) => Add(
-            Box::new(uniquify_expr(umap, e1)),
-            Box::new(uniquify_expr(umap, e2)),
-        ),
+        Neg(e) => Neg(bx![uniquify_expr(umap, e)]),
+        Add(e1, e2) => Add(bx![uniquify_expr(umap, e1)], bx![uniquify_expr(umap, e2)]),
         Read => Read,
     }
 }
