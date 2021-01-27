@@ -29,25 +29,24 @@ pub macro binary_op {
 
 pub macro __mk_op {
     ( (@args) (@expr (@ctor $($ctor:tt)*) $($tt:tt)*) ) => { $($ctor)*($($tt)*) },
-//    ( (@args,) (@expr (@ctor $($ctor:tt)*) $($tt:tt)*) ) => { $($ctor)*($($tt)*) },
-    ( (@args $i:ident, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
-        __mk_op((@args $($tail)*) (@expr $($tt)* Box::new(var!(stringify!($i)))))
-    },
     ( (@args $i:ident)  (@expr $($tt:tt)*) ) => {
-        __mk_op((@args) (@expr $($tt)* Box::new(var!(stringify!($i)))))
+        __mk_op!((@args) (@expr $($tt)* Box::new(var!(stringify!($i)))))
     },
     ( (@args $e:expr)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args) (@expr $($tt)*, Box::new($e.into_term())))
+        __mk_op!((@args) (@expr $($tt)* Box::new($e.into_term())))
+    },
+    ( (@args $i:ident, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
+        __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new(var!(stringify!($i))),))
     },
     ( (@args $e:expr, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new($e.into_term())))
+        __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new($e.into_term()),))
     },
 }
 
-pub macro add1 {
+pub macro add {
     ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Term::Add)))},
 }
-pub macro add {
+pub macro add1 {
     ($($tt:tt)*) => {binary_op!((@ctor Term::Add), $($tt)*)},
 }
 /*
