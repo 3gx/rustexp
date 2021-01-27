@@ -8,35 +8,18 @@ pub enum Term {
     Let(String, Box<Term>, Box<Term>),
 }
 
-pub macro unary_op {
-    ($cb:ident, $id:ident) => {$cb!(Box::new(var!(stringify!($id))))},
-    ($cb:ident, $e:expr) => {$cb!(Box::new($e.into_term()))},
-}
-pub macro binary_op {
-    ((@ctor $($ctor:tt)*), $i1:ident, $i2:ident) => {
-        $($ctor)*(Box::new(var!(stringify!($i1))),
-                 Box::new(var!(stringify!($i2))))},
-    ((@ctor $($ctor:tt)*), $i1:ident, $e2:expr) => {
-        $($ctor)*(Box::new(var!(stringify!($i1))),
-                 Box::new($e2.into_term()))},
-    ((@ctor $($ctor:tt)*), $e1:expr, $i2:ident) => {
-        $($ctor)*(Box::new($e1.into_term()),
-                Box::new(var!(stringify!($i2))))},
-    ((@ctor $($ctor:tt)*), $e1:expr, $e2:expr) => {
-        $($ctor)*(Box::new($e1.into_term()),
-                Box::new($e2.into_term()))},
-}
-
 pub macro __mk_op {
     ( (@args) (@expr (@ctor $($ctor:tt)*) $($tt:tt)*) ) => { $($ctor)*($($tt)*) },
     ( (@args $i:ident)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args) (@expr $($tt)* Box::new(var!(stringify!($i)))))
+        __mk_op!((@args)
+                 (@expr $($tt)* Box::new(Term::Var(stringify!($i).to_string()))))
     },
     ( (@args $e:expr)  (@expr $($tt:tt)*) ) => {
         __mk_op!((@args) (@expr $($tt)* Box::new($e.into_term())))
     },
     ( (@args $i:ident, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new(var!(stringify!($i))),))
+        __mk_op!((@args $($tail)*)
+                 (@expr $($tt)* Box::new(Term::Var(stringify!($i).to_string())),))
     },
     ( (@args $e:expr, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
         __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new($e.into_term()),))
@@ -47,16 +30,6 @@ pub macro add {
     ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Term::Add)))},
 }
 
-/*
-pub macro neg1 {
-    ($id:ident) => {
-        neg!(Box::new(var!($id)))
-    },
-    ($e:expr) => {
-        Term::Neg(Box::new($e.into_term()))
-    },
-}
-*/
 pub macro neg {
     ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Term::Neg)))},
 }
@@ -224,15 +197,5 @@ pub fn uniquify_expr(umap: &UMap, expr: &Term) -> Term {
 pub fn uniquify(p: Program) -> Program {
     match p {
         Program(v, e) => Program(v, uniquify_expr(&sym![], &e)),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn txx() {
-        use crate::rvar_lang::*;
-        let v = var!("x");
-        println!("v= {:?}", v);
     }
 }
