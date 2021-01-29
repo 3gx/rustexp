@@ -15,10 +15,9 @@ mod rvar_anf_tests {
         println!("p1= {:?} ", p1);
         println!("v1= {} ", v1);
 
-        /*
         use rvar_anf_lang::{interp_exp, rco_exp};
         let p1anf = rco_exp(&p1);
-        println!("p1= {:#?} ", p1anf);
+        println!("p1anf= {:?} ", p1anf);
 
         let v1anf = interp_exp(&vec![], &p1anf);
 
@@ -28,7 +27,6 @@ mod rvar_anf_tests {
         let v2 = vec![5, 6];
         let mut a = [&v1[..], &v2[..]].concat();
         a.push(42);
-        println!("a={:#?}", a);
-        */
+        println!("a={:?}", a);
     }
 }

@@ -61,7 +61,7 @@ impl IntoTerm<Expr> for &str {
 }
 
 type SymTable<T> = Vec<(String, T)>;
-pub type Env = SymTable<Int>;
+pub type EnvInt = SymTable<Int>;
 
 pub macro sym {
     () => {
@@ -87,7 +87,7 @@ pub fn sym_set<T: Clone>(sym: &SymTable<T>, key: &str, val: &T) -> SymTable<T> {
     sym
 }
 
-pub fn interp_exp(env: &Env, e: &Expr) -> Int {
+pub fn interp_exp(env: &EnvInt, e: &Expr) -> Int {
     use Expr::*;
     r#match! { [e]
         Int(n) => n.clone(),
@@ -123,12 +123,12 @@ pub fn gensym_reset() {
     let mut map = MAP.lock().unwrap();
     map.clear();
 }
-pub fn gensym(x: &String) -> String {
+pub fn gensym(x: &str) -> String {
     let mut map = MAP.lock().unwrap();
     let counter = map.entry(x.to_string()).or_insert(0);
     *counter += 1;
 
-    x.clone() + &counter.to_string()
+    x.to_string() + &counter.to_string()
 }
 
 type UMap = SymTable<String>;
