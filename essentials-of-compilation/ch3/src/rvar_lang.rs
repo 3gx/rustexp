@@ -1,7 +1,7 @@
 #[path = "./macros.rs"]
 mod macros;
 pub use macros::__mk_op;
-use macros::{bx, r#match, IntoExpr};
+use macros::{bx, r#match, IntoTerm};
 
 type Int = i64;
 #[derive(Debug, Clone, PartialEq)]
@@ -44,21 +44,21 @@ pub macro r#let {
 pub struct Program(pub Expr);
 
 pub macro program($e:expr) {
-    Program($e.into_expr())
+    Program($e.into_term())
 }
 
-impl IntoExpr<Expr> for Int {
-    fn into_expr(&self) -> Expr {
+impl IntoTerm<Expr> for Int {
+    fn into_term(&self) -> Expr {
         int!(*self)
     }
 }
-impl IntoExpr<Expr> for Expr {
-    fn into_expr(&self) -> Expr {
+impl IntoTerm<Expr> for Expr {
+    fn into_term(&self) -> Expr {
         self.clone()
     }
 }
-impl IntoExpr<Expr> for &str {
-    fn into_expr(&self) -> Expr {
+impl IntoTerm<Expr> for &str {
+    fn into_term(&self) -> Expr {
         Expr::Var(self.to_string())
     }
 }

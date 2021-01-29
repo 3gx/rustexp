@@ -127,8 +127,8 @@ pub macro bx {
     ($($tt:tt)*) => {Box::new($($tt)*)},
 }
 
-pub trait IntoExpr<T> {
-    fn into_expr(&self) -> T;
+pub trait IntoTerm<T> {
+    fn into_term(&self) -> T;
 }
 
 pub macro __mk_op {
@@ -140,7 +140,7 @@ pub macro __mk_op {
                  (@vctor $($vctor)*))
     },
     ( (@args $e:expr)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*) ) => {
-        __mk_op!((@args) (@expr $($tt)* Box::new($e.into_expr()))
+        __mk_op!((@args) (@expr $($tt)* Box::new($e.into_term()))
                  (@vctor $($vctor)*))
     },
     ( (@args $i:ident, $($tail:tt)*)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*)) => {
@@ -149,7 +149,7 @@ pub macro __mk_op {
                  (@vctor $($vctor)*))
     },
     ( (@args $e:expr, $($tail:tt)*)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*) ) => {
-        __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new($e.into_expr()),)
+        __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new($e.into_term()),)
                  (@vctor $($vctor)*))
     },
 }

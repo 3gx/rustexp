@@ -1,7 +1,8 @@
 #[path = "./macros.rs"]
 mod macros;
 pub use macros::__mk_op;
-use macros::{bx, r#match, IntoExpr};
+//use macros::{bx, r#match, IntoExpr};
+use macros::IntoTerm;
 
 #[path = "rvar_lang.rs"]
 pub mod rvar_lang;
@@ -15,8 +16,8 @@ pub enum Atom {
 pub macro int($e:expr) {
     Atom::Int($e)
 }
-impl IntoExpr<Atom> for Int {
-    fn into_expr(&self) -> Atom {
+impl IntoTerm<Atom> for Int {
+    fn into_term(&self) -> Atom {
         int!(*self)
     }
 }
