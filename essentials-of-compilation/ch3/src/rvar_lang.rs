@@ -15,13 +15,11 @@ pub enum Expr {
 }
 
 pub macro add {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Add))
-                              (@vctor Expr::Var))},
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Add))) }
 }
 
 pub macro neg {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Neg))
-                              (@vctor Expr::Var))},
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Neg)) ) }
 }
 
 pub macro read() {
@@ -35,8 +33,7 @@ pub macro int($e:expr) {
 pub macro r#let {
     ([$id:ident $($expr:tt)*] $($body:tt)*) => {
        __mk_op!((@args $($expr)*, $($body)*)
-                (@expr (@ctor Expr::Let) stringify!($id).to_string(),)
-                (@vctor Expr::Var))
+                (@expr (@ctor Expr::Let) stringify!($id).to_string(),) )
     },
 }
 

@@ -132,24 +132,19 @@ pub trait IntoTerm<T> {
 }
 
 pub macro __mk_op {
-    ( (@args) (@expr (@ctor $($ctor:tt)*) $($tt:tt)*)
-              (@vctor $($vctor:tt)*)) => { $($ctor)*($($tt)*) },
-    ( (@args $i:ident)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*)) => {
+    ( (@args) (@expr (@ctor $($ctor:tt)*) $($tt:tt)*) ) => { $($ctor)*($($tt)*) },
+    ( (@args $i:ident)  (@expr $($tt:tt)*) ) => {
         __mk_op!((@args)
-                 (@expr $($tt)* Box::new($($vctor)*(stringify!($i).to_string())))
-                 (@vctor $($vctor)*))
+                 (@expr $($tt)* Box::new(stringify!($i).into_term())))
     },
-    ( (@args $e:expr)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*) ) => {
-        __mk_op!((@args) (@expr $($tt)* Box::new($e.into_term()))
-                 (@vctor $($vctor)*))
+    ( (@args $e:expr)  (@expr $($tt:tt)*) ) => {
+        __mk_op!((@args) (@expr $($tt)* Box::new($e.into_term())))
     },
-    ( (@args $i:ident, $($tail:tt)*)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*)) => {
+    ( (@args $i:ident, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
         __mk_op!((@args $($tail)*)
-                 (@expr $($tt)* Box::new($($vctor)*(stringify!($i).to_string())),)
-                 (@vctor $($vctor)*))
+                 (@expr $($tt)* Box::new(stringify!($i).into_term()),))
     },
-    ( (@args $e:expr, $($tail:tt)*)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*) ) => {
-        __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new($e.into_term()),)
-                 (@vctor $($vctor)*))
+    ( (@args $e:expr, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
+        __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new($e.into_term()),))
     },
 }
