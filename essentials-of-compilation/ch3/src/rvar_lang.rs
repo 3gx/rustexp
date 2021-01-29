@@ -123,7 +123,7 @@ pub fn gensym_reset() {
     let mut map = MAP.lock().unwrap();
     map.clear();
 }
-fn gensym(x: &String) -> String {
+pub fn gensym(x: &String) -> String {
     let mut map = MAP.lock().unwrap();
     let counter = map.entry(x.to_string()).or_insert(0);
     *counter += 1;

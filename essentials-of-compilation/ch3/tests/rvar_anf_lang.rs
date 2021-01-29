@@ -2,11 +2,11 @@
 mod rvar_anf_tests {
     #[test]
     fn t1() {
-        use ch3::rvar_anf_lang::*;
+        use ch3::rvar_anf_lang;
         let (p1, v1) = {
             // not the same as
             // use ch2::rvar_lang::*;
-            use rvar_lang::*;
+            use rvar_anf_lang::rvar_lang::*;
             let p1 = r#let!([x add!(12, add!(neg!(20), neg!(add!(10,neg!(15)))))]
                     add!(add!(30, neg!(15)), x));
             let v1 = interp_exp(&vec![], &p1);

@@ -26,3 +26,25 @@ impl IntoTerm<Atom> for &str {
         Atom::Var(self.to_string())
     }
 }
+
+#[derive(Debug, Clone)]
+pub enum Expr {
+    Atom(Atom),
+    Read,
+    Neg(Atom),
+    Add(Atom, Atom),
+    Let(String, Box<Expr>, Box<Expr>),
+}
+
+pub macro read() {
+    Expr::Read
+}
+pub macro add {
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Add))) }
+}
+
+pub macro neg {
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Neg)) ) }
+}
+
+use rvar_lang::{gensym, gensym_reset, sym, sym_get, sym_set};
