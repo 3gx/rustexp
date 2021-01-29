@@ -71,7 +71,7 @@ pub fn rco_exp(e: &RvarExpr) -> Expr {
                 let a = var!(&x);
                 Expr::Let(x, bx![e], bx![f(a)])
             }
-            x => panic!("unhandled {:?}", x),
+            x@(Atom::Int(_), Some(_)) => panic!("invalid match {:?}", x),
         }
     }
     match e {
