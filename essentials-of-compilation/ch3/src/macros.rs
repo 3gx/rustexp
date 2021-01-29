@@ -122,3 +122,7 @@ pub macro r#match {
         )
     }
 }
+
+pub macro bx {
+    ($($tt:tt)*) => {Box::new($($tt)*)},
+}

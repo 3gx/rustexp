@@ -9,6 +9,10 @@ pub enum Expr {
     Let(String, Box<Expr>, Box<Expr>),
 }
 
+#[path = "./macros.rs"]
+mod macros;
+use macros::{bx, r#match};
+
 macro __mk_op {
     ( (@args) (@expr (@ctor $($ctor:tt)*) $($tt:tt)*) ) => { $($ctor)*($($tt)*) },
     ( (@args $i:ident)  (@expr $($tt:tt)*) ) => {
@@ -25,10 +29,6 @@ macro __mk_op {
     ( (@args $e:expr, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
         __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new($e.into_term()),))
     },
-}
-
-macro bx {
-    ($($tt:tt)*) => {Box::new($($tt)*)},
 }
 
 pub macro add {
@@ -113,11 +113,6 @@ pub fn sym_set<T: Clone>(sym: &SymTable<T>, key: &str, val: &T) -> SymTable<T> {
     sym.push((key.to_string(), val.clone()));
     sym
 }
-
-#[path = "./macros.rs"]
-mod macros;
-#[allow(unused_imports)]
-use macros::r#match;
 
 pub fn interp_exp(env: &Env, e: &Expr) -> Int {
     use Expr::*;
