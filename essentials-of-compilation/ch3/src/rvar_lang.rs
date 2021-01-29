@@ -1,3 +1,8 @@
+#[path = "./macros.rs"]
+mod macros;
+pub use macros::__mk_op;
+use macros::{bx, r#match, IntoExpr};
+
 type Int = i64;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
@@ -8,11 +13,6 @@ pub enum Expr {
     Var(String),
     Let(String, Box<Expr>, Box<Expr>),
 }
-
-#[path = "./macros.rs"]
-mod macros;
-pub use macros::__mk_op;
-use macros::{bx, r#match, IntoExpr};
 
 pub macro add {
     ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Add))
