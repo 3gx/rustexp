@@ -126,3 +126,30 @@ pub macro r#match {
 pub macro bx {
     ($($tt:tt)*) => {Box::new($($tt)*)},
 }
+
+pub trait IntoExpr<T> {
+    fn into_expr(&self) -> T;
+}
+
+pub macro __mk_op {
+    ( (@args) (@expr (@ctor $($ctor:tt)*) $($tt:tt)*)
+              (@vctor $($vctor:tt)*)) => { $($ctor)*($($tt)*) },
+    ( (@args $i:ident)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*)) => {
+        __mk_op!((@args)
+                 (@expr $($tt)* Box::new($($vctor)*(stringify!($i).to_string())))
+                 (@vctor $($vctor)*))
+    },
+    ( (@args $e:expr)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*) ) => {
+        __mk_op!((@args) (@expr $($tt)* Box::new($e.into_expr()))
+                 (@vctor $($vctor)*))
+    },
+    ( (@args $i:ident, $($tail:tt)*)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*)) => {
+        __mk_op!((@args $($tail)*)
+                 (@expr $($tt)* Box::new($($vctor)*(stringify!($i).to_string())),)
+                 (@vctor $($vctor)*))
+    },
+    ( (@args $e:expr, $($tail:tt)*)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*) ) => {
+        __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new($e.into_expr()),)
+                 (@vctor $($vctor)*))
+    },
+}

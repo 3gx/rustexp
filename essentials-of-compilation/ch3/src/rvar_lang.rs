@@ -11,30 +11,8 @@ pub enum Expr {
 
 #[path = "./macros.rs"]
 mod macros;
-use macros::{bx, r#match};
-
-macro __mk_op {
-    ( (@args) (@expr (@ctor $($ctor:tt)*) $($tt:tt)*)
-              (@vctor $($vctor:tt)*)) => { $($ctor)*($($tt)*) },
-    ( (@args $i:ident)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*)) => {
-        __mk_op!((@args)
-                 (@expr $($tt)* Box::new($($vctor)*(stringify!($i).to_string())))
-                 (@vctor $($vctor)*))
-    },
-    ( (@args $e:expr)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*) ) => {
-        __mk_op!((@args) (@expr $($tt)* Box::new($e.into_term()))
-                 (@vctor $($vctor)*))
-    },
-    ( (@args $i:ident, $($tail:tt)*)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*)) => {
-        __mk_op!((@args $($tail)*)
-                 (@expr $($tt)* Box::new(Expr::Var(stringify!($i).to_string())),)
-                 (@vctor $($vctor)*))
-    },
-    ( (@args $e:expr, $($tail:tt)*)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*) ) => {
-        __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new($e.into_term()),)
-                 (@vctor $($vctor)*))
-    },
-}
+pub use macros::__mk_op;
+use macros::{bx, r#match, IntoExpr};
 
 pub macro add {
     ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Add))
@@ -54,12 +32,6 @@ pub macro int($e:expr) {
     Expr::Int($e)
 }
 
-/*
-pub macro var($id:ident) {
-    Expr::Var(stringify!($id).to_string())
-}
-*/
-
 pub macro r#let {
     ([$id:ident $($expr:tt)*] $($body:tt)*) => {
        __mk_op!((@args $($expr)*, $($body)*)
@@ -72,25 +44,21 @@ pub macro r#let {
 pub struct Program(pub Expr);
 
 pub macro program($e:expr) {
-    Program($e.into_term())
+    Program($e.into_expr())
 }
 
-pub trait IntoTerm {
-    fn into_term(&self) -> Expr;
-}
-
-impl IntoTerm for Int {
-    fn into_term(&self) -> Expr {
+impl IntoExpr<Expr> for Int {
+    fn into_expr(&self) -> Expr {
         int!(*self)
     }
 }
-impl IntoTerm for Expr {
-    fn into_term(&self) -> Expr {
+impl IntoExpr<Expr> for Expr {
+    fn into_expr(&self) -> Expr {
         self.clone()
     }
 }
-impl IntoTerm for &str {
-    fn into_term(&self) -> Expr {
+impl IntoExpr<Expr> for &str {
+    fn into_expr(&self) -> Expr {
         Expr::Var(self.to_string())
     }
 }
