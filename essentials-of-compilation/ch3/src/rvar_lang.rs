@@ -14,29 +14,36 @@ mod macros;
 use macros::{bx, r#match};
 
 macro __mk_op {
-    ( (@args) (@expr (@ctor $($ctor:tt)*) $($tt:tt)*) ) => { $($ctor)*($($tt)*) },
-    ( (@args $i:ident)  (@expr $($tt:tt)*) ) => {
+    ( (@args) (@expr (@ctor $($ctor:tt)*) $($tt:tt)*)
+              (@vctor $($vctor:tt)*)) => { $($ctor)*($($tt)*) },
+    ( (@args $i:ident)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*)) => {
         __mk_op!((@args)
-                 (@expr $($tt)* Box::new(Expr::Var(stringify!($i).to_string()))))
+                 (@expr $($tt)* Box::new($($vctor)*(stringify!($i).to_string())))
+                 (@vctor $($vctor)*))
     },
-    ( (@args $e:expr)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args) (@expr $($tt)* Box::new($e.into_term())))
+    ( (@args $e:expr)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*) ) => {
+        __mk_op!((@args) (@expr $($tt)* Box::new($e.into_term()))
+                 (@vctor $($vctor)*))
     },
-    ( (@args $i:ident, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
+    ( (@args $i:ident, $($tail:tt)*)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*)) => {
         __mk_op!((@args $($tail)*)
-                 (@expr $($tt)* Box::new(Expr::Var(stringify!($i).to_string())),))
+                 (@expr $($tt)* Box::new(Expr::Var(stringify!($i).to_string())),)
+                 (@vctor $($vctor)*))
     },
-    ( (@args $e:expr, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new($e.into_term()),))
+    ( (@args $e:expr, $($tail:tt)*)  (@expr $($tt:tt)*) (@vctor $($vctor:tt)*) ) => {
+        __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new($e.into_term()),)
+                 (@vctor $($vctor)*))
     },
 }
 
 pub macro add {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Add)))},
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Add))
+                              (@vctor Expr::Var))},
 }
 
 pub macro neg {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Neg)))},
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Neg))
+                              (@vctor Expr::Var))},
 }
 
 pub macro read() {
@@ -56,7 +63,8 @@ pub macro var($id:ident) {
 pub macro r#let {
     ([$id:ident $($expr:tt)*] $($body:tt)*) => {
        __mk_op!((@args $($expr)*, $($body)*)
-                (@expr (@ctor Expr::Let) stringify!($id).to_string(),))
+                (@expr (@ctor Expr::Let) stringify!($id).to_string(),)
+                (@vctor Expr::Var))
     },
 }
 
