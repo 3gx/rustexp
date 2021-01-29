@@ -21,3 +21,8 @@ impl IntoTerm<Atom> for Int {
         int!(*self)
     }
 }
+impl IntoTerm<Atom> for &str {
+    fn into_term(&self) -> Atom {
+        Atom::Var(self.to_string())
+    }
+}
