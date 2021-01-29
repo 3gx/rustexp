@@ -97,7 +97,7 @@ pub fn interp_prog(prog: &CProgram) -> Int {
 }
 
 use rvar_anf_lang as RVarAnf;
-pub fn explicate_impl(e: &RVarAnf::Expr, var_tail: Option<(&str, &Tail)>) -> (Tail, Vec<String>) {
+pub fn explicate_impl(e: &RVarAnf::Expr, old_tail: Option<(&str, &Tail)>) -> (Tail, Vec<String>) {
     fn from_atom(a: &RVarAnf::Atom) -> Atom {
         match a {
             RVarAnf::Atom::Int(n) => Atom::Int(*n),
@@ -106,7 +106,7 @@ pub fn explicate_impl(e: &RVarAnf::Expr, var_tail: Option<(&str, &Tail)>) -> (Ta
     }
     let mk_tail = |e: Expr| {
         (
-            match var_tail {
+            match old_tail {
                 Some((var, tail)) => {
                     Tail::Seq(Stmt::AssignVar(var.to_string(), e), Box::new(tail.clone()))
                 }
@@ -121,10 +121,7 @@ pub fn explicate_impl(e: &RVarAnf::Expr, var_tail: Option<(&str, &Tail)>) -> (Ta
         RVarAnf::Expr::Neg(a) => mk_tail(Expr::Neg(from_atom(a))),
         RVarAnf::Expr::Add(a1, a2) => mk_tail(Expr::Add(from_atom(a1), from_atom(a2))),
         RVarAnf::Expr::Let(x, expr, body) => {
-            let (tail, vars1) = match var_tail {
-                Some((var, tail)) => explicate_impl(body, Some((var, tail))),
-                None => explicate_impl(body, None),
-            };
+            let (tail, vars1) = explicate_impl(body, old_tail);
             let (tail, vars2) = explicate_impl(expr, Some((x, &tail)));
             let mut vars = vec![x.clone()];
             for v in vars1.iter() {
