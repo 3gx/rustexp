@@ -10,7 +10,7 @@ pub use rvar_anf_lang::rvar_lang;
 
 type Int = i64;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum Reg {
     rsp,
@@ -29,12 +29,12 @@ pub enum Reg {
     r13,
     r14,
     r15,
-    Var(String),
 }
 
 #[derive(Debug, Clone)]
 pub enum Arg {
     Imm(Int),
+    Var(String),
     Reg(Reg),
     Deref(Reg, Int),
 }
@@ -70,7 +70,7 @@ use cvar_lang as CVarLang;
 pub fn select_inst_atom(a: &CVarLang::Atom) -> Arg {
     match a {
         CVarLang::Atom::Int(n) => Arg::Imm(*n),
-        CVarLang::Atom::Var(x) => Arg::Reg(Reg::Var(x.clone())),
+        CVarLang::Atom::Var(x) => Arg::Var(x.clone()),
     }
 }
 
@@ -92,7 +92,7 @@ pub fn select_inst_assign(dst: Arg, e: &CVarLang::Expr) -> Vec<Inst> {
 pub fn select_inst_stmt(s: &CVarLang::Stmt) -> Vec<Inst> {
     use CVarLang::Stmt;
     match s {
-        Stmt::AssignVar(x, e) => select_inst_assign(Arg::Reg(Reg::Var(x.clone())), e),
+        Stmt::AssignVar(x, e) => select_inst_assign(Arg::Var(x.clone()), e),
     }
 }
 
@@ -119,14 +119,20 @@ pub fn select_inst_tail(t: &CVarLang::Tail, block: Block) -> Block {
     }
 }
 
-pub type Env = Vec<(Reg, Int)>;
-fn env_get<'a>(env: &'a Env, reg: &Reg) -> Option<&'a Int> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EnvKey {
+    Reg(Reg),
+    Var(String),
+}
+
+pub type Env = Vec<(EnvKey, Int)>;
+fn env_get<'a>(env: &'a Env, reg: &EnvKey) -> Option<&'a Int> {
     env.iter()
         .rev()
         .find_map(|x| if &x.0 != reg { None } else { Some(&x.1) })
 }
 
-fn env_set(mut env: Env, reg: Reg, val: Int) -> Env {
+fn env_set(mut env: Env, reg: EnvKey, val: Int) -> Env {
     env.push((reg, val));
     env
 }
@@ -134,7 +140,8 @@ fn env_set(mut env: Env, reg: Reg, val: Int) -> Env {
 fn interp_arg(frame: &Vec<Int>, env: &Env, arg: &Arg) -> Int {
     match arg {
         Arg::Imm(n) => *n,
-        Arg::Reg(reg) => *env_get(env, reg).unwrap(),
+        Arg::Reg(reg) => *env_get(env, &EnvKey::Reg(*reg)).unwrap(),
+        Arg::Var(x) => *env_get(env, &EnvKey::Var(x.clone())).unwrap(),
         Arg::Deref(Reg::rbp, idx) => frame[(-idx - 8) as usize],
         Arg::Deref(..) => panic!("unimplemented {:?}", arg),
     }
@@ -144,8 +151,9 @@ pub fn interp_inst(frame: &mut Vec<Int>, env: Env, inst: &Inst) -> Env {
     use Inst::*;
 
     fn assign(frame: &mut Vec<Int>, env: Env, arg: &Arg, result: Int) -> Env {
-        match arg {
-            Arg::Reg(reg) => env_set(env, reg.clone(), result),
+        match arg.clone() {
+            Arg::Reg(reg) => env_set(env, EnvKey::Reg(reg), result),
+            Arg::Var(x) => env_set(env, EnvKey::Var(x), result),
             Arg::Deref(Reg::rbp, idx) => {
                 frame[(-idx - 8) as usize] = result;
                 env
@@ -182,7 +190,7 @@ pub fn interp_block(block: &Block) -> Int {
     for inst in list {
         env = interp_inst(&mut frame, env, inst);
     }
-    *env_get(&env, &Reg::rax).unwrap()
+    *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
 }
 
 use std::collections::HashMap;
@@ -197,7 +205,7 @@ pub fn assign_homes(block: &Block) -> BlockStack {
     }
 
     let home = |arg: &Arg| match arg {
-        Arg::Reg(Reg::Var(x)) => {
+        Arg::Var(x) => {
             let idx = var2idx.get(x).unwrap();
             Arg::Deref(Reg::rbp, -idx)
         }
@@ -230,7 +238,7 @@ pub fn interp_block_stack(block: &BlockStack) -> Int {
     for inst in list {
         env = interp_inst(&mut frame, env, inst);
     }
-    *env_get(&env, &Reg::rax).unwrap()
+    *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
 }
 
 pub fn patch_x86(block: &BlockStack) -> BlockStack {
@@ -264,7 +272,7 @@ pub fn patch_x86(block: &BlockStack) -> BlockStack {
 fn print_x86arg(arg: &Arg) -> String {
     match arg {
         Arg::Imm(n) => format!("${}", n),
-        Arg::Reg(Reg::Var(_)) => panic!(),
+        x @ Arg::Var(_) => panic!("Can't have Arg::Var in final x86 {:?}", x),
         Arg::Reg(reg) => format!("%{:?}", reg),
         Arg::Deref(reg, idx) => format!("{}(%{:?})", idx, reg),
     }
