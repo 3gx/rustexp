@@ -126,25 +126,3 @@ pub macro r#match {
 pub macro bx {
     ($($tt:tt)*) => {Box::new($($tt)*)},
 }
-
-pub trait IntoTerm<T> {
-    fn into_term(&self) -> T;
-}
-
-pub macro __mk_op {
-    ( (@args) (@expr (@ctor $($ctor:tt)*) $($tt:tt)*) ) => { $($ctor)*($($tt)*) },
-    ( (@args $i:ident)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args)
-                 (@expr $($tt)* Box::new(stringify!($i).into_term())))
-    },
-    ( (@args $e:expr)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args) (@expr $($tt)* Box::new($e.into_term())))
-    },
-    ( (@args $i:ident, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args $($tail)*)
-                 (@expr $($tt)* Box::new(stringify!($i).into_term()),))
-    },
-    ( (@args $e:expr, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new($e.into_term()),))
-    },
-}

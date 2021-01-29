@@ -1,6 +1,5 @@
 #[path = "./macros.rs"]
 mod macros;
-pub use macros::__mk_op;
 use macros::r#match;
 
 #[path = "rvar_anf_lang.rs"]

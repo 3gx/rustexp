@@ -1,7 +1,28 @@
 #[path = "./macros.rs"]
 mod macros;
-pub use macros::__mk_op;
-use macros::{bx, r#match, IntoTerm};
+use macros::{bx, r#match};
+
+pub trait IntoTerm {
+    fn into_term(&self) -> Expr;
+}
+
+macro __mk_op {
+    ( (@args) (@expr (@ctor $($ctor:tt)*) $($tt:tt)*) ) => { $($ctor)*($($tt)*) },
+    ( (@args $i:ident)  (@expr $($tt:tt)*) ) => {
+        __mk_op!((@args)
+                 (@expr $($tt)* Box::new(stringify!($i).into_term())))
+    },
+    ( (@args $e:expr)  (@expr $($tt:tt)*) ) => {
+        __mk_op!((@args) (@expr $($tt)* Box::new($e.into_term())))
+    },
+    ( (@args $i:ident, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
+        __mk_op!((@args $($tail)*)
+                 (@expr $($tt)* Box::new(stringify!($i).into_term()),))
+    },
+    ( (@args $e:expr, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
+        __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new($e.into_term()),))
+    },
+}
 
 type Int = i64;
 #[derive(Debug, Clone, PartialEq)]
@@ -44,17 +65,17 @@ pub macro program($e:expr) {
     Program($e.into_term())
 }
 
-impl IntoTerm<Expr> for Int {
+impl IntoTerm for Int {
     fn into_term(&self) -> Expr {
         int!(*self)
     }
 }
-impl IntoTerm<Expr> for Expr {
+impl IntoTerm for Expr {
     fn into_term(&self) -> Expr {
         self.clone()
     }
 }
-impl IntoTerm<Expr> for &str {
+impl IntoTerm for &str {
     fn into_term(&self) -> Expr {
         Expr::Var(self.to_string())
     }
