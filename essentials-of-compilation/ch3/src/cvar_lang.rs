@@ -4,7 +4,7 @@ pub use macros::__mk_op;
 use macros::r#match;
 
 #[path = "rvar_anf_lang.rs"]
-mod rvar_anf_lang;
+pub mod rvar_anf_lang;
 pub use rvar_anf_lang::rvar_lang;
 
 type Int = i64;
@@ -13,6 +13,17 @@ type Int = i64;
 pub enum Atom {
     Int(Int),
     Var(String),
+}
+pub macro int($e:expr) {
+    Atom::Int($e)
+}
+pub macro var {
+    ($id:ident) => {
+        var!(stringify!($id))
+    },
+    ($id:expr) => {
+        Atom::Var($id.to_string())
+    }
 }
 
 #[derive(Debug, Clone)]
