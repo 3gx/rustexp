@@ -314,3 +314,57 @@ pub fn print_x86(block: &BlockStack) -> String {
     prog.push_str("\tretq\n");
     prog
 }
+
+// ---------------------------------------------------------------------------
+// liveness analysis
+// interference graph
+// graph coloring
+// patch instructions
+// print x86
+
+use std::collections::HashSet;
+fn liveness_analysis(block: &Block) -> Vec<HashSet<String>> {
+    fn update_live_set(live_set: &mut HashSet<String>, rd: &[&Arg], wr: &[&Arg]) {
+        // before_k = (after_k - wr) + rd;
+        for arg in wr {
+            match arg {
+                Arg::Var(x) => live_set.remove(x),
+                _ => false,
+            };
+        }
+        for arg in rd {
+            match arg {
+                Arg::Var(x) => live_set.remove(x),
+                _ => false,
+            };
+        }
+    }
+    let update_live_set = |inst: &Inst, live_set: &HashSet<String>| {
+        let mut live_set = live_set.clone();
+        use Inst::*;
+        match inst {
+            Addq(a1, a2) => update_live_set(&mut live_set, &[a1, a2], &[a2]),
+            Subq(a1, a2) => update_live_set(&mut live_set, &[a1, a2], &[a2]),
+            Movq(a1, a2) => update_live_set(&mut live_set, &[a1], &[a2]),
+            Negq(arg) => update_live_set(&mut live_set, &[arg], &[arg]),
+            Callq(_, _) => unimplemented!(),
+            Retq => (),
+            Pushq(_) => unimplemented!(),
+            Popq(_) => unimplemented!(),
+            Jmp(_) => unimplemented!(),
+        };
+        live_set
+    };
+
+    let Block(_, list) = block;
+    let mut live_set_vec: Vec<HashSet<String>> = vec![HashSet::new()];
+    for inst in list.iter().rev() {
+        let live_set = update_live_set(inst, live_set_vec.last().unwrap());
+        live_set_vec.push(live_set);
+    }
+    // reverse vector
+    live_set_vec.reverse();
+    // pop last element, which is empty set
+    live_set_vec.pop();
+    live_set_vec
+}
