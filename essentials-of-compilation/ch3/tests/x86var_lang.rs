@@ -119,7 +119,38 @@ mod x86var_lang {
         for (live_set, inst) in lives.iter().zip(inst_list.iter()) {
             println!("{:<35}\t{:?}", format!("{:?}", inst), live_set);
         }
+        println!("");
 
-        {}
+        {
+            #[derive(Debug)]
+            struct SymPair(usize, usize);
+
+            use std::hash::{Hash, Hasher};
+
+            impl Eq for SymPair {}
+            impl PartialEq for SymPair {
+                fn eq(&self, other: &Self) -> bool {
+                    self.0 == other.0 && self.1 == other.1 || self.0 == other.1 && self.1 == other.0
+                }
+            }
+
+            // This will make it easier to find the right connections
+            impl PartialEq<usize> for SymPair {
+                fn eq(&self, other: &usize) -> bool {
+                    self.0 == *other || self.1 == *other
+                }
+            }
+
+            impl Hash for SymPair {
+                fn hash<H: Hasher>(&self, _: &mut H) {}
+            }
+
+            use std::collections::HashSet;
+            type HS = HashSet<SymPair>;
+            let mut h: HS = HashSet::new();
+            h.insert(SymPair(1, 2));
+            h.insert(SymPair(2, 1));
+            println!("{:?}", h);
+        }
     }
 }
