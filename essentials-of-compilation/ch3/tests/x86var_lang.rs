@@ -152,5 +152,41 @@ mod x86var_lang {
             h.insert(SymPair(2, 1));
             println!("{:?}", h);
         }
+        {
+            #[derive(Debug)]
+            struct SymPair(usize, usize);
+
+            impl Eq for SymPair {}
+            impl PartialEq for SymPair {
+                fn eq(&self, other: &Self) -> bool {
+                    self.0 == other.0 && self.1 == other.1 || self.0 == other.1 && self.1 == other.0
+                }
+            }
+
+            use std::cmp::Ordering;
+            impl Ord for SymPair {
+                fn cmp(&self, other: &Self) -> Ordering {
+                    let v0 = (std::cmp::min(self.0, self.1), std::cmp::max(self.0, self.1));
+                    let v1 = (
+                        std::cmp::min(other.0, other.1),
+                        std::cmp::max(other.0, other.1),
+                    );
+                    v0.cmp(&v1)
+                }
+            }
+            impl PartialOrd for SymPair {
+                fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+                    Some(self.cmp(other))
+                }
+            }
+
+            use std::collections::BTreeSet;
+            let mut h = BTreeSet::new();
+            h.insert(SymPair(3, 2));
+            h.insert(SymPair(1, 2));
+            h.insert(SymPair(2, 1));
+            h.insert(SymPair(2, 3));
+            println!("\n-\n{:?}", h);
+        }
     }
 }

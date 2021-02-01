@@ -406,15 +406,19 @@ impl Hash for IEdge {
     fn hash<H: Hasher>(&self, _: &mut H) {}
 }
 
-type IGraph = HashSet<IEdge>;
+use std::collections::BTreeSet;
+type IGraph = BTreeSet<IEdge>;
 pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
-    let mut g = HashSet::new();
+    unimplemented!()
+    /*
+    let mut g = BTreeSet::new();
 
     for LiveSet(wr, set) in liveness {
         for el in set {}
     }
 
     g
+        */
 }
 
 // ---------------------------------------------------------------------------
