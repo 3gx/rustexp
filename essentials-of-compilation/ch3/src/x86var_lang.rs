@@ -325,43 +325,48 @@ pub fn print_x86(block: &BlockStack) -> String {
 // liveness analysis
 
 use std::collections::HashSet;
-pub fn liveness_analysis(block: &Block) -> Vec<HashSet<String>> {
-    fn update_with_rdwr(live_set: &mut HashSet<String>, rd: &[&Arg], wr: &[&Arg]) {
+#[derive(Debug, Clone)]
+pub struct LiveSet(pub Option<String>, pub HashSet<String>);
+
+pub fn liveness_analysis(block: &Block) -> Vec<LiveSet> {
+    fn update_with_rdwr(live_set: &mut HashSet<String>, rd: &[&Arg], wr: &Arg) -> Option<String> {
         // before_k = (after_k - wr) + rd;
-        for arg in wr {
-            match arg {
-                Arg::Var(x) => live_set.remove(x),
-                _ => false,
-            };
-        }
+        match wr {
+            Arg::Var(x) => live_set.remove(x),
+            _ => false,
+        };
         for arg in rd {
             match arg {
                 Arg::Var(x) => live_set.insert(x.clone()),
                 _ => false,
             };
         }
+        match wr {
+            Arg::Var(x) => Some(x.clone()),
+            _ => None,
+        }
     }
     let update_live_set = |inst: &Inst, live_set: &HashSet<String>| {
         let mut live_set = live_set.clone();
         use Inst::*;
-        match inst {
-            Addq(a1, a2) => update_with_rdwr(&mut live_set, &[a1, a2], &[a2]),
-            Subq(a1, a2) => update_with_rdwr(&mut live_set, &[a1, a2], &[a2]),
-            Movq(a1, a2) => update_with_rdwr(&mut live_set, &[a1], &[a2]),
-            Negq(arg) => update_with_rdwr(&mut live_set, &[arg], &[arg]),
+        let wr = match inst {
+            Addq(a1, a2) => update_with_rdwr(&mut live_set, &[a1, a2], a2),
+            Subq(a1, a2) => update_with_rdwr(&mut live_set, &[a1, a2], a2),
+            Movq(a1, a2) => update_with_rdwr(&mut live_set, &[a1], a2),
+            Negq(arg) => update_with_rdwr(&mut live_set, &[arg], arg),
             Callq(_, _) => unimplemented!(),
-            Retq => (),
+            Retq => None,
             Pushq(_) => unimplemented!(),
             Popq(_) => unimplemented!(),
             Jmp(_) => unimplemented!(),
         };
-        live_set
+        LiveSet(wr, live_set)
     };
 
     let Block(_, list) = block;
-    let mut live_set_vec: Vec<HashSet<String>> = vec![HashSet::new()];
+    let mut live_set_vec: Vec<LiveSet> = vec![LiveSet(None, HashSet::new())];
     for inst in list.iter().rev() {
-        let live_set = update_live_set(inst, live_set_vec.last().unwrap());
+        let live_set = update_live_set(inst, &live_set_vec.last().unwrap().1);
         live_set_vec.push(live_set);
     }
     // reverse vector
@@ -402,10 +407,10 @@ impl Hash for IEdge {
 }
 
 type IGraph = HashSet<IEdge>;
-pub fn interference_graph(liveness: &Vec<HashSet<String>>) -> IGraph {
+pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
     let mut g = HashSet::new();
 
-    for set in liveness {
+    for LiveSet(wr, set) in liveness {
         for el in set {}
     }
 
