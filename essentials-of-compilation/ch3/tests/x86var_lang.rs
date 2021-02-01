@@ -103,12 +103,21 @@ mod x86var_lang {
 
         use x86var_lang::Block;
         let x86var = x86var_lang::select_inst_tail(&tail, x86var_lang::Block::with_vars(vars));
-        let Block(_, list) = &x86var;
-        for inst in list {
+        let Block(_, inst_list) = &x86var;
+        /*
+        for inst in inst_list {
             println!("  {:?}", inst);
         }
+        */
         let val_x86var = x86var_lang::interp_block(&x86var);
         //println!("eval(x86var)= {}", val_x86var);
         assert_eq!(v1, val_x86var);
+
+        use x86var_lang::*;
+        let lives = liveness_analysis(&x86var);
+        println!("\n{:-^35}\t{:?}", "instruction", "live set");
+        for (live_set, inst) in lives.iter().zip(inst_list.iter()) {
+            println!("{:<35}\t{:?}", format!("{:?}", inst), live_set);
+        }
     }
 }

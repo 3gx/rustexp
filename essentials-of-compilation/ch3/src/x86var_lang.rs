@@ -323,8 +323,8 @@ pub fn print_x86(block: &BlockStack) -> String {
 // print x86
 
 use std::collections::HashSet;
-fn liveness_analysis(block: &Block) -> Vec<HashSet<String>> {
-    fn update_live_set(live_set: &mut HashSet<String>, rd: &[&Arg], wr: &[&Arg]) {
+pub fn liveness_analysis(block: &Block) -> Vec<HashSet<String>> {
+    fn update_with_rdwr(live_set: &mut HashSet<String>, rd: &[&Arg], wr: &[&Arg]) {
         // before_k = (after_k - wr) + rd;
         for arg in wr {
             match arg {
@@ -334,7 +334,7 @@ fn liveness_analysis(block: &Block) -> Vec<HashSet<String>> {
         }
         for arg in rd {
             match arg {
-                Arg::Var(x) => live_set.remove(x),
+                Arg::Var(x) => live_set.insert(x.clone()),
                 _ => false,
             };
         }
@@ -343,10 +343,10 @@ fn liveness_analysis(block: &Block) -> Vec<HashSet<String>> {
         let mut live_set = live_set.clone();
         use Inst::*;
         match inst {
-            Addq(a1, a2) => update_live_set(&mut live_set, &[a1, a2], &[a2]),
-            Subq(a1, a2) => update_live_set(&mut live_set, &[a1, a2], &[a2]),
-            Movq(a1, a2) => update_live_set(&mut live_set, &[a1], &[a2]),
-            Negq(arg) => update_live_set(&mut live_set, &[arg], &[arg]),
+            Addq(a1, a2) => update_with_rdwr(&mut live_set, &[a1, a2], &[a2]),
+            Subq(a1, a2) => update_with_rdwr(&mut live_set, &[a1, a2], &[a2]),
+            Movq(a1, a2) => update_with_rdwr(&mut live_set, &[a1], &[a2]),
+            Negq(arg) => update_with_rdwr(&mut live_set, &[arg], &[arg]),
             Callq(_, _) => unimplemented!(),
             Retq => (),
             Pushq(_) => unimplemented!(),
