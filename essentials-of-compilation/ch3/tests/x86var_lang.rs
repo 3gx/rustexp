@@ -119,5 +119,7 @@ mod x86var_lang {
         for (live_set, inst) in lives.iter().zip(inst_list.iter()) {
             println!("{:<35}\t{:?}", format!("{:?}", inst), live_set);
         }
+
+        {}
     }
 }

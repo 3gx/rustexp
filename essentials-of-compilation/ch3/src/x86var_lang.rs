@@ -10,7 +10,7 @@ pub use rvar_anf_lang::rvar_lang;
 
 type Int = i64;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[allow(non_camel_case_types)]
 pub enum Reg {
     rsp,
@@ -374,8 +374,43 @@ pub fn liveness_analysis(block: &Block) -> Vec<HashSet<String>> {
 // ---------------------------------------------------------------------------
 // interference graph
 
-pub struct InterferenceGraph;
-pub fn interference_graph(liveness: &Vec<HashSet<String>>) -> InterferenceGraph {
+#[derive(Debug, Clone)] //, PartialEq, Eq)]
+pub enum IVertex {
+    Reg(Reg),
+    Var(String),
+}
+#[derive(Debug, Clone)]
+pub struct IEdge(IVertex, IVertex);
+
+/*
+impl Eq for IEdge {}
+impl PartialEq for IEdge {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0 && self.1 == other.1 || self.0 == other.1 && self.1 == other.0
+    }
+}
+
+// This will make it easier to find the right connections
+impl PartialEq<IVertex> for IEdge {
+    fn eq(&self, other: &IVertex) -> bool {
+        self.0 == *other || self.1 == *other
+    }
+}
+*/
+
+/*
+use std::hash::{Hash, Hasher};
+impl Hash for IEdge {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+        self.1.hash(state);
+    }
+}
+*/
+
+type IGraph = HashSet<IEdge>;
+pub fn interference_graph(liveness: &Vec<HashSet<String>>) -> IGraph {
+    //HashSet::new()
     unimplemented!()
 }
 
