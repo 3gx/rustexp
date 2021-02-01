@@ -241,6 +241,9 @@ pub fn interp_block_stack(block: &BlockStack) -> Int {
     *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
 }
 
+// ---------------------------------------------------------------------------
+// patch instructions
+
 pub fn patch_x86(block: &BlockStack) -> BlockStack {
     let BlockStack(stack_size, list) = block;
     let mut list1 = vec![];
@@ -268,6 +271,9 @@ pub fn patch_x86(block: &BlockStack) -> BlockStack {
     }
     BlockStack(*stack_size, list1)
 }
+
+// ---------------------------------------------------------------------------
+// print x86
 
 fn print_x86arg(arg: &Arg) -> String {
     match arg {
@@ -317,10 +323,6 @@ pub fn print_x86(block: &BlockStack) -> String {
 
 // ---------------------------------------------------------------------------
 // liveness analysis
-// interference graph
-// graph coloring
-// patch instructions
-// print x86
 
 use std::collections::HashSet;
 pub fn liveness_analysis(block: &Block) -> Vec<HashSet<String>> {
@@ -368,3 +370,14 @@ pub fn liveness_analysis(block: &Block) -> Vec<HashSet<String>> {
     live_set_vec.pop();
     live_set_vec
 }
+
+// ---------------------------------------------------------------------------
+// interference graph
+
+pub struct InterferenceGraph;
+pub fn interference_graph(liveness: &Vec<HashSet<String>>) -> InterferenceGraph {
+    unimplemented!()
+}
+
+// ---------------------------------------------------------------------------
+// graph coloring
