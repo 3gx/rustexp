@@ -374,7 +374,7 @@ pub fn liveness_analysis(block: &Block) -> Vec<HashSet<String>> {
 // ---------------------------------------------------------------------------
 // interference graph
 
-#[derive(Debug, Clone)] //, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IVertex {
     Reg(Reg),
     Var(String),
@@ -382,7 +382,6 @@ pub enum IVertex {
 #[derive(Debug, Clone)]
 pub struct IEdge(IVertex, IVertex);
 
-/*
 impl Eq for IEdge {}
 impl PartialEq for IEdge {
     fn eq(&self, other: &Self) -> bool {
@@ -396,17 +395,11 @@ impl PartialEq<IVertex> for IEdge {
         self.0 == *other || self.1 == *other
     }
 }
-*/
 
-/*
 use std::hash::{Hash, Hasher};
 impl Hash for IEdge {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.hash(state);
-        self.1.hash(state);
-    }
+    fn hash<H: Hasher>(&self, _: &mut H) {}
 }
-*/
 
 type IGraph = HashSet<IEdge>;
 pub fn interference_graph(liveness: &Vec<HashSet<String>>) -> IGraph {
