@@ -403,8 +403,13 @@ impl Hash for IEdge {
 
 type IGraph = HashSet<IEdge>;
 pub fn interference_graph(liveness: &Vec<HashSet<String>>) -> IGraph {
-    //HashSet::new()
-    unimplemented!()
+    let mut g = HashSet::new();
+
+    for set in liveness {
+        for el in set {}
+    }
+
+    g
 }
 
 // ---------------------------------------------------------------------------
