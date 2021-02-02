@@ -419,16 +419,15 @@ impl PartialOrd for IEdge {
 use std::collections::BTreeSet;
 type IGraph = BTreeSet<IEdge>;
 pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
-    unimplemented!()
-    /*
     let mut g = BTreeSet::new();
 
     for LiveSet(wr, set) in liveness {
-        for el in set {}
+        for el in set {
+            //
+        }
     }
 
     g
-        */
 }
 
 // ---------------------------------------------------------------------------
