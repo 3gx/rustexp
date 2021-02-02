@@ -388,6 +388,8 @@ pub enum IVertex {
 pub struct IEdge(pub IVertex, pub IVertex);
 
 impl Eq for IEdge {}
+
+// (a,b) = (b,a)
 impl PartialEq for IEdge {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0 && self.1 == other.1 || self.0 == other.1 && self.1 == other.0
@@ -400,9 +402,10 @@ impl PartialEq<IVertex> for IEdge {
         self.0 == *other || self.1 == *other
     }
 }
-use std::cmp::Ordering;
+
+// order such that if (a,b) ~ (b,a)
 impl Ord for IEdge {
-    fn cmp(&self, other: &Self) -> Ordering {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         use std::cmp::{max, min};
         let v0 = (min(&self.0, &self.1), max(&self.0, &self.1));
         let v1 = (min(&other.0, &other.1), max(&other.0, &other.1));
@@ -411,7 +414,7 @@ impl Ord for IEdge {
 }
 
 impl PartialOrd for IEdge {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
