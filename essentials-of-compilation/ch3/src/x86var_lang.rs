@@ -400,15 +400,12 @@ impl PartialEq<IVertex> for IEdge {
         self.0 == *other || self.1 == *other
     }
 }
-/*
 use std::cmp::Ordering;
 impl Ord for IEdge {
     fn cmp(&self, other: &Self) -> Ordering {
-        let x = self.clone();
-        let y = other.clone();
-        (self.0 < other.0, self.1 < other.1).cmp(
-        let v0 = (std::cmp::min(x.0, x.1), std::cmp::max(x.0, x.1));
-        let v1 = (std::cmp::min(y.0, y.1), std::cmp::max(y.0, y.1));
+        use std::cmp::{max, min};
+        let v0 = (min(&self.0, &self.1), max(&self.0, &self.1));
+        let v1 = (min(&other.0, &other.1), max(&other.0, &other.1));
         v0.cmp(&v1)
     }
 }
@@ -418,7 +415,6 @@ impl PartialOrd for IEdge {
         Some(self.cmp(other))
     }
 }
-*/
 
 use std::collections::BTreeSet;
 type IGraph = BTreeSet<IEdge>;

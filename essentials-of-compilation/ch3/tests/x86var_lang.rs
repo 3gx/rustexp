@@ -172,7 +172,6 @@ mod x86var_lang {
             impl Ord for SymPair {
                 fn cmp(&self, other: &Self) -> Ordering {
                     use std::cmp::{max, min};
-
                     let v0 = (min(&self.0, &self.1), max(&self.0, &self.1));
                     let v1 = (min(&other.0, &other.1), max(&other.0, &other.1));
                     v0.cmp(&v1)
