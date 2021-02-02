@@ -385,7 +385,7 @@ pub enum IVertex {
     Var(String),
 }
 #[derive(Debug, Clone)]
-pub struct IEdge(IVertex, IVertex);
+pub struct IEdge(pub IVertex, pub IVertex);
 
 impl Eq for IEdge {}
 impl PartialEq for IEdge {
@@ -422,8 +422,12 @@ pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
     let mut g = BTreeSet::new();
 
     for LiveSet(wr, set) in liveness {
-        for el in set {
-            //
+        if let Some(wr) = wr {
+            for el in set {
+                if el != wr {
+                    g.insert(IEdge(IVertex::Var(wr.clone()), IVertex::Var(el.clone())));
+                }
+            }
         }
     }
 

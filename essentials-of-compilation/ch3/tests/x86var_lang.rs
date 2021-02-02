@@ -121,6 +121,24 @@ mod x86var_lang {
         }
         println!("");
 
+        let g = interference_graph(&lives);
+        use std::collections::HashSet;
+        let mut gvars = HashSet::new();
+        for s in g {
+            println!(" {:?}", s);
+            let IEdge(a, b) = s;
+            if let IVertex::Var(x) = a {
+                gvars.insert(x.clone());
+            }
+            if let IVertex::Var(x) = b {
+                gvars.insert(x.clone());
+            }
+        }
+        println!("gvars= {:?}", gvars);
+    }
+
+    #[test]
+    fn t2() {
         {
             #[derive(Debug)]
             struct SymPair(usize, usize);
