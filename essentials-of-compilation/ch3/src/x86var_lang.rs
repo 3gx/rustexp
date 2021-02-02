@@ -10,7 +10,7 @@ pub use rvar_anf_lang::rvar_lang;
 
 type Int = i64;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(non_camel_case_types)]
 pub enum Reg {
     rsp,
@@ -379,7 +379,7 @@ pub fn liveness_analysis(block: &Block) -> Vec<LiveSet> {
 // ---------------------------------------------------------------------------
 // interference graph
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum IVertex {
     Reg(Reg),
     Var(String),
@@ -400,11 +400,25 @@ impl PartialEq<IVertex> for IEdge {
         self.0 == *other || self.1 == *other
     }
 }
-
-use std::hash::{Hash, Hasher};
-impl Hash for IEdge {
-    fn hash<H: Hasher>(&self, _: &mut H) {}
+/*
+use std::cmp::Ordering;
+impl Ord for IEdge {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let x = self.clone();
+        let y = other.clone();
+        (self.0 < other.0, self.1 < other.1).cmp(
+        let v0 = (std::cmp::min(x.0, x.1), std::cmp::max(x.0, x.1));
+        let v1 = (std::cmp::min(y.0, y.1), std::cmp::max(y.0, y.1));
+        v0.cmp(&v1)
+    }
 }
+
+impl PartialOrd for IEdge {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+*/
 
 use std::collections::BTreeSet;
 type IGraph = BTreeSet<IEdge>;

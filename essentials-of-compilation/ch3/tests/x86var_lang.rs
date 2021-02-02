@@ -153,8 +153,13 @@ mod x86var_lang {
             println!("{:?}", h);
         }
         {
-            #[derive(Debug)]
-            struct SymPair(usize, usize);
+            #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+            enum V {
+                Int(usize),
+                Str(String),
+            }
+            #[derive(Debug, Clone)]
+            struct SymPair(V, V);
 
             impl Eq for SymPair {}
             impl PartialEq for SymPair {
@@ -166,11 +171,10 @@ mod x86var_lang {
             use std::cmp::Ordering;
             impl Ord for SymPair {
                 fn cmp(&self, other: &Self) -> Ordering {
-                    let v0 = (std::cmp::min(self.0, self.1), std::cmp::max(self.0, self.1));
-                    let v1 = (
-                        std::cmp::min(other.0, other.1),
-                        std::cmp::max(other.0, other.1),
-                    );
+                    use std::cmp::{max, min};
+
+                    let v0 = (min(&self.0, &self.1), max(&self.0, &self.1));
+                    let v1 = (min(&other.0, &other.1), max(&other.0, &other.1));
                     v0.cmp(&v1)
                 }
             }
@@ -182,10 +186,11 @@ mod x86var_lang {
 
             use std::collections::BTreeSet;
             let mut h = BTreeSet::new();
-            h.insert(SymPair(3, 2));
-            h.insert(SymPair(1, 2));
-            h.insert(SymPair(2, 1));
-            h.insert(SymPair(2, 3));
+            use V::{Int, Str};
+            h.insert(SymPair(Int(3), Int(2)));
+            h.insert(SymPair(Int(1), Str("2".to_string())));
+            h.insert(SymPair(Str("2".to_string()), Int(1)));
+            h.insert(SymPair(Int(2), Int(3)));
             println!("\n-\n{:?}", h);
         }
     }
