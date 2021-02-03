@@ -16,19 +16,19 @@ pub enum Reg {
     rsp,
     rbp,
     rax,
-    rbx,
-    rcx,
-    rdx,
-    rsi,
-    rdi,
-    r8,
-    r9,
-    r10,
-    r11,
-    r12,
-    r13,
-    r14,
-    r15,
+    rbx, // 0
+    rcx, // 1
+    rdx, // 2
+    rsi, // 3
+    rdi, // 4
+    r8,  // 5
+    r9,  // 6
+    r10, // 7
+    r11, // 8
+    r12, // 9
+    r13, // 10
+    r14, // 11
+    r15, // 12
 }
 
 #[derive(Debug, Clone)]
@@ -438,22 +438,23 @@ pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
 // ---------------------------------------------------------------------------
 // graph coloring
 
-pub fn graph_coloring(g: &IGraph) -> HashMap<IVertex, Reg> {
+use std::collections::BTreeMap;
+pub fn reg_alloc(g: &IGraph) -> BTreeMap<String, Reg> {
     type Color = usize;
-    type WorkSet = HashMap<String, HashSet<Color>>;
-    let mut workset: WorkSet = HashMap::new();
+    type WorkSet = BTreeMap<String, BTreeSet<Color>>;
+    let mut workset: WorkSet = BTreeMap::new();
 
-    type ColorMap = HashMap<String, Color>;
-    let mut colormap: ColorMap = HashMap::new();
+    type ColorMap = BTreeMap<String, Color>;
+    let mut colormap: ColorMap = BTreeMap::new();
     for s in g {
         let IEdge(IVertex(a), IVertex(b)) = s.clone();
-        workset.insert(a, HashSet::new()).unwrap();
-        workset.insert(b, HashSet::new()).unwrap();
+        workset.insert(a, BTreeSet::new());
+        workset.insert(b, BTreeSet::new());
     }
 
-    fn find_vsat(w: &mut WorkSet) -> (String, HashSet<Color>) {
+    fn find_vsat(w: &mut WorkSet) -> (String, BTreeSet<Color>) {
         let mut vmax = &"".to_string();
-        let mut satmax = &HashSet::new();
+        let mut satmax = &BTreeSet::new();
         for (v, sat) in w.iter() {
             if sat.len() >= satmax.len() {
                 vmax = v;
@@ -466,20 +467,66 @@ pub fn graph_coloring(g: &IGraph) -> HashMap<IVertex, Reg> {
         }
     }
 
-    fn find_adjacent(g: &IGraph, v: &String) -> HashSet<String> {
-        unimplemented!()
+    fn find_adjacent(g: &IGraph, v: &String) -> BTreeSet<String> {
+        let mut adjacent = BTreeSet::new();
+        for IEdge(IVertex(v1), IVertex(v2)) in g {
+            if v1 == v {
+                adjacent.insert(v2.clone());
+            } else if v2 == v {
+                adjacent.insert(v1.clone());
+            }
+        }
+        println!("v= {:?} adjacent= {:?}", v, adjacent);
+        adjacent
     }
-    fn color_vertex(v: &String, adjacent: &HashSet<String>, colormap: &ColorMap) -> Option<Color> {
-        unimplemented!()
+    fn color_vertex(adjacent: &BTreeSet<String>, colormap: &ColorMap) -> Option<Color> {
+        let max_regs = 12;
+        for color in 0..max_regs {
+            let mut can_use = true;
+            for v in adjacent {
+                if let Some(used_col) = colormap.get(v) {
+                    can_use = can_use && *used_col != color;
+                }
+            }
+            if can_use {
+                return Some(color);
+            }
+        }
+        return None;
     }
     while !workset.is_empty() {
-        let (v, sat) = find_vsat(&mut workset);
+        let (v, _) = find_vsat(&mut workset);
         let adjacent = find_adjacent(g, &v);
-        let color = color_vertex(&v, &adjacent, &colormap);
+        let color = color_vertex(&adjacent, &colormap);
         if let Some(color) = color {
             assert_eq!(colormap.insert(v, color), None);
+            for v in adjacent {
+                if let Some(sat) = workset.get_mut(&v) {
+                    sat.insert(color);
+                }
+            }
         }
     }
 
-    unimplemented!()
+    let color2reg = vec![
+        Reg::rbx, // 0
+        Reg::rcx, // 1
+        Reg::rdx, // 2
+        Reg::rsi, // 3
+        Reg::rdi, // 4
+        Reg::r8,  // 5
+        Reg::r9,  // 6
+        Reg::r10, // 7
+        Reg::r11, // 8
+        Reg::r12, // 9
+        Reg::r13, // 10
+        Reg::r14, // 11
+        Reg::r15, // 12
+    ];
+
+    let mut regs = BTreeMap::new();
+    for (v, color) in colormap {
+        regs.insert(v, color2reg[color]);
+    }
+    regs
 }

@@ -124,13 +124,19 @@ mod x86var_lang {
         let g = interference_graph(&lives);
         use std::collections::HashSet;
         let mut gvars = HashSet::new();
-        for s in g {
+        for s in &g {
             println!(" {:?}", s);
             let IEdge(IVertex(a), IVertex(b)) = s;
             gvars.insert(a.clone());
             gvars.insert(b.clone());
         }
         println!("gvars= {:?}", gvars);
+
+        let regs = reg_alloc(&g);
+        println!("\nregisters");
+        for (v, r) in &regs {
+            println!("var= {:?}  reg= {:?}", v, r);
+        }
     }
 
     #[test]
