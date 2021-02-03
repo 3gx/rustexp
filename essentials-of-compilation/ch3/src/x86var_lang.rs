@@ -10,6 +10,8 @@ pub use rvar_anf_lang::rvar_lang;
 
 type Int = i64;
 
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(non_camel_case_types)]
 pub enum Reg {
@@ -50,6 +52,12 @@ pub enum Inst {
     Pushq(Arg),
     Popq(Arg),
     Jmp(String),
+}
+
+#[derive(Debug, Clone)]
+pub struct Options {
+    pub vars: Option<Vec<String>>,
+    pub regs: Option<BTreeMap<String, Reg>>,
 }
 
 #[derive(Debug, Clone)]
@@ -193,7 +201,6 @@ pub fn interp_block(block: &Block) -> Int {
     *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
 }
 
-use std::collections::HashMap;
 pub fn assign_homes(block: &Block) -> BlockStack {
     let Block(vars, list) = block;
     let mut var2idx: HashMap<String, Int> = HashMap::new();
@@ -324,7 +331,6 @@ pub fn print_x86(block: &BlockStack) -> String {
 // ---------------------------------------------------------------------------
 // liveness analysis
 
-use std::collections::HashSet;
 #[derive(Debug, Clone)]
 pub struct LiveSet(pub Option<String>, pub HashSet<String>);
 
@@ -417,7 +423,6 @@ impl PartialOrd for IEdge {
     }
 }
 
-use std::collections::BTreeSet;
 type IGraph = BTreeSet<IEdge>;
 pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
     let mut g = BTreeSet::new();
@@ -438,7 +443,6 @@ pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
 // ---------------------------------------------------------------------------
 // graph coloring
 
-use std::collections::BTreeMap;
 pub fn reg_alloc(g: &IGraph) -> BTreeMap<String, Reg> {
     type Color = usize;
     type WorkSet = BTreeMap<String, BTreeSet<Color>>;
