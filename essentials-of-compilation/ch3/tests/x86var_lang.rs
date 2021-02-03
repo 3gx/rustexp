@@ -153,11 +153,11 @@ mod x86var_lang {
         print_vec(&x86var_home.1);
 
         let val_x86var_stack = x86var_lang::interp_block_stack(&x86var_home);
-        println!("eval(x86var_home)= {}", val_x86var_stack);
+        //println!("eval(x86var_home)= {}", val_x86var_stack);
         assert_eq!(v1, val_x86var_stack);
 
         let x86var_patched = x86var_lang::patch_x86(&x86var_home);
-        println!("x86var_patched= {:?}", x86var_patched);
+        //println!("x86var_patched= {:?}", x86var_patched);
         let val_x86var_patched = x86var_lang::interp_block_stack(&x86var_patched);
         assert_eq!(v1, val_x86var_patched);
         print_vec(&x86var_patched.1);
