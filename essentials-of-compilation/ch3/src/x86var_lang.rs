@@ -380,10 +380,8 @@ pub fn liveness_analysis(block: &Block) -> Vec<LiveSet> {
 // interference graph
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum IVertex {
-    Reg(Reg),
-    Var(String),
-}
+pub struct IVertex(pub String);
+
 #[derive(Debug, Clone)]
 pub struct IEdge(pub IVertex, pub IVertex);
 
@@ -426,10 +424,10 @@ pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
 
     for LiveSet(wr, set) in liveness {
         if let Some(wr) = wr {
+            let mut set = set.clone();
+            set.remove(wr);
             for el in set {
-                if el != wr {
-                    g.insert(IEdge(IVertex::Var(wr.clone()), IVertex::Var(el.clone())));
-                }
+                g.insert(IEdge(IVertex(wr.clone()), IVertex(el)));
             }
         }
     }
@@ -439,3 +437,32 @@ pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
 
 // ---------------------------------------------------------------------------
 // graph coloring
+
+pub fn graph_coloring(g: &IGraph) -> HashMap<IVertex, Reg> {
+    type WorkSet = HashMap<String, HashSet<usize>>;
+    let mut workset: WorkSet = HashMap::new();
+    let mut regmap: HashMap<String, usize> = HashMap::new();
+    for s in g {
+        let IEdge(IVertex(a), IVertex(b)) = s.clone();
+        workset.insert(a, HashSet::new()).unwrap();
+        workset.insert(b, HashSet::new()).unwrap();
+    }
+
+    fn find_vsat(w: &mut WorkSet) -> (String, HashSet<usize>) {
+        let mut vmax = &"".to_string();
+        let mut satmax = &HashSet::new();
+        for (v, sat) in w.iter() {
+            if sat.len() >= satmax.len() {
+                vmax = v;
+                satmax = sat;
+            }
+        }
+        let v = vmax.clone();
+        w.remove_entry(&v).unwrap()
+    }
+    while !workset.is_empty() {
+        let (v, sat) = find_vsat(&mut workset);
+    }
+
+    unimplemented!()
+}

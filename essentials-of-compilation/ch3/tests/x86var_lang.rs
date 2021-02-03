@@ -126,13 +126,9 @@ mod x86var_lang {
         let mut gvars = HashSet::new();
         for s in g {
             println!(" {:?}", s);
-            let IEdge(a, b) = s;
-            if let IVertex::Var(x) = a {
-                gvars.insert(x.clone());
-            }
-            if let IVertex::Var(x) = b {
-                gvars.insert(x.clone());
-            }
+            let IEdge(IVertex(a), IVertex(b)) = s;
+            gvars.insert(a.clone());
+            gvars.insert(b.clone());
         }
         println!("gvars= {:?}", gvars);
     }
