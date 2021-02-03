@@ -34,7 +34,8 @@ mod x86var_lang {
         println!("v1clang= {}", v1clang);
         assert_eq!(v1anf, v1clang);
 
-        let x86var = x86var_lang::select_inst_tail(&tail, x86var_lang::Block::with_vars(vars));
+        let x86var =
+            x86var_lang::select_inst_tail(&tail, x86var_lang::BlockVar::new().with_vars(vars));
         println!("x86var= {:?}", x86var);
         let val_x86var = x86var_lang::interp_block(&x86var);
         println!("eval(x86var)= {}", val_x86var);
@@ -47,7 +48,7 @@ mod x86var_lang {
         }
         print_vec(&x86var.1);
 
-        let x86var_lang::Block(vars, _) = &x86var;
+        let x86var_lang::BlockVar(vars, _) = &x86var;
         println!("vars= {:?}", vars);
 
         let x86var_home = x86var_lang::assign_homes(&x86var);
@@ -101,9 +102,10 @@ mod x86var_lang {
         //println!("v1clang= {}", v1clang);
         assert_eq!(v1anf, v1clang);
 
-        use x86var_lang::Block;
-        let x86var = x86var_lang::select_inst_tail(&tail, x86var_lang::Block::with_vars(vars));
-        let Block(_, inst_list) = &x86var;
+        use x86var_lang::BlockVar;
+        let x86var =
+            x86var_lang::select_inst_tail(&tail, x86var_lang::BlockVar::new().with_vars(vars));
+        let BlockVar(_, inst_list) = &x86var;
         /*
         for inst in inst_list {
             println!("  {:?}", inst);
@@ -137,6 +139,18 @@ mod x86var_lang {
         for (v, r) in &regs {
             println!("var= {:?}  reg= {:?}", v, r);
         }
+
+        let x86reg = BlockVar::new()
+            .with_vars(x86var.0.vars)
+            .with_regs(regs)
+            .with_inst(x86var.1);
+        let x86reg_home = x86var_lang::assign_homes(&x86reg);
+        fn print_vec<T: std::fmt::Debug>(list: &Vec<T>) {
+            for el in list {
+                println!("\t{:?}", el);
+            }
+        }
+        print_vec(&x86reg_home.1);
     }
 
     #[test]

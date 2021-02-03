@@ -61,16 +61,36 @@ pub struct Options {
 }
 
 #[derive(Debug, Clone)]
-pub struct Block(pub Vec<String>, pub Vec<Inst>);
+pub struct BlockVarOpts {
+    pub vars: Vec<String>,
+    pub regs: BTreeMap<String, Reg>,
+}
+#[derive(Debug, Clone)]
+pub struct BlockVar(pub BlockVarOpts, pub Vec<Inst>);
 #[derive(Debug, Clone)]
 pub struct BlockStack(pub Int, pub Vec<Inst>);
 
-impl Block {
-    pub fn empty() -> Block {
-        Block(vec![], vec![])
+impl BlockVar {
+    pub fn new() -> BlockVar {
+        BlockVar(
+            BlockVarOpts {
+                vars: vec![],
+                regs: BTreeMap::new(),
+            },
+            vec![],
+        )
     }
-    pub fn with_vars(vars: Vec<String>) -> Block {
-        Block(vars, vec![])
+    pub fn with_vars(mut self, vars: Vec<String>) -> BlockVar {
+        self.0.vars = vars;
+        self
+    }
+    pub fn with_regs(mut self, regs: BTreeMap<String, Reg>) -> BlockVar {
+        self.0.regs = regs;
+        self
+    }
+    pub fn with_inst(mut self, inst: Vec<Inst>) -> BlockVar {
+        self.1 = inst;
+        self
     }
 }
 
@@ -104,25 +124,25 @@ pub fn select_inst_stmt(s: &CVarLang::Stmt) -> Vec<Inst> {
     }
 }
 
-pub fn select_inst_tail(t: &CVarLang::Tail, block: Block) -> Block {
+pub fn select_inst_tail(t: &CVarLang::Tail, block: BlockVar) -> BlockVar {
     use CVarLang::Tail;
     use Reg::*;
 
     match t {
         Tail::Return(expr) => {
-            let Block(info, mut list) = block;
+            let BlockVar(info, mut list) = block;
             for inst in select_inst_assign(Arg::Reg(rax), expr) {
                 list.push(inst)
             }
             //list.push(Retq);
-            Block(info, list)
+            BlockVar(info, list)
         }
         Tail::Seq(stmt, tail) => {
-            let Block(info, mut list) = block;
+            let BlockVar(info, mut list) = block;
             for inst in select_inst_stmt(stmt) {
                 list.push(inst);
             }
-            select_inst_tail(tail, Block(info, list))
+            select_inst_tail(tail, BlockVar(info, list))
         }
     }
 }
@@ -191,8 +211,8 @@ pub fn interp_inst(frame: &mut Vec<Int>, env: Env, inst: &Inst) -> Env {
         Retq => env,
     }
 }
-pub fn interp_block(block: &Block) -> Int {
-    let Block(_, list) = block;
+pub fn interp_block(block: &BlockVar) -> Int {
+    let BlockVar(_, list) = block;
     let mut env: Env = vec![];
     let mut frame = vec![];
     for inst in list {
@@ -201,8 +221,8 @@ pub fn interp_block(block: &Block) -> Int {
     *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
 }
 
-pub fn assign_homes(block: &Block) -> BlockStack {
-    let Block(vars, list) = block;
+pub fn assign_homes(block: &BlockVar) -> BlockStack {
+    let BlockVar(BlockVarOpts { vars, regs }, list) = block;
     let mut var2idx: HashMap<String, Int> = HashMap::new();
     let mut stack_size = 0;
     for var in vars {
@@ -214,7 +234,11 @@ pub fn assign_homes(block: &Block) -> BlockStack {
     let home = |arg: &Arg| match arg {
         Arg::Var(x) => {
             let idx = var2idx.get(x).unwrap();
-            Arg::Deref(Reg::rbp, -idx)
+            if let Some(reg) = regs.get(x) {
+                Arg::Reg(*reg)
+            } else {
+                Arg::Deref(Reg::rbp, -idx)
+            }
         }
         _ => arg.clone(),
     };
@@ -334,7 +358,7 @@ pub fn print_x86(block: &BlockStack) -> String {
 #[derive(Debug, Clone)]
 pub struct LiveSet(pub Option<String>, pub HashSet<String>);
 
-pub fn liveness_analysis(block: &Block) -> Vec<LiveSet> {
+pub fn liveness_analysis(block: &BlockVar) -> Vec<LiveSet> {
     fn update_with_rdwr(live_set: &mut HashSet<String>, rd: &[&Arg], wr: &Arg) -> Option<String> {
         // before_k = (after_k - wr) + rd;
         match wr {
@@ -369,7 +393,7 @@ pub fn liveness_analysis(block: &Block) -> Vec<LiveSet> {
         LiveSet(wr, live_set)
     };
 
-    let Block(_, list) = block;
+    let BlockVar(_, list) = block;
     let mut live_set_vec: Vec<LiveSet> = vec![LiveSet(None, HashSet::new())];
     for inst in list.iter().rev() {
         let live_set = update_live_set(inst, &live_set_vec.last().unwrap().1);
