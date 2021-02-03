@@ -439,16 +439,19 @@ pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
 // graph coloring
 
 pub fn graph_coloring(g: &IGraph) -> HashMap<IVertex, Reg> {
-    type WorkSet = HashMap<String, HashSet<usize>>;
+    type Color = usize;
+    type WorkSet = HashMap<String, HashSet<Color>>;
     let mut workset: WorkSet = HashMap::new();
-    let mut regmap: HashMap<String, usize> = HashMap::new();
+
+    type ColorMap = HashMap<String, Color>;
+    let mut colormap: ColorMap = HashMap::new();
     for s in g {
         let IEdge(IVertex(a), IVertex(b)) = s.clone();
         workset.insert(a, HashSet::new()).unwrap();
         workset.insert(b, HashSet::new()).unwrap();
     }
 
-    fn find_vsat(w: &mut WorkSet) -> (String, HashSet<usize>) {
+    fn find_vsat(w: &mut WorkSet) -> (String, HashSet<Color>) {
         let mut vmax = &"".to_string();
         let mut satmax = &HashSet::new();
         for (v, sat) in w.iter() {
@@ -457,11 +460,25 @@ pub fn graph_coloring(g: &IGraph) -> HashMap<IVertex, Reg> {
                 satmax = sat;
             }
         }
-        let v = vmax.clone();
-        w.remove_entry(&v).unwrap()
+        {
+            let v = vmax.clone();
+            w.remove_entry(&v).unwrap()
+        }
+    }
+
+    fn find_adjacent(g: &IGraph, v: &String) -> HashSet<String> {
+        unimplemented!()
+    }
+    fn color_vertex(v: &String, adjacent: &HashSet<String>, colormap: &ColorMap) -> Option<Color> {
+        unimplemented!()
     }
     while !workset.is_empty() {
         let (v, sat) = find_vsat(&mut workset);
+        let adjacent = find_adjacent(g, &v);
+        let color = color_vertex(&v, &adjacent, &colormap);
+        if let Some(color) = color {
+            assert_eq!(colormap.insert(v, color), None);
+        }
     }
 
     unimplemented!()
