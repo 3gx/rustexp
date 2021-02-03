@@ -484,16 +484,17 @@ pub fn reg_alloc(ig: &IGraph, bg: &IGraph) -> BTreeMap<String, Reg> {
 
     fn find_vsat(w: &mut WorkSet, bg: &IGraph) -> (String, BTreeSet<Color>) {
         let (mut vmax, mut satmax) = w.iter().next().unwrap();
+        let mut sat_set = [vmax.as_str()].iter().cloned().collect::<BTreeSet<&str>>();
         for (v, sat) in w.iter() {
             if sat.len() > satmax.len() {
-                vmax = v;
                 satmax = sat;
+                sat_set = [vmax.as_str()].iter().cloned().collect();
             } else if sat.len() == satmax.len() {
-                // skip
+                sat_set.insert(v);
             }
         }
         {
-            let v = vmax.clone();
+            let v = sat_set.iter().next().unwrap().to_string();
             w.remove_entry(&v).unwrap()
         }
     }
