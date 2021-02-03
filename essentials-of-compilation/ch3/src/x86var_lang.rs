@@ -472,10 +472,9 @@ pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
 pub fn reg_alloc(ig: &IGraph, bg: &IGraph) -> BTreeMap<String, Reg> {
     type Color = usize;
     type WorkSet = BTreeMap<String, BTreeSet<Color>>;
-    let mut workset: WorkSet = BTreeMap::new();
-
     type ColorMap = BTreeMap<String, Color>;
-    let mut colormap: ColorMap = BTreeMap::new();
+
+    let mut workset: WorkSet = BTreeMap::new();
     for s in ig {
         let IEdge(IVertex(a), IVertex(b)) = s.clone();
         workset.insert(a, BTreeSet::new());
@@ -527,6 +526,8 @@ pub fn reg_alloc(ig: &IGraph, bg: &IGraph) -> BTreeMap<String, Reg> {
         let v = candidates.iter().next().unwrap();
         v.clone()
     }
+
+    let mut colormap: ColorMap = BTreeMap::new();
     while !workset.is_empty() {
         let satset = find_candidates(&mut workset);
         let v = pick_vertex(&satset, &colormap, bg);
