@@ -469,20 +469,20 @@ pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
 // ---------------------------------------------------------------------------
 // graph coloring
 
-pub fn reg_alloc(g: &IGraph) -> BTreeMap<String, Reg> {
+pub fn reg_alloc(ig: &IGraph, bg: &IGraph) -> BTreeMap<String, Reg> {
     type Color = usize;
     type WorkSet = BTreeMap<String, BTreeSet<Color>>;
     let mut workset: WorkSet = BTreeMap::new();
 
     type ColorMap = BTreeMap<String, Color>;
     let mut colormap: ColorMap = BTreeMap::new();
-    for s in g {
+    for s in ig {
         let IEdge(IVertex(a), IVertex(b)) = s.clone();
         workset.insert(a, BTreeSet::new());
         workset.insert(b, BTreeSet::new());
     }
 
-    fn find_vsat(w: &mut WorkSet) -> (String, BTreeSet<Color>) {
+    fn find_vsat(w: &mut WorkSet, bg: &IGraph) -> (String, BTreeSet<Color>) {
         let (mut vmax, mut satmax) = w.iter().next().unwrap();
         for (v, sat) in w.iter() {
             if sat.len() > satmax.len() {
@@ -526,8 +526,8 @@ pub fn reg_alloc(g: &IGraph) -> BTreeMap<String, Reg> {
         return None;
     }
     while !workset.is_empty() {
-        let (v, _) = find_vsat(&mut workset);
-        let adjacent = find_adjacent(g, &v);
+        let (v, _) = find_vsat(&mut workset, bg);
+        let adjacent = find_adjacent(ig, &v);
         let color = color_vertex(&adjacent, &colormap);
         if let Some(color) = color {
             assert_eq!(colormap.insert(v, color), None);
@@ -566,5 +566,12 @@ pub fn reg_alloc(g: &IGraph) -> BTreeMap<String, Reg> {
 // move bias graph
 
 pub fn move_bias(b: &BlockVar) -> IGraph {
-    unimplemented!()
+    let mut g = BTreeSet::new();
+    let BlockVar(_, inst_list) = b;
+    for inst in inst_list.clone() {
+        if let Inst::Movq(Arg::Var(x), Arg::Var(y)) = inst {
+            g.insert(IEdge(IVertex(x), IVertex(y)));
+        }
+    }
+    g
 }
