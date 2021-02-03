@@ -504,36 +504,71 @@ pub fn reg_alloc(ig: &IGraph, bg: &IGraph) -> BTreeMap<String, Reg> {
                 adjacent.insert(v1.clone());
             }
         }
-        println!("v= {:?} adjacent= {:?}", v, adjacent);
+        println!(" -- v= {:?} adjacent= {:?}", v, adjacent);
         adjacent
     }
-    fn color_vertex(adjacent: &BTreeSet<String>, colormap: &ColorMap) -> Option<Color> {
-        let max_regs = 12;
-        for color in 0..max_regs {
+
+    fn color_vertex(
+        adjacent: &BTreeSet<String>,
+        colormap: &ColorMap,
+        color: Option<Color>,
+    ) -> Option<Color> {
+        let can_use = |color| {
             let mut can_use = true;
             for v in adjacent {
                 if let Some(used_col) = colormap.get(v) {
                     can_use = can_use && *used_col != color;
                 }
             }
-            if can_use {
+            can_use
+        };
+        if let Some(color) = color {
+            if can_use(color) {
+                return Some(color);
+            }
+        }
+        let max_regs = 12;
+        for color in 0..max_regs {
+            if can_use(color) {
                 return Some(color);
             }
         }
         return None;
     }
-    fn pick_vertex(candidates: &BTreeSet<String>, colormap: &ColorMap, bg: &IGraph) -> String {
-        let v = candidates.iter().next().unwrap();
-        v.clone()
+
+    fn pick_vertex(
+        candidates: &BTreeSet<String>,
+        colormap: &ColorMap,
+        bg: &IGraph,
+    ) -> (String, Option<Color>) {
+        for IEdge(IVertex(a), IVertex(b)) in bg {
+            /*
+            println!(
+                "a,b= {:?}, candidates={:?}, colormap={:?} - {:?}",
+                (a, b),
+                candidates,
+                colormap,
+                (candidates.get(a), colormap.get(a)),
+            );
+            */
+            if !candidates.get(a).is_none() && !colormap.get(b).is_none() {
+                return (a.clone(), Some(*colormap.get(b).unwrap()));
+            }
+            if !candidates.get(b).is_none() && !colormap.get(a).is_none() {
+                return (b.clone(), Some(*colormap.get(a).unwrap()));
+            }
+        }
+        (candidates.iter().next().unwrap().clone(), None)
     }
 
     let mut colormap: ColorMap = BTreeMap::new();
     while !workset.is_empty() {
         let satset = find_candidates(&mut workset);
-        let v = pick_vertex(&satset, &colormap, bg);
+        let (v, color) = pick_vertex(&satset, &colormap, bg);
+        println!("v= {:?}, candidate_color ={:?}", v, color);
         workset.remove(&v);
         let adjacent = find_adjacent(ig, &v);
-        let color = color_vertex(&adjacent, &colormap);
+        let color = color_vertex(&adjacent, &colormap, color);
         if let Some(color) = color {
             assert_eq!(colormap.insert(v, color), None);
             for v in adjacent {
@@ -562,6 +597,7 @@ pub fn reg_alloc(ig: &IGraph, bg: &IGraph) -> BTreeMap<String, Reg> {
 
     let mut regs = BTreeMap::new();
     for (v, color) in colormap {
+        println!("v= {:?} color={:?}", v, color);
         regs.insert(v, color2reg[color]);
     }
     regs
