@@ -482,21 +482,18 @@ pub fn reg_alloc(ig: &IGraph, bg: &IGraph) -> BTreeMap<String, Reg> {
         workset.insert(b, BTreeSet::new());
     }
 
-    fn find_vsat(w: &mut WorkSet, bg: &IGraph) -> (String, BTreeSet<Color>) {
-        let (mut vmax, mut satmax) = w.iter().next().unwrap();
-        let mut sat_set = [vmax.as_str()].iter().cloned().collect::<BTreeSet<&str>>();
+    fn find_candidates(w: &WorkSet) -> BTreeSet<String> {
+        let (_, mut satmax) = w.iter().next().unwrap();
+        let mut candidates = BTreeSet::<String>::new();
         for (v, sat) in w.iter() {
-            if sat.len() > satmax.len() {
+            if sat.len() == satmax.len() {
+                candidates.insert(v.clone());
+            } else if sat.len() > satmax.len() {
                 satmax = sat;
-                sat_set = [vmax.as_str()].iter().cloned().collect();
-            } else if sat.len() == satmax.len() {
-                sat_set.insert(v);
+                candidates = [v.to_string()].iter().cloned().collect();
             }
         }
-        {
-            let v = sat_set.iter().next().unwrap().to_string();
-            w.remove_entry(&v).unwrap()
-        }
+        candidates
     }
 
     fn find_adjacent(g: &IGraph, v: &String) -> BTreeSet<String> {
@@ -526,8 +523,14 @@ pub fn reg_alloc(ig: &IGraph, bg: &IGraph) -> BTreeMap<String, Reg> {
         }
         return None;
     }
+    fn pick_vertex(candidates: &BTreeSet<String>, colormap: &ColorMap, bg: &IGraph) -> String {
+        let v = candidates.iter().next().unwrap();
+        v.clone()
+    }
     while !workset.is_empty() {
-        let (v, _) = find_vsat(&mut workset, bg);
+        let satset = find_candidates(&mut workset);
+        let v = pick_vertex(&satset, &colormap, bg);
+        workset.remove(&v);
         let adjacent = find_adjacent(ig, &v);
         let color = color_vertex(&adjacent, &colormap);
         if let Some(color) = color {
