@@ -134,6 +134,8 @@ mod x86var_lang {
         }
         println!("gvars= {:?}", gvars);
 
+        let gbias = move_bias(&x86var);
+
         let regs = reg_alloc(&g);
         println!("\nregisters");
         for (v, r) in &regs {

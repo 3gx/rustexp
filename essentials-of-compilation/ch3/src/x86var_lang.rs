@@ -561,3 +561,10 @@ pub fn reg_alloc(g: &IGraph) -> BTreeMap<String, Reg> {
     }
     regs
 }
+
+// ---------------------------------------------------------------------------
+// move bias graph
+
+pub fn move_bias(b: &BlockVar) -> IGraph {
+    unimplemented!()
+}
