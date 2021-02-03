@@ -227,16 +227,18 @@ pub fn assign_homes(block: &BlockVar) -> BlockStack {
     let mut stack_size = 0;
     for var in vars {
         assert!(!var2idx.contains_key(var));
-        stack_size += 8;
-        var2idx.insert(var.clone(), stack_size);
+        if regs.get(var).is_none() {
+            stack_size += 8;
+            var2idx.insert(var.clone(), stack_size);
+        }
     }
 
     let home = |arg: &Arg| match arg {
         Arg::Var(x) => {
-            let idx = var2idx.get(x).unwrap();
             if let Some(reg) = regs.get(x) {
                 Arg::Reg(*reg)
             } else {
+                let idx = var2idx.get(x).unwrap();
                 Arg::Deref(Reg::rbp, -idx)
             }
         }
