@@ -25,14 +25,28 @@ macro __mk_op {
 }
 
 type Int = i64;
+type Bool = bool;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
+    // atoms
     Int(Int),
+    Bool(Bool),
+    Var(String),
+
+    // let expr
+    Let(String, Box<Expr>, Box<Expr>),
+
+    //control-flow
+    If(Box<Expr>, Box<Expr>, Box<Expr>),
+
+    // primitive ops
     Read,
+    Cmp(Box<Expr>, Box<Expr>),
     Neg(Box<Expr>),
     Add(Box<Expr>, Box<Expr>),
-    Var(String),
-    Let(String, Box<Expr>, Box<Expr>),
+    And(Box<Expr>, Box<Expr>),
+    Or(Box<Expr>, Box<Expr>),
+    Not(Box<Expr>),
 }
 
 pub macro add {

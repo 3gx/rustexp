@@ -42,5 +42,12 @@ fn main() {
         println!("foo1= {:?}", foo1);
         *foo1.cyclic.borrow_mut() = Some(foo3.clone());
     }
+    {
+        let x = Gc::new(GcCell::new(20));
+        let y = Gc::clone(&x);
+        println!("x= {:?}", x);
+        *x.borrow_mut() = 42;
+        println!("x= {:?}", y);
+    }
     println!("Hello, world!");
 }
