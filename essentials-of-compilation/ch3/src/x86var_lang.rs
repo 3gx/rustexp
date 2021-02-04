@@ -283,7 +283,7 @@ pub fn patch_x86(block: &BlockStack) -> BlockStack {
     for inst in list {
         use Inst::*;
         use Reg::{rax, rbp};
-        let insts1 = r#match! { [inst]
+        let insts1 = match inst {
             Addq(Arg::Deref(rbp, idx1), Arg::Deref(rbp, idx2)) => vec![
                 Movq(Arg::Deref(rbp, *idx1), Arg::Reg(rax)),
                 Addq(Arg::Reg(rax), Arg::Deref(rbp, *idx2)),
@@ -455,12 +455,14 @@ pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
     let mut g = BTreeSet::new();
 
     for LiveSet(_wr, set) in liveness {
+        // XXX: use o(n^2) algorithm, since the write-based algorithm is incorrectly implemented
         for a in set {
             for b in set {
                 g.insert(IEdge(IVertex(a.clone()), IVertex(b.clone())));
             }
         }
         /*
+        // write-based algorithm to build interference graph
         if let Some(wr) = wr {
             let mut set = set.clone();
             set.remove(wr);
