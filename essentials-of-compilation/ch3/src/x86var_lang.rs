@@ -537,7 +537,7 @@ pub fn reg_alloc(ig: &IGraph, bg: &IGraph) -> BTreeMap<String, Reg> {
                 return Some(color);
             }
         }
-        let max_regs = 12;
+        let max_regs = 13;
         for color in 0..max_regs {
             if can_use(color) {
                 return Some(color);
