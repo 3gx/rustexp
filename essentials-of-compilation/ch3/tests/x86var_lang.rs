@@ -136,6 +136,7 @@ mod x86var_lang {
         println!("gvars= {:?}", gvars);
 
         let gbias = move_bias(&x86var);
+        //let gbias = std::collections::BTreeSet::new();
         for vtx in &gbias {
             println!("bias: {:?}", vtx);
         }
@@ -317,6 +318,7 @@ mod x86var_lang {
         println!("gvars= {:?}", gvars);
 
         let gbias = move_bias(&x86var);
+        //let gbias = std::collections::BTreeSet::new();
         for vtx in &gbias {
             println!("bias: {:?}", vtx);
         }
