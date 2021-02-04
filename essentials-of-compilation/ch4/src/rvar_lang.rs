@@ -1,6 +1,5 @@
 #[path = "./macros.rs"]
 mod macros;
-use macros::{bx, r#match};
 
 pub trait IntoTerm {
     fn into_term(&self) -> Expr;
@@ -24,45 +23,45 @@ macro __mk_op {
     },
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum CmpOp {
+    Eq,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+}
+
 type Int = i64;
 type Bool = bool;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     // atoms
     Int(Int),
-    //Bool(Bool),
+    Bool(Bool),
     Var(String),
 
     // let expr
     Let(String, Box<Expr>, Box<Expr>),
 
     //control-flow
-    //If(Box<Expr>, Box<Expr>, Box<Expr>),
+    If(Box<Expr>, Box<Expr>, Box<Expr>),
 
     // primitive ops
     Read,
-    //Cmp(Box<Expr>, Box<Expr>),
     Neg(Box<Expr>),
     Add(Box<Expr>, Box<Expr>),
-    //And(Box<Expr>, Box<Expr>),
-    //Or(Box<Expr>, Box<Expr>),
-    //Not(Box<Expr>),
-}
-
-pub macro add {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Add))) }
-}
-
-pub macro neg {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Neg)) ) }
-}
-
-pub macro read() {
-    Expr::Read
+    Cmp(CmpOp, Box<Expr>, Box<Expr>),
+    And(Box<Expr>, Box<Expr>),
+    Or(Box<Expr>, Box<Expr>),
+    Not(Box<Expr>),
 }
 
 pub macro int($e:expr) {
     Expr::Int($e)
+}
+pub macro bool($b:expr) {
+    Expr::Bool($b)
 }
 
 pub macro r#let {
@@ -70,6 +69,34 @@ pub macro r#let {
        __mk_op!((@args $($expr)*, $($body)*)
                 (@expr (@ctor Expr::Let) stringify!($id).to_string(),) )
     },
+}
+pub use r#let as let_;
+
+pub macro r#if {
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::If))) }
+}
+pub use r#if as if_;
+
+pub macro read() {
+    Expr::Read
+}
+pub macro neg {
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Neg)) ) }
+}
+pub macro add {
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Add))) }
+}
+pub macro cmp {
+    ($op:expr, $($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Cmp) $op,) ) }
+}
+pub macro and {
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::And)) ) }
+}
+pub macro or {
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Or)) ) }
+}
+pub macro xor {
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Xor)) ) }
 }
 
 #[derive(Debug, Clone)]
@@ -84,6 +111,11 @@ impl IntoTerm for Int {
         int!(*self)
     }
 }
+impl IntoTerm for bool {
+    fn into_term(&self) -> Expr {
+        bool!(*self)
+    }
+}
 impl IntoTerm for Expr {
     fn into_term(&self) -> Expr {
         self.clone()
@@ -95,8 +127,28 @@ impl IntoTerm for &str {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum Value {
+    Int(Int),
+    Bool(Bool),
+}
+impl Value {
+    fn int(&self) -> Option<&Int> {
+        match self {
+            Value::Int(n) => Some(n),
+            Value::Bool(_) => None,
+        }
+    }
+    fn bool(&self) -> Option<&Bool> {
+        match self {
+            Value::Int(_) => None,
+            Value::Bool(b) => Some(b),
+        }
+    }
+}
+
 type SymTable<T> = Vec<(String, T)>;
-pub type EnvInt = SymTable<Int>;
+pub type EnvInt = SymTable<Value>;
 
 pub macro sym {
     () => {
@@ -122,26 +174,61 @@ pub fn sym_set<T: Clone>(sym: &SymTable<T>, key: &str, val: &T) -> SymTable<T> {
     sym
 }
 
-pub fn interp_exp(env: &EnvInt, e: &Expr) -> Int {
+pub fn interp_exp(env: &EnvInt, e: &Expr) -> Value {
     use Expr::*;
-    r#match! { [e]
-        Int(n) => n.clone(),
+    match e {
+        Int(n) => Value::Int(*n),
+        Bool(b) => Value::Bool(*b),
         Read => {
             let mut input = String::new();
             std::io::stdin().read_line(&mut input).unwrap();
-            input.trim().parse().unwrap()
+            Value::Int(input.trim().parse().unwrap())
         }
-        Neg(e) => -interp_exp(env, e),
-        Add(e1, e2) => interp_exp(env, e1) + interp_exp(env, e2),
+        Neg(e) => Value::Int(-interp_exp(env, e).int().unwrap()),
+        Add(e1, e2) => {
+            Value::Int(interp_exp(env, e1).int().unwrap() + interp_exp(env, e2).int().unwrap())
+        }
         Var(x) => sym_get(env, &x).unwrap().clone(),
         Let(x, e, body) => {
             let new_env = sym_set(env, x, &interp_exp(env, e));
             interp_exp(&new_env, body)
         }
+        If(cond, thn, els) => interp_exp(
+            env,
+            if *interp_exp(env, cond).bool().unwrap() {
+                thn
+            } else {
+                els
+            },
+        ),
+        And(e1, e2) => {
+            if *interp_exp(env, e1).bool().unwrap() {
+                interp_exp(env, e2)
+            } else {
+                Value::Bool(false)
+            }
+        }
+        Or(e1, e2) => {
+            if *interp_exp(env, e1).bool().unwrap() {
+                Value::Bool(true)
+            } else {
+                interp_exp(env, e2)
+            }
+        }
+        Not(expr) => Value::Bool(!interp_exp(env, expr).bool().unwrap()),
+        Cmp(op, e1, e2) => match (op, interp_exp(env, e1), interp_exp(env, e2)) {
+            (CmpOp::Eq, Value::Int(a), Value::Int(b)) => Value::Bool(a == b),
+            (CmpOp::Eq, Value::Bool(a), Value::Bool(b)) => Value::Bool(a == b),
+            (CmpOp::Le, Value::Int(a), Value::Int(b)) => Value::Bool(a <= b),
+            (CmpOp::Lt, Value::Int(a), Value::Int(b)) => Value::Bool(a < b),
+            (CmpOp::Ge, Value::Int(a), Value::Int(b)) => Value::Bool(a >= b),
+            (CmpOp::Gt, Value::Int(a), Value::Int(b)) => Value::Bool(a > b),
+            x @ _ => panic!("type mismatch: {:?}", x),
+        },
     }
 }
 
-pub fn interp_program(p: &Program) -> Int {
+pub fn interp_program(p: &Program) -> Value {
     match p {
         Program(e) => interp_exp(&vec![], e),
     }
@@ -166,6 +253,7 @@ pub fn gensym(x: &str) -> String {
     x.to_string() + &counter.to_string()
 }
 
+/*
 type UMap = SymTable<String>;
 pub fn uniquify_expr(umap: &UMap, expr: &Expr) -> Expr {
     use Expr::*;
@@ -192,3 +280,4 @@ pub fn uniquify(p: Program) -> Program {
         Program(e) => Program(uniquify_expr(&sym![], &e)),
     }
 }
+*/

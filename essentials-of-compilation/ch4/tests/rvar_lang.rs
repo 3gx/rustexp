@@ -27,6 +27,7 @@ mod rvar_lang {
         }
     }
 
+    /*
     #[test]
     fn t1() {
         use ch4::rvar_lang::sym;
@@ -48,6 +49,7 @@ mod rvar_lang {
         println!("e1u= {:?}", e1u);
         assert_eq!(e2, e1u);
     }
+    */
 
     #[test]
     fn t2() {
