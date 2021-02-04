@@ -33,7 +33,7 @@ pub enum Reg {
     r15, // 12
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Arg {
     Imm(Int),
     Var(String),
@@ -283,7 +283,7 @@ pub fn patch_x86(block: &BlockStack) -> BlockStack {
     for inst in list {
         use Inst::*;
         use Reg::{rax, rbp};
-        let insts1 = match inst {
+        let insts1 = r#match! { [inst]
             Addq(Arg::Deref(rbp, idx1), Arg::Deref(rbp, idx2)) => vec![
                 Movq(Arg::Deref(rbp, *idx1), Arg::Reg(rax)),
                 Addq(Arg::Reg(rax), Arg::Deref(rbp, *idx2)),
@@ -296,6 +296,7 @@ pub fn patch_x86(block: &BlockStack) -> BlockStack {
                 Movq(Arg::Deref(rbp, *idx1), Arg::Reg(rax)),
                 Movq(Arg::Reg(rax), Arg::Deref(rbp, *idx2)),
             ],
+            Movq(arg1, arg2) if arg1 == arg2 => vec![],
             _ => vec![inst.clone()],
         };
         for inst in insts1 {
@@ -453,7 +454,13 @@ type IGraph = BTreeSet<IEdge>;
 pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
     let mut g = BTreeSet::new();
 
-    for LiveSet(wr, set) in liveness {
+    for LiveSet(_wr, set) in liveness {
+        for a in set {
+            for b in set {
+                g.insert(IEdge(IVertex(a.clone()), IVertex(b.clone())));
+            }
+        }
+        /*
         if let Some(wr) = wr {
             let mut set = set.clone();
             set.remove(wr);
@@ -461,6 +468,7 @@ pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
                 g.insert(IEdge(IVertex(wr.clone()), IVertex(el)));
             }
         }
+        */
     }
 
     g
@@ -504,7 +512,7 @@ pub fn reg_alloc(ig: &IGraph, bg: &IGraph) -> BTreeMap<String, Reg> {
                 adjacent.insert(v1.clone());
             }
         }
-        println!(" -- v= {:?} adjacent= {:?}", v, adjacent);
+        //println!(" -- v= {:?} adjacent= {:?}", v, adjacent);
         adjacent
     }
 
