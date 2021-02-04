@@ -30,23 +30,23 @@ type Bool = bool;
 pub enum Expr {
     // atoms
     Int(Int),
-    Bool(Bool),
+    //Bool(Bool),
     Var(String),
 
     // let expr
     Let(String, Box<Expr>, Box<Expr>),
 
     //control-flow
-    If(Box<Expr>, Box<Expr>, Box<Expr>),
+    //If(Box<Expr>, Box<Expr>, Box<Expr>),
 
     // primitive ops
     Read,
-    Cmp(Box<Expr>, Box<Expr>),
+    //Cmp(Box<Expr>, Box<Expr>),
     Neg(Box<Expr>),
     Add(Box<Expr>, Box<Expr>),
-    And(Box<Expr>, Box<Expr>),
-    Or(Box<Expr>, Box<Expr>),
-    Not(Box<Expr>),
+    //And(Box<Expr>, Box<Expr>),
+    //Or(Box<Expr>, Box<Expr>),
+    //Not(Box<Expr>),
 }
 
 pub macro add {
