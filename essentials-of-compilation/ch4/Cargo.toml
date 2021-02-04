@@ -8,3 +8,5 @@ edition = "2018"
 
 [dependencies]
 lazy_static = "1.0"
+gc = { version = "0.3", features = ["derive"] }
+
