@@ -111,8 +111,8 @@ pub fn select_inst_assign(dst: Arg, e: &CVarLang::Expr) -> Vec<Inst> {
         Expr::Read => vec![Callq("Read".to_string(), 0), Movq(Arg::Reg(rax), dst)],
         Expr::Neg(a) => vec![Movq(select_inst_atom(a), dst.clone()), Negq(dst)],
         Expr::Add(a1, a2) => vec![
-            Movq(select_inst_atom(a2), dst.clone()),
-            Addq(select_inst_atom(a1), dst),
+            Movq(select_inst_atom(a1), dst.clone()),
+            Addq(select_inst_atom(a2), dst),
         ],
     }
 }
