@@ -124,14 +124,16 @@ pub macro gt {
                               (@expr (@ctor Expr::BinaryOp)
                                      BinaryOpKind::CmpOp(CmpOpKind::Gt),) ) }
 }
-/*
 pub macro and {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::BinaryOp) BinaryOpKind::And) ) }
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*)
+                              (@expr (@ctor Expr::BinaryOp)
+                                     BinaryOpKind::And,) ) }
 }
 pub macro or {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::BinaryOp) BinaryOpKind::Or) ) }
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*)
+                              (@expr (@ctor Expr::BinaryOp)
+                                     BinaryOpKind::Or,) ) }
 }
-*/
 
 #[derive(Debug, Clone)]
 pub struct Program(pub Expr);

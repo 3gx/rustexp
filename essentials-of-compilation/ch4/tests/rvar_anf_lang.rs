@@ -29,4 +29,32 @@ mod rvar_anf_tests {
         a.push(42);
         println!("a={:?}", a);
     }
+
+    #[test]
+    fn t2() {
+        use ch4::rvar_anf_lang;
+        let (e1, v1) = {
+            use rvar_anf_lang::rvar_lang::*;
+            let e1 = let_!([x 1]
+                        let_!([y 101]
+                          r#if!( and!(eq!(x,0), eq!(y,read!())),
+                                 add!(y,2),
+                                 r#if!( or!(eq!(x,1), eq!(x,2)),
+                                        add!(y,20),
+                                        add!(y,30)))));
+
+            let v1 = interp_exp(&vec![], &e1);
+            (e1, v1)
+        };
+        println!("e1= {:#?} ", e1);
+        println!("v1= {:?} ", v1);
+
+        use rvar_anf_lang::{interp_exp, rco_exp};
+        let e1anf = rco_exp(&e1);
+        println!("e1anf= {:#?} ", e1anf);
+
+        let v1anf = interp_exp(&vec![], &e1anf);
+        assert_eq!(v1, v1anf);
+        println!("v1= {:?} ", v1);
+    }
 }
