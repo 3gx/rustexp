@@ -24,7 +24,7 @@ macro __mk_op {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
 pub enum CmpOpKind {
     Eq,
     Lt,
@@ -33,13 +33,13 @@ pub enum CmpOpKind {
     Ge,
 }
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
 pub enum UnaryOpKind {
     Neg,
     Not,
 }
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
 pub enum BinaryOpKind {
     CmpOp(CmpOpKind),
     Add,
@@ -335,13 +335,51 @@ pub fn uniquify(p: Program) -> Program {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Type {
     Bool,
     Int,
 }
 
 pub type Ctx = SymTable<Type>;
-pub fn type_check(ctx: &Ctx, e: &Expr) -> Option<Type> {
-    unimplemented!()
+pub fn type_check(ctx: &Ctx, expr: &Expr) -> Type {
+    match expr {
+        Expr::Int(_) => Type::Int,
+        Expr::Bool(_) => Type::Bool,
+        Expr::Var(x) => *sym_get(ctx, x).unwrap(),
+        Expr::Let(x, expr, body) => {
+            let ty = type_check(ctx, expr);
+            let ctx = sym_set(ctx, x, &ty);
+            type_check(&ctx, body)
+        }
+        Expr::If(pred, then_, else_) => {
+            match type_check(ctx, pred) {
+                Type::Bool => (),
+                x @ _ => panic!("type({:?}) must be Bool, got {:?}", pred, x),
+            };
+            let then_ty = type_check(ctx, then_);
+            let else_ty = type_check(ctx, else_);
+            if then_ty != else_ty {
+                panic!(
+                    "type({:?}) = {:?} != {:?} = type({:?})",
+                    then_, then_ty, else_ty, else_
+                )
+            }
+            then_ty
+        }
+        Expr::Read => Type::Int,
+        Expr::UnaryOp(op, expr) => match (op, type_check(ctx, expr)) {
+            (UnaryOpKind::Not, Type::Bool) => Type::Bool,
+            (UnaryOpKind::Neg, Type::Int) => Type::Int,
+            x @ _ => panic!("unsupported {:?}", x),
+        },
+        Expr::BinaryOp(op, e1, e2) => match (op, type_check(ctx, e1), type_check(ctx, e2)) {
+            (BinaryOpKind::Add, Type::Int, Type::Int) => Type::Int,
+            (BinaryOpKind::And, Type::Bool, Type::Bool) => Type::Bool,
+            (BinaryOpKind::Or, Type::Bool, Type::Bool) => Type::Bool,
+            (BinaryOpKind::CmpOp(CmpOpKind::Eq), Type::Bool, Type::Bool) => Type::Bool,
+            (BinaryOpKind::CmpOp(_), Type::Int, Type::Int) => Type::Bool,
+            x @ _ => panic!("unsupported {:?}", x),
+        },
+    }
 }

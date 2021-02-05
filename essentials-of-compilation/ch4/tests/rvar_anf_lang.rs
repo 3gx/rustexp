@@ -9,11 +9,13 @@ mod rvar_anf_tests {
             use rvar_anf_lang::rvar_lang::*;
             let p1 = r#let!([x add!(12, add!(neg!(20), neg!(add!(10,neg!(15)))))]
                     add!(add!(30, neg!(15)), x));
+            println!("p1= {:?} ", p1);
+            let p1ty = type_check(&vec![], &p1);
+            println!("type= {:?}", p1ty);
             let v1 = interp_exp(&vec![], &p1);
+            println!("v1= {:?} ", v1);
             (p1, v1)
         };
-        println!("p1= {:?} ", p1);
-        println!("v1= {:?} ", v1);
 
         use rvar_anf_lang::{interp_exp, rco_exp};
         let p1anf = rco_exp(&p1);

@@ -5,6 +5,8 @@ mod rvar_lang {
         use ch4::rvar_lang::*;
         let p1 = program![r#let!([x add!(12, 20)]  add!(10, x))];
         println!("p1= {:?} ", p1);
+        let p1ty = type_check(&vec![], &p1.0);
+        println!("type= {:?}", p1ty);
         let v1 = interp_program(&p1);
         println!("v1= {:?} ", v1);
 
@@ -35,9 +37,15 @@ mod rvar_lang {
         let e2 = r#let!([x1 32]  add!(r#let!([x2 10] x2), x1));
         println!("e1= {:?}", e1);
         println!("e2= {:?}", e2);
+        let e1ty = type_check(&vec![], &e1);
+        let e2ty = type_check(&vec![], &e2);
+        println!("e1ty= {:?}", e1ty);
+        println!("e2ty= {:?}", e2ty);
         let e1u = uniquify_expr(&sym![], &e1);
         println!("e1u= {:?}", e1u);
         assert_eq!(e2, e1u);
+        let e1u_ty = type_check(&vec![], &e1u);
+        assert_eq!(e1ty, e1u_ty);
 
         gensym_reset();
         let e1 = r#let!([x 32]  add!(r#let!([y 10] y), x));
@@ -74,6 +82,8 @@ mod rvar_lang {
                            add!(y,2),
                            add!(y,10))));
         println!("expr= {:?}", expr);
+        let ety = type_check(&vec![], &expr);
+        println!("ety= {:?}", ety);
         let prog = program![expr];
         let val = interp_program(&prog);
         println!("val= {:?}", val);
@@ -85,6 +95,8 @@ mod rvar_lang {
                       r#if!(if_!(lt!(x,1), eq!(x,0), eq!(x,2)),
                            add!(y,2),
                            add!(y,10))));
+        let ety = type_check(&vec![], &expr);
+        println!("ety= {:?}", ety);
         let uexpr = uniquify_expr(&sym![], &expr);
         println!("uexpr= {:?}", uexpr);
         let prog = program![uexpr];
