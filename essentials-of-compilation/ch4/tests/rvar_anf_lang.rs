@@ -10,7 +10,7 @@ mod rvar_anf_tests {
             let p1 = r#let!([x add!(12, add!(neg!(20), neg!(add!(10,neg!(15)))))]
                     add!(add!(30, neg!(15)), x));
             println!("p1= {:?} ", p1);
-            let p1ty = type_check(&vec![], &p1);
+            let p1ty = type_expr(&vec![], &p1);
             println!("type= {:?}", p1ty);
             let v1 = interp_exp(&vec![], &p1);
             println!("v1= {:?} ", v1);

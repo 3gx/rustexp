@@ -8,6 +8,14 @@ pub trait IntoTerm {
 
 macro __mk_op {
     ( (@args) (@expr (@ctor $($ctor:tt)*) $($tt:tt)*) ) => { $($ctor)*($($tt)*) },
+    ( (@args false)  (@expr $($tt:tt)*) ) => {
+        __mk_op!((@args)
+                 (@expr $($tt)* Box::new(Expr::Bool(false))))
+    },
+    ( (@args true)  (@expr $($tt:tt)*) ) => {
+        __mk_op!((@args)
+                 (@expr $($tt)* Box::new(Expr::Bool(true))))
+    },
     ( (@args $i:ident)  (@expr $($tt:tt)*) ) => {
         __mk_op!((@args)
                  (@expr $($tt)* Box::new(stringify!($i).into_term())))
@@ -342,23 +350,23 @@ pub enum Type {
 }
 
 pub type Ctx = SymTable<Type>;
-pub fn type_check(ctx: &Ctx, expr: &Expr) -> Type {
+pub fn type_expr(ctx: &Ctx, expr: &Expr) -> Type {
     match expr {
         Expr::Int(_) => Type::Int,
         Expr::Bool(_) => Type::Bool,
         Expr::Var(x) => *sym_get(ctx, x).unwrap(),
         Expr::Let(x, expr, body) => {
-            let ty = type_check(ctx, expr);
+            let ty = type_expr(ctx, expr);
             let ctx = sym_set(ctx, x, &ty);
-            type_check(&ctx, body)
+            type_expr(&ctx, body)
         }
         Expr::If(pred, then_, else_) => {
-            match type_check(ctx, pred) {
+            match type_expr(ctx, pred) {
                 Type::Bool => (),
                 x @ _ => panic!("type({:?}) must be Bool, got {:?}", pred, x),
             };
-            let then_ty = type_check(ctx, then_);
-            let else_ty = type_check(ctx, else_);
+            let then_ty = type_expr(ctx, then_);
+            let else_ty = type_expr(ctx, else_);
             if then_ty != else_ty {
                 panic!(
                     "type({:?}) = {:?} != {:?} = type({:?})",
@@ -368,12 +376,12 @@ pub fn type_check(ctx: &Ctx, expr: &Expr) -> Type {
             then_ty
         }
         Expr::Read => Type::Int,
-        Expr::UnaryOp(op, expr) => match (op, type_check(ctx, expr)) {
+        Expr::UnaryOp(op, expr) => match (op, type_expr(ctx, expr)) {
             (UnaryOpKind::Not, Type::Bool) => Type::Bool,
             (UnaryOpKind::Neg, Type::Int) => Type::Int,
             x @ _ => panic!("unsupported {:?}", x),
         },
-        Expr::BinaryOp(op, e1, e2) => match (op, type_check(ctx, e1), type_check(ctx, e2)) {
+        Expr::BinaryOp(op, e1, e2) => match (op, type_expr(ctx, e1), type_expr(ctx, e2)) {
             (BinaryOpKind::Add, Type::Int, Type::Int) => Type::Int,
             (BinaryOpKind::And, Type::Bool, Type::Bool) => Type::Bool,
             (BinaryOpKind::Or, Type::Bool, Type::Bool) => Type::Bool,
