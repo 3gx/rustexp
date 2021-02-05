@@ -334,3 +334,14 @@ pub fn uniquify(p: Program) -> Program {
         Program(e) => Program(uniquify_expr(&sym![], &e)),
     }
 }
+
+#[derive(Debug, Copy, Clone)]
+pub enum Type {
+    Bool,
+    Int,
+}
+
+pub type Ctx = SymTable<Type>;
+pub fn type_check(ctx: &Ctx, e: &Expr) -> Result<Type, Vec<String>> {
+    unimplemented!()
+}
