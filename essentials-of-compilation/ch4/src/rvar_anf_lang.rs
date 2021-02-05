@@ -122,11 +122,6 @@ pub fn rco_exp(e: &RvarExpr) -> Expr {
         RvarExpr::Var(x) => Expr::Atom(var!(&x)),
         RvarExpr::Read => Expr::Read,
         RvarExpr::BinaryOp(op, e1, e2) => simplify_and_rco_binop(op, e1, e2),
-        /*
-            rco_op(rco_atom(e1), |x| {
-            rco_op(rco_atom(e2), |y| Expr::BinaryOp(*op, x, y))
-        }),
-        */
         RvarExpr::UnaryOp(op, expr) => rco_op(rco_atom(expr), |x| Expr::UnaryOp(*op, x)),
         RvarExpr::Let(x, e, body) => Expr::Let(x.clone(), bx![rco_exp(e)], bx![rco_exp(body)]),
         RvarExpr::If(e1, e2, e3) => Expr::If(bx![rco_exp(e1)], bx![rco_exp(e2)], bx![rco_exp(e3)]),
