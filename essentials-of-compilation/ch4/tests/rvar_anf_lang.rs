@@ -13,7 +13,7 @@ mod rvar_anf_tests {
             (p1, v1)
         };
         println!("p1= {:?} ", p1);
-        println!("v1= {} ", v1);
+        println!("v1= {:?} ", v1);
 
         use rvar_anf_lang::{interp_exp, rco_exp};
         let p1anf = rco_exp(&p1);
@@ -21,7 +21,7 @@ mod rvar_anf_tests {
 
         let v1anf = interp_exp(&vec![], &p1anf);
 
-        println!("v1anf= {}", v1anf);
+        println!("v1anf= {:?}", v1anf);
         assert_eq!(v1, v1anf);
         let v1 = vec![3, 4];
         let v2 = vec![5, 6];

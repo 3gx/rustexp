@@ -28,9 +28,11 @@ macro __mk_op {
 }
 
 type Int = i64;
+type Bool = bool;
 #[derive(Debug, Clone)]
 pub enum Atom {
     Int(Int),
+    Bool(Bool),
     Var(String),
 }
 pub macro int($e:expr) {
@@ -38,7 +40,6 @@ pub macro int($e:expr) {
 }
 pub macro var {
     ($id:ident) => { var!(stringify!($id)) },
-//    ($e:expr) => { Atom::Var($e.to_string()) },
     ($e:expr) => { $e.as_str().into_term() },
 }
 impl IntoTerm for Int {
@@ -55,26 +56,21 @@ impl IntoTerm for &str {
 #[derive(Debug, Clone)]
 pub enum Expr {
     Atom(Atom),
+
+    Let(String, Box<Expr>, Box<Expr>),
+    If(Box<Expr>, Box<Expr>, Box<Expr>),
+
     Read,
     Neg(Atom),
     Add(Atom, Atom),
-    Let(String, Box<Expr>, Box<Expr>),
+    Cmp(CmpOp, Atom, Atom),
+    And(Atom, Atom),
+    Or(Atom, Atom),
+    Not(Atom),
 }
-
-pub macro read() {
-    Expr::Read
-}
-pub macro add {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Add))) }
-}
-
-pub macro neg {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Neg)) ) }
-}
-
-use rvar_lang::{gensym, sym_get, sym_set, EnvInt};
 
 use rvar_lang::Expr as RvarExpr;
+use rvar_lang::{gensym, sym_get, sym_set, CmpOp, Env, Value};
 
 fn rco_atom(e: &RvarExpr) -> (Atom, Option<Expr>) {
     match e {
@@ -93,41 +89,84 @@ pub fn rco_exp(e: &RvarExpr) -> Expr {
                 Expr::Let(x, bx![e], bx![f(a)])
             }
             x@(Atom::Int(_), Some(_)) => panic!("unsuppoted combo {:?}", x),
+            x@(Atom::Bool(_), Some(_)) => panic!("unsuppoted combo {:?}", x),
         }
     }
     match e {
         RvarExpr::Int(i) => Expr::Atom(int!(*i)),
+        RvarExpr::Bool(b) => Expr::Atom(Atom::Bool(*b)),
         RvarExpr::Var(x) => Expr::Atom(var!(&x)),
         RvarExpr::Read => Expr::Read,
         RvarExpr::Add(e1, e2) => {
-            let (a1, e1) = rco_atom(e1);
-            let ae2 = rco_atom(e2);
-            rco_op((a1, e1), |x| rco_op(ae2, |y| Expr::Add(x, y)))
+            rco_op(rco_atom(e1), |x| rco_op(rco_atom(e2), |y| Expr::Add(x, y)))
         }
         RvarExpr::Neg(e) => rco_op(rco_atom(e), |x| Expr::Neg(x)),
         RvarExpr::Let(x, e, body) => Expr::Let(x.clone(), bx![rco_exp(e)], bx![rco_exp(body)]),
+        RvarExpr::Cmp(cmp, e1, e2) => rco_op(rco_atom(e1), |x| {
+            rco_op(rco_atom(e2), |y| Expr::Cmp(*cmp, x, y))
+        }),
+        RvarExpr::And(e1, e2) => {
+            rco_op(rco_atom(e1), |x| rco_op(rco_atom(e2), |y| Expr::And(x, y)))
+        }
+        RvarExpr::Or(e1, e2) => rco_op(rco_atom(e1), |x| rco_op(rco_atom(e2), |y| Expr::Or(x, y))),
+        RvarExpr::Not(e) => rco_op(rco_atom(e), |x| Expr::Not(x)),
+        RvarExpr::If(e1, e2, e3) => Expr::If(bx![rco_exp(e1)], bx![rco_exp(e2)], bx![rco_exp(e3)]),
     }
 }
 
-pub fn interp_atom(env: &EnvInt, e: &Atom) -> Int {
+pub fn interp_atom(env: &Env, e: &Atom) -> Value {
     match e {
-        Atom::Int(n) => *n,
+        Atom::Int(n) => Value::Int(*n),
+        Atom::Bool(b) => Value::Bool(*b),
         Atom::Var(x) => sym_get(env, &x).unwrap().clone(),
     }
 }
-pub fn interp_exp(env: &EnvInt, e: &Expr) -> Int {
+pub fn interp_exp(env: &Env, e: &Expr) -> Value {
     match e {
         Expr::Atom(atom) => interp_atom(env, atom),
         Expr::Read => {
             let mut input = String::new();
             std::io::stdin().read_line(&mut input).unwrap();
-            input.trim().parse().unwrap()
+            Value::Int(input.trim().parse().unwrap())
         }
-        Expr::Neg(e) => -interp_atom(env, e),
-        Expr::Add(e1, e2) => interp_atom(env, e1) + interp_atom(env, e2),
+        Expr::Neg(e) => Value::Int(-interp_atom(env, e).int().unwrap()),
+        Expr::Add(e1, e2) => {
+            Value::Int(interp_atom(env, e1).int().unwrap() + interp_atom(env, e2).int().unwrap())
+        }
         Expr::Let(x, e, body) => {
             let new_env = sym_set(env, x, &interp_exp(env, e));
             interp_exp(&new_env, body)
         }
+        Expr::Not(a) => Value::Bool(!interp_atom(env, a).bool().unwrap()),
+        Expr::And(a1, a2) => {
+            if *interp_atom(env, a1).bool().unwrap() {
+                return Value::Bool(*interp_atom(env, a2).bool().unwrap());
+            } else {
+                return Value::Bool(false);
+            }
+        }
+        Expr::Or(a1, a2) => {
+            if *interp_atom(env, a1).bool().unwrap() {
+                return Value::Bool(true);
+            } else {
+                return Value::Bool(*interp_atom(env, a2).bool().unwrap());
+            }
+        }
+        Expr::If(e1, e2, e3) => {
+            if *interp_exp(env, e1).bool().unwrap() {
+                interp_exp(env, e2)
+            } else {
+                interp_exp(env, e3)
+            }
+        }
+        Expr::Cmp(op, a1, a2) => match (op, interp_atom(env, a1), interp_atom(env, a2)) {
+            (CmpOp::Eq, Value::Int(a), Value::Int(b)) => Value::Bool(a == b),
+            (CmpOp::Eq, Value::Bool(a), Value::Bool(b)) => Value::Bool(a == b),
+            (CmpOp::Le, Value::Int(a), Value::Int(b)) => Value::Bool(a <= b),
+            (CmpOp::Lt, Value::Int(a), Value::Int(b)) => Value::Bool(a < b),
+            (CmpOp::Ge, Value::Int(a), Value::Int(b)) => Value::Bool(a >= b),
+            (CmpOp::Gt, Value::Int(a), Value::Int(b)) => Value::Bool(a > b),
+            x @ _ => panic!("type mismatch: {:?}", x),
+        },
     }
 }

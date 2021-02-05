@@ -143,13 +143,13 @@ pub enum Value {
     Bool(Bool),
 }
 impl Value {
-    fn int(&self) -> Option<&Int> {
+    pub fn int(&self) -> Option<&Int> {
         match self {
             Value::Int(n) => Some(n),
             Value::Bool(_) => None,
         }
     }
-    fn bool(&self) -> Option<&Bool> {
+    pub fn bool(&self) -> Option<&Bool> {
         match self {
             Value::Int(_) => None,
             Value::Bool(b) => Some(b),
@@ -158,7 +158,7 @@ impl Value {
 }
 
 type SymTable<T> = Vec<(String, T)>;
-pub type EnvInt = SymTable<Value>;
+pub type Env = SymTable<Value>;
 
 pub macro sym {
     () => {
@@ -184,7 +184,7 @@ pub fn sym_set<T: Clone>(sym: &SymTable<T>, key: &str, val: &T) -> SymTable<T> {
     sym
 }
 
-pub fn interp_exp(env: &EnvInt, e: &Expr) -> Value {
+pub fn interp_exp(env: &Env, e: &Expr) -> Value {
     use Expr::*;
     match e {
         Int(n) => Value::Int(*n),
@@ -213,7 +213,7 @@ pub fn interp_exp(env: &EnvInt, e: &Expr) -> Value {
         ),
         And(e1, e2) => {
             if *interp_exp(env, e1).bool().unwrap() {
-                interp_exp(env, e2)
+                Value::Bool(*interp_exp(env, e2).bool().unwrap())
             } else {
                 Value::Bool(false)
             }
@@ -222,7 +222,7 @@ pub fn interp_exp(env: &EnvInt, e: &Expr) -> Value {
             if *interp_exp(env, e1).bool().unwrap() {
                 Value::Bool(true)
             } else {
-                interp_exp(env, e2)
+                Value::Bool(*interp_exp(env, e2).bool().unwrap())
             }
         }
         Not(expr) => Value::Bool(!interp_exp(env, expr).bool().unwrap()),
