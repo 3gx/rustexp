@@ -1,6 +1,6 @@
 #[path = "./macros.rs"]
 mod macros;
-//use macros::bx;
+use macros::bx;
 
 pub trait IntoTerm {
     fn into_term(&self) -> Expr;
@@ -263,7 +263,6 @@ pub fn gensym(x: &str) -> String {
     x.to_string() + &counter.to_string()
 }
 
-/*
 type UMap = SymTable<String>;
 pub fn uniquify_expr(umap: &UMap, expr: &Expr) -> Expr {
     use Expr::*;
@@ -282,6 +281,7 @@ pub fn uniquify_expr(umap: &UMap, expr: &Expr) -> Expr {
         Neg(e) => Neg(bx![uniquify_expr(umap, e)]),
         Add(e1, e2) => Add(bx![uniquify_expr(umap, e1)], bx![uniquify_expr(umap, e2)]),
         Read => Read,
+        _ => panic!("unhandled expr= {:?}", expr),
     }
 }
 
@@ -290,4 +290,3 @@ pub fn uniquify(p: Program) -> Program {
         Program(e) => Program(uniquify_expr(&sym![], &e)),
     }
 }
-*/
