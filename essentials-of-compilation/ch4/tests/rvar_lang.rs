@@ -76,11 +76,11 @@ mod rvar_lang {
     #[test]
     fn t3() {
         use ch4::rvar_lang::*;
-        let expr = let_!([x 0]
-                    let_!([y  100]
-                      if_!(if_!(lt!(x,1), eq!(x,0), eq!(x,2)),
-                           add!(y,2),
-                           add!(y,10))));
+        let expr = let_! {[x 0]
+        let_!{[y  100]
+          if_!{if_!{lt!(x,1), eq!(x,0), eq!(x,2)},
+               add!(y,2),
+               add!(y,10)}}};
         println!("expr= {:?}", expr);
         let ety = type_check(&vec![], &expr);
         println!("ety= {:?}", ety);
@@ -90,11 +90,11 @@ mod rvar_lang {
         assert_eq!(val, Value::Int(102));
 
         gensym_reset();
-        let expr = let_!([x 1]
-                    let_!([y  100]
-                      r#if!(if_!(lt!(x,1), eq!(x,0), eq!(x,2)),
-                           add!(y,2),
-                           add!(y,10))));
+        let expr = let_! {[x 1]
+        let_!{[y  100]
+          r#if!{if_!{lt!(x,1), eq!(x,0), eq!(x,2)},
+               add!(y,2),
+               add!(y,10)}}};
         let ety = type_check(&vec![], &expr);
         println!("ety= {:?}", ety);
         let uexpr = uniquify_expr(&sym![], &expr);
