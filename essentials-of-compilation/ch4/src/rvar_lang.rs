@@ -1,5 +1,6 @@
 #[path = "./macros.rs"]
 mod macros;
+//use macros::bx;
 
 pub trait IntoTerm {
     fn into_term(&self) -> Expr;
@@ -86,17 +87,26 @@ pub macro neg {
 pub macro add {
     ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Add))) }
 }
-pub macro cmp {
-    ($op:expr, $($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Cmp) $op,) ) }
+pub macro eq {
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Cmp) CmpOp::Eq,) ) }
+}
+pub macro le {
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Cmp) CmpOp::Le,) ) }
+}
+pub macro lt {
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Cmp) CmpOp::Lt,) ) }
+}
+pub macro ge {
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Cmp) CmpOp::Ge,) ) }
+}
+pub macro gt {
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Cmp) CmpOp::Gt,) ) }
 }
 pub macro and {
     ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::And)) ) }
 }
 pub macro or {
     ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Or)) ) }
-}
-pub macro xor {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Xor)) ) }
 }
 
 #[derive(Debug, Clone)]
