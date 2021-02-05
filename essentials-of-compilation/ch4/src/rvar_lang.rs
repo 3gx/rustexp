@@ -342,6 +342,6 @@ pub enum Type {
 }
 
 pub type Ctx = SymTable<Type>;
-pub fn type_check(ctx: &Ctx, e: &Expr) -> Result<Type, Vec<String>> {
+pub fn type_check(ctx: &Ctx, e: &Expr) -> Option<Type> {
     unimplemented!()
 }
