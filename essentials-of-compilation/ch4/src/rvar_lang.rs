@@ -24,7 +24,7 @@ macro __mk_op {
     },
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub enum CmpOp {
     Eq,
     Lt,
@@ -269,6 +269,7 @@ pub fn uniquify_expr(umap: &UMap, expr: &Expr) -> Expr {
     match expr {
         Var(x) => Var(sym_get(umap, x).unwrap().clone()),
         Int(n) => Int(*n),
+        Bool(b) => Bool(*b),
         Let(x, e, body) => {
             let newvar = gensym(x);
             let umap = sym_set(umap, x, &newvar);
@@ -281,7 +282,19 @@ pub fn uniquify_expr(umap: &UMap, expr: &Expr) -> Expr {
         Neg(e) => Neg(bx![uniquify_expr(umap, e)]),
         Add(e1, e2) => Add(bx![uniquify_expr(umap, e1)], bx![uniquify_expr(umap, e2)]),
         Read => Read,
-        _ => panic!("unhandled expr= {:?}", expr),
+        If(e1, e2, e3) => If(
+            bx![uniquify_expr(umap, e1)],
+            bx![uniquify_expr(umap, e2)],
+            bx![uniquify_expr(umap, e3)],
+        ),
+        Cmp(op, e1, e2) => Cmp(
+            *op,
+            bx![uniquify_expr(umap, e1)],
+            bx![uniquify_expr(umap, e2)],
+        ),
+        And(e1, e2) => And(bx![uniquify_expr(umap, e1)], bx![uniquify_expr(umap, e2)]),
+        Or(e1, e2) => Or(bx![uniquify_expr(umap, e1)], bx![uniquify_expr(umap, e2)]),
+        Not(expr) => Not(bx![uniquify_expr(umap, expr)]),
     }
 }
 
