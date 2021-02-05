@@ -25,12 +25,26 @@ macro __mk_op {
 }
 
 #[derive(Debug, Clone, PartialEq, Copy)]
-pub enum CmpOp {
+pub enum CmpOpKind {
     Eq,
     Lt,
     Le,
     Gt,
     Ge,
+}
+
+#[derive(Debug, Clone, PartialEq, Copy)]
+pub enum UnaryOpKind {
+    Neg,
+    Not,
+}
+
+#[derive(Debug, Clone, PartialEq, Copy)]
+pub enum BinaryOpKind {
+    CmpOp(CmpOpKind),
+    Add,
+    And,
+    Or,
 }
 
 type Int = i64;
@@ -48,14 +62,10 @@ pub enum Expr {
     //control-flow
     If(Box<Expr>, Box<Expr>, Box<Expr>),
 
-    // primitive ops
     Read,
-    Neg(Box<Expr>),
-    Add(Box<Expr>, Box<Expr>),
-    Cmp(CmpOp, Box<Expr>, Box<Expr>),
-    And(Box<Expr>, Box<Expr>),
-    Or(Box<Expr>, Box<Expr>),
-    Not(Box<Expr>),
+
+    UnaryOp(UnaryOpKind, Box<Expr>),
+    BinaryOp(BinaryOpKind, Box<Expr>, Box<Expr>),
 }
 
 pub macro int($e:expr) {
@@ -82,32 +92,46 @@ pub macro read() {
     Expr::Read
 }
 pub macro neg {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Neg)) ) }
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::UnaryOp) UnaryOpKind::Neg,) ) }
 }
 pub macro add {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Add))) }
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*)
+                              (@expr (@ctor Expr::BinaryOp)
+                                     BinaryOpKind::Add,)) }
 }
 pub macro eq {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Cmp) CmpOp::Eq,) ) }
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*)
+                              (@expr (@ctor Expr::BinaryOp)
+                                     BinaryOpKind::CmpOp(CmpOpKind::Eq),) ) }
 }
 pub macro le {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Cmp) CmpOp::Le,) ) }
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*)
+                              (@expr (@ctor Expr::BinaryOp)
+                                     BinaryOpKind::CmpOp(CmpOpKind::Le),) ) }
 }
 pub macro lt {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Cmp) CmpOp::Lt,) ) }
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*)
+                              (@expr (@ctor Expr::BinaryOp)
+                                     BinaryOpKind::CmpOp(CmpOpKind::Lt),) ) }
 }
 pub macro ge {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Cmp) CmpOp::Ge,) ) }
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*)
+                              (@expr (@ctor Expr::BinaryOp)
+                                     BinaryOpKind::CmpOp(CmpOpKind::Ge),) ) }
 }
 pub macro gt {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Cmp) CmpOp::Gt,) ) }
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*)
+                              (@expr (@ctor Expr::BinaryOp)
+                                     BinaryOpKind::CmpOp(CmpOpKind::Gt),) ) }
 }
+/*
 pub macro and {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::And)) ) }
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::BinaryOp) BinaryOpKind::And) ) }
 }
 pub macro or {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::Or)) ) }
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::BinaryOp) BinaryOpKind::Or) ) }
 }
+*/
 
 #[derive(Debug, Clone)]
 pub struct Program(pub Expr);
@@ -185,25 +209,26 @@ pub fn sym_set<T: Clone>(sym: &SymTable<T>, key: &str, val: &T) -> SymTable<T> {
 }
 
 pub fn interp_exp(env: &Env, e: &Expr) -> Value {
-    use Expr::*;
+    use self::CmpOpKind as C;
+    use {BinaryOpKind::*, UnaryOpKind::*};
     match e {
-        Int(n) => Value::Int(*n),
-        Bool(b) => Value::Bool(*b),
-        Read => {
+        Expr::Int(n) => Value::Int(*n),
+        Expr::Bool(b) => Value::Bool(*b),
+        Expr::Read => {
             let mut input = String::new();
             std::io::stdin().read_line(&mut input).unwrap();
             Value::Int(input.trim().parse().unwrap())
         }
-        Neg(e) => Value::Int(-interp_exp(env, e).int().unwrap()),
-        Add(e1, e2) => {
+        Expr::UnaryOp(Neg, e) => Value::Int(-interp_exp(env, e).int().unwrap()),
+        Expr::BinaryOp(Add, e1, e2) => {
             Value::Int(interp_exp(env, e1).int().unwrap() + interp_exp(env, e2).int().unwrap())
         }
-        Var(x) => sym_get(env, &x).unwrap().clone(),
-        Let(x, e, body) => {
+        Expr::Var(x) => sym_get(env, &x).unwrap().clone(),
+        Expr::Let(x, e, body) => {
             let new_env = sym_set(env, x, &interp_exp(env, e));
             interp_exp(&new_env, body)
         }
-        If(cond, thn, els) => interp_exp(
+        Expr::If(cond, thn, els) => interp_exp(
             env,
             if *interp_exp(env, cond).bool().unwrap() {
                 thn
@@ -211,30 +236,32 @@ pub fn interp_exp(env: &Env, e: &Expr) -> Value {
                 els
             },
         ),
-        And(e1, e2) => {
+        Expr::BinaryOp(And, e1, e2) => {
             if *interp_exp(env, e1).bool().unwrap() {
                 Value::Bool(*interp_exp(env, e2).bool().unwrap())
             } else {
                 Value::Bool(false)
             }
         }
-        Or(e1, e2) => {
+        Expr::BinaryOp(Or, e1, e2) => {
             if *interp_exp(env, e1).bool().unwrap() {
                 Value::Bool(true)
             } else {
                 Value::Bool(*interp_exp(env, e2).bool().unwrap())
             }
         }
-        Not(expr) => Value::Bool(!interp_exp(env, expr).bool().unwrap()),
-        Cmp(op, e1, e2) => match (op, interp_exp(env, e1), interp_exp(env, e2)) {
-            (CmpOp::Eq, Value::Int(a), Value::Int(b)) => Value::Bool(a == b),
-            (CmpOp::Eq, Value::Bool(a), Value::Bool(b)) => Value::Bool(a == b),
-            (CmpOp::Le, Value::Int(a), Value::Int(b)) => Value::Bool(a <= b),
-            (CmpOp::Lt, Value::Int(a), Value::Int(b)) => Value::Bool(a < b),
-            (CmpOp::Ge, Value::Int(a), Value::Int(b)) => Value::Bool(a >= b),
-            (CmpOp::Gt, Value::Int(a), Value::Int(b)) => Value::Bool(a > b),
-            x @ _ => panic!("type mismatch: {:?}", x),
-        },
+        Expr::UnaryOp(Not, expr) => Value::Bool(!interp_exp(env, expr).bool().unwrap()),
+        Expr::BinaryOp(BinaryOpKind::CmpOp(op), e1, e2) => {
+            match (op, interp_exp(env, e1), interp_exp(env, e2)) {
+                (C::Eq, Value::Int(a), Value::Int(b)) => Value::Bool(a == b),
+                (C::Eq, Value::Bool(a), Value::Bool(b)) => Value::Bool(a == b),
+                (C::Le, Value::Int(a), Value::Int(b)) => Value::Bool(a <= b),
+                (C::Lt, Value::Int(a), Value::Int(b)) => Value::Bool(a < b),
+                (C::Ge, Value::Int(a), Value::Int(b)) => Value::Bool(a >= b),
+                (C::Gt, Value::Int(a), Value::Int(b)) => Value::Bool(a > b),
+                x @ _ => panic!("type mismatch: {:?}", x),
+            }
+        }
     }
 }
 
@@ -279,22 +306,18 @@ pub fn uniquify_expr(umap: &UMap, expr: &Expr) -> Expr {
                 bx![uniquify_expr(&umap, body)],
             )
         }
-        Neg(e) => Neg(bx![uniquify_expr(umap, e)]),
-        Add(e1, e2) => Add(bx![uniquify_expr(umap, e1)], bx![uniquify_expr(umap, e2)]),
+        UnaryOp(op, expr) => UnaryOp(*op, bx![uniquify_expr(umap, expr)]),
+        BinaryOp(op, e1, e2) => BinaryOp(
+            *op,
+            bx![uniquify_expr(umap, e1)],
+            bx![uniquify_expr(umap, e2)],
+        ),
         Read => Read,
         If(e1, e2, e3) => If(
             bx![uniquify_expr(umap, e1)],
             bx![uniquify_expr(umap, e2)],
             bx![uniquify_expr(umap, e3)],
         ),
-        Cmp(op, e1, e2) => Cmp(
-            *op,
-            bx![uniquify_expr(umap, e1)],
-            bx![uniquify_expr(umap, e2)],
-        ),
-        And(e1, e2) => And(bx![uniquify_expr(umap, e1)], bx![uniquify_expr(umap, e2)]),
-        Or(e1, e2) => Or(bx![uniquify_expr(umap, e1)], bx![uniquify_expr(umap, e2)]),
-        Not(expr) => Not(bx![uniquify_expr(umap, expr)]),
     }
 }
 
