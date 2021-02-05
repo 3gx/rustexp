@@ -82,7 +82,7 @@ mod rvar_lang {
         gensym_reset();
         let expr = let_!([x 1]
                     let_!([y  100]
-                      if_!(if_!(lt!(x,1), eq!(x,0), eq!(x,2)),
+                      r#if!(if_!(lt!(x,1), eq!(x,0), eq!(x,2)),
                            add!(y,2),
                            add!(y,10))));
         let uexpr = uniquify_expr(&sym![], &expr);
