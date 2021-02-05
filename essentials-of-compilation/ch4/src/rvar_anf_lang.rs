@@ -28,7 +28,14 @@ macro __mk_op {
 }
 
 use rvar_lang::Expr as RvarExpr;
-use rvar_lang::{gensym, sym_get, sym_set, BinaryOpKind, Env, UnaryOpKind, Value};
+use rvar_lang::{gensym, sym_get, sym_set, Env, UnaryOpKind, Value};
+
+#[derive(Debug, Clone, PartialEq, Copy)]
+pub enum BinaryOpKind {
+    Add,
+    Eq,
+    Lt,
+}
 
 type Int = i64;
 type Bool = bool;
@@ -88,14 +95,38 @@ pub fn rco_exp(e: &RvarExpr) -> Expr {
             x@(Atom::Bool(_), Some(_)) => panic!("unsuppoted combo {:?}", x),
         }
     }
+    fn simplify_and_rco_binop(op: &rvar_lang::BinaryOpKind, e1: &RvarExpr, e2: &RvarExpr) -> Expr {
+        use rvar_lang::BinaryOpKind as RVarOpKind;
+        use rvar_lang::CmpOpKind as RVarCmpKind;
+        let rco_op_apply = |op, e1, e2| {
+            rco_op(rco_atom(e1), |x| {
+                rco_op(rco_atom(e2), |y| Expr::BinaryOp(op, x, y))
+            })
+        };
+        match op {
+            RVarOpKind::And => rco_exp(&RvarExpr::If(e1.bx(), e2.bx(), RvarExpr::Bool(false).bx())),
+            RVarOpKind::Or => rco_exp(&RvarExpr::If(e1.bx(), RvarExpr::Bool(true).bx(), e2.bx())),
+            RVarOpKind::CmpOp(op) => match op {
+                RVarCmpKind::Eq => rco_op_apply(BinaryOpKind::Eq, e1, e2),
+                RVarCmpKind::Lt => rco_op_apply(BinaryOpKind::Lt, e1, e2),
+                RVarCmpKind::Le => unimplemented!(),
+                RVarCmpKind::Gt => unimplemented!(),
+                RVarCmpKind::Ge => unimplemented!(),
+            },
+            RVarOpKind::Add => rco_op_apply(BinaryOpKind::Add, e1, e2),
+        }
+    }
     match e {
         RvarExpr::Int(i) => Expr::Atom(int!(*i)),
         RvarExpr::Bool(b) => Expr::Atom(Atom::Bool(*b)),
         RvarExpr::Var(x) => Expr::Atom(var!(&x)),
         RvarExpr::Read => Expr::Read,
-        RvarExpr::BinaryOp(op, e1, e2) => rco_op(rco_atom(e1), |x| {
+        RvarExpr::BinaryOp(op, e1, e2) => simplify_and_rco_binop(op, e1, e2),
+        /*
+            rco_op(rco_atom(e1), |x| {
             rco_op(rco_atom(e2), |y| Expr::BinaryOp(*op, x, y))
         }),
+        */
         RvarExpr::UnaryOp(op, expr) => rco_op(rco_atom(expr), |x| Expr::UnaryOp(*op, x)),
         RvarExpr::Let(x, e, body) => Expr::Let(x.clone(), bx![rco_exp(e)], bx![rco_exp(body)]),
         RvarExpr::If(e1, e2, e3) => Expr::If(bx![rco_exp(e1)], bx![rco_exp(e2)], bx![rco_exp(e3)]),
@@ -110,7 +141,6 @@ pub fn interp_atom(env: &Env, e: &Atom) -> Value {
     }
 }
 pub fn interp_exp(env: &Env, e: &Expr) -> Value {
-    use rvar_lang::CmpOpKind as C;
     use {BinaryOpKind::*, UnaryOpKind::*};
     match e {
         Expr::Atom(atom) => interp_atom(env, atom),
@@ -128,20 +158,6 @@ pub fn interp_exp(env: &Env, e: &Expr) -> Value {
             interp_exp(&new_env, body)
         }
         Expr::UnaryOp(Not, a) => Value::Bool(!interp_atom(env, a).bool().unwrap()),
-        Expr::BinaryOp(And, a1, a2) => {
-            if *interp_atom(env, a1).bool().unwrap() {
-                return Value::Bool(*interp_atom(env, a2).bool().unwrap());
-            } else {
-                return Value::Bool(false);
-            }
-        }
-        Expr::BinaryOp(Or, a1, a2) => {
-            if *interp_atom(env, a1).bool().unwrap() {
-                return Value::Bool(true);
-            } else {
-                return Value::Bool(*interp_atom(env, a2).bool().unwrap());
-            }
-        }
         Expr::If(e1, e2, e3) => {
             if *interp_exp(env, e1).bool().unwrap() {
                 interp_exp(env, e2)
@@ -149,16 +165,12 @@ pub fn interp_exp(env: &Env, e: &Expr) -> Value {
                 interp_exp(env, e3)
             }
         }
-        Expr::BinaryOp(BinaryOpKind::CmpOp(op), a1, a2) => {
-            match (op, interp_atom(env, a1), interp_atom(env, a2)) {
-                (C::Eq, Value::Int(a), Value::Int(b)) => Value::Bool(a == b),
-                (C::Eq, Value::Bool(a), Value::Bool(b)) => Value::Bool(a == b),
-                (C::Le, Value::Int(a), Value::Int(b)) => Value::Bool(a <= b),
-                (C::Lt, Value::Int(a), Value::Int(b)) => Value::Bool(a < b),
-                (C::Ge, Value::Int(a), Value::Int(b)) => Value::Bool(a >= b),
-                (C::Gt, Value::Int(a), Value::Int(b)) => Value::Bool(a > b),
-                x @ _ => panic!("type mismatch: {:?}", x),
-            }
-        }
+        Expr::BinaryOp(op, a1, a2) => match (op, interp_atom(env, a1), interp_atom(env, a2)) {
+            (BinaryOpKind::Add, Value::Int(a), Value::Int(b)) => Value::Int(a + b),
+            (BinaryOpKind::Eq, Value::Int(a), Value::Int(b)) => Value::Bool(a == b),
+            (BinaryOpKind::Eq, Value::Bool(a), Value::Bool(b)) => Value::Bool(a == b),
+            (BinaryOpKind::Lt, Value::Int(a), Value::Int(b)) => Value::Bool(a < b),
+            x @ _ => panic!("type mismatch: {:?}", x),
+        },
     }
 }

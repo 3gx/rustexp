@@ -68,6 +68,12 @@ pub enum Expr {
     BinaryOp(BinaryOpKind, Box<Expr>, Box<Expr>),
 }
 
+impl Expr {
+    pub fn bx(&self) -> Box<Expr> {
+        Box::new(self.clone())
+    }
+}
+
 pub macro int($e:expr) {
     Expr::Int($e)
 }
