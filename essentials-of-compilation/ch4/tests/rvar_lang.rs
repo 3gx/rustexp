@@ -64,4 +64,31 @@ mod rvar_lang {
         println!("p1= {:?} ", p1);
         println!("v1= {:?} ", v1);
     }
+
+    #[test]
+    fn t3() {
+        use ch4::rvar_lang::*;
+        let expr = let_!([x 0]
+                    let_!([y  100]
+                      if_!(if_!(lt!(x,1), eq!(x,0), eq!(x,2)),
+                           add!(y,2),
+                           add!(y,10))));
+        println!("expr= {:?}", expr);
+        let prog = program![expr];
+        let val = interp_program(&prog);
+        println!("val= {:?}", val);
+        assert_eq!(val, Value::Int(102));
+
+        gensym_reset();
+        let expr = let_!([x 1]
+                    let_!([y  100]
+                      if_!(if_!(lt!(x,1), eq!(x,0), eq!(x,2)),
+                           add!(y,2),
+                           add!(y,10))));
+        let uexpr = uniquify_expr(&sym![], &expr);
+        println!("uexpr= {:?}", uexpr);
+        let prog = program![uexpr];
+        let uval = interp_program(&prog);
+        assert_eq!(uval, Value::Int(110));
+    }
 }
