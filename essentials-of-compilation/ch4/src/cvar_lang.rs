@@ -39,7 +39,10 @@ pub enum Tail {
 }
 
 #[derive(Debug, Clone)]
-pub struct CProgram(pub Vec<String>, pub Vec<(String, Tail)>);
+pub struct BasicBlock(pub String, pub Tail);
+
+#[derive(Debug, Clone)]
+pub struct CProgram(pub Vec<BasicBlock>);
 
 pub fn interp_expr(env: &Env, e: &Expr) -> Value {
     use Expr::*;
@@ -85,24 +88,17 @@ pub fn interp_tail(env: &Env, tail: &Tail) -> Value {
 
 pub fn interp_prog(prog: &CProgram) -> Value {
     r#match! { prog,
-        CProgram(_, blocks) if @{[(label, tail),..] = &blocks[..],
+        CProgram(blocks) if @{[BasicBlock(label, tail),..] = &blocks[..],
                                   "start" == label}
                             => interp_tail(&vec![], tail),
         _ => panic!("unhandled {:?}", prog),
     }
 }
 
-pub fn explicate_impl(e: &RVarAnf::Expr, var_n_tail: Option<(&str, &Tail)>) -> (Tail, Vec<String>) {
-    let mk_tail = |e: Expr| {
-        (
-            match var_n_tail {
-                Some((var, tail)) => {
-                    Tail::Seq(Stmt::AssignVar(var.to_string(), e), Box::new(tail.clone()))
-                }
-                None => Tail::Return(e),
-            },
-            vec![],
-        )
+pub fn explicate_impl(e: &RVarAnf::Expr, var_n_tail: Option<(&str, &Tail)>) -> Tail {
+    let mk_tail = |e: Expr| match var_n_tail {
+        Some((var, tail)) => Tail::Seq(Stmt::AssignVar(var.to_string(), e), Box::new(tail.clone())),
+        None => Tail::Return(e),
     };
     match e {
         RVarAnf::Expr::Atom(a) => mk_tail(Expr::Atom(a.clone())),
@@ -110,16 +106,9 @@ pub fn explicate_impl(e: &RVarAnf::Expr, var_n_tail: Option<(&str, &Tail)>) -> (
         RVarAnf::Expr::UnaryOp(op, a) => mk_tail(Expr::UnaryOp(*op, a.clone())),
         RVarAnf::Expr::BinaryOp(op, a1, a2) => mk_tail(Expr::BinaryOp(*op, a1.clone(), a2.clone())),
         RVarAnf::Expr::Let(x, expr, body) => {
-            let (tail, vars1) = explicate_impl(body, var_n_tail);
-            let (tail, vars2) = explicate_impl(expr, Some((x, &tail)));
-            let mut vars = vec![x.clone()];
-            for v in vars1.iter() {
-                vars.push(v.clone());
-            }
-            for v in vars2.iter() {
-                vars.push(v.clone());
-            }
-            (tail, vars)
+            let tail = explicate_impl(body, var_n_tail);
+            let tail = explicate_impl(expr, Some((x, &tail)));
+            tail
         }
         RVarAnf::Expr::If(cnd, thn, els) => {
             unimplemented!()
@@ -128,8 +117,8 @@ pub fn explicate_impl(e: &RVarAnf::Expr, var_n_tail: Option<(&str, &Tail)>) -> (
 }
 
 pub fn explicate_tail(e: &RVarAnf::Expr) -> CProgram {
-    let (tail, vars) = explicate_impl(e, None);
-    CProgram(vars, vec![("start".to_string(), tail)])
+    let tail = explicate_impl(e, None);
+    CProgram(vec![BasicBlock("start".to_string(), tail)])
 }
 
 /*
