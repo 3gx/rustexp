@@ -127,9 +127,11 @@ pub fn explicate_impl(e: &RVarAnf::Expr, var_n_tail: Option<(&str, &Tail)>) -> (
     }
 }
 
-pub fn explicate_tail(e: &RVarAnf::Expr) -> (Tail, Vec<String>) {
-    explicate_impl(e, None)
+pub fn explicate_tail(e: &RVarAnf::Expr) -> CProgram {
+    let (tail, vars) = explicate_impl(e, None);
+    CProgram(vars, vec![("start".to_string(), tail)])
 }
+
 /*
 pub fn explicate_assign(e: &RVarAnf::Expr, var: &str, tail: &Tail) -> (Tail, Vec<String>) {
     explicate_impl(e, Some((var, tail)))

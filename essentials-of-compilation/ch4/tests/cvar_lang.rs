@@ -41,11 +41,10 @@ mod cvar_lang {
         println!("v1anf= {:?}", v1anf);
         assert_eq!(v1, v1anf);
 
-        let (tail, vars) = cvar_lang::explicate_tail(&p1anf);
+        let cprog = cvar_lang::explicate_tail(&p1anf);
+        let cvar_lang::CProgram(vars, tail) = &cprog;
         println!("vars= {:?}", vars);
         println!("tail= {:?}", tail);
-
-        let cprog = cvar_lang::CProgram(vars, vec![("start".to_string(), tail)]);
 
         let v1clang = cvar_lang::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
