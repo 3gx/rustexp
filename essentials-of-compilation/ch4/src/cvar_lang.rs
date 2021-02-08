@@ -7,9 +7,9 @@ pub mod rvar_anf_lang;
 pub use rvar_anf_lang as RVarAnf;
 pub use RVarAnf::rvar_lang as RVar;
 
+pub use RVarAnf::{int, var, Atom, BinaryOpKind, Bool, Int, UnaryOpKind};
 use RVarAnf::{interp_atom, Value};
 use RVarAnf::{sym_get, sym_set, Env};
-use RVarAnf::{Atom, BinaryOpKind, Bool, Int, UnaryOpKind};
 
 #[derive(Debug, Clone)]
 pub enum Expr {
@@ -82,14 +82,7 @@ pub fn interp_prog(prog: &CProgram) -> Value {
     }
 }
 
-/*
 pub fn explicate_impl(e: &RVarAnf::Expr, old_tail: Option<(&str, &Tail)>) -> (Tail, Vec<String>) {
-    fn from_atom(a: &RVarAnf::Atom) -> Atom {
-        match a {
-            RVarAnf::Atom::Int(n) => Atom::Int(*n),
-            RVarAnf::Atom::Var(v) => Atom::Var(v.clone()),
-        }
-    }
     let mk_tail = |e: Expr| {
         (
             match old_tail {
@@ -102,10 +95,10 @@ pub fn explicate_impl(e: &RVarAnf::Expr, old_tail: Option<(&str, &Tail)>) -> (Ta
         )
     };
     match e {
-        RVarAnf::Expr::Atom(a) => mk_tail(Expr::Atom(from_atom(a))),
+        RVarAnf::Expr::Atom(a) => mk_tail(Expr::Atom(a.clone())),
         RVarAnf::Expr::Read => mk_tail(Expr::Read),
-        RVarAnf::Expr::Neg(a) => mk_tail(Expr::Neg(from_atom(a))),
-        RVarAnf::Expr::Add(a1, a2) => mk_tail(Expr::Add(from_atom(a1), from_atom(a2))),
+        RVarAnf::Expr::UnaryOp(op, a) => mk_tail(Expr::UnaryOp(*op, a.clone())),
+        RVarAnf::Expr::BinaryOp(op, a1, a2) => mk_tail(Expr::BinaryOp(*op, a1.clone(), a2.clone())),
         RVarAnf::Expr::Let(x, expr, body) => {
             let (tail, vars1) = explicate_impl(body, old_tail);
             let (tail, vars2) = explicate_impl(expr, Some((x, &tail)));
@@ -118,6 +111,7 @@ pub fn explicate_impl(e: &RVarAnf::Expr, old_tail: Option<(&str, &Tail)>) -> (Ta
             }
             (tail, vars)
         }
+        _ => panic!("unhandled expression: {:?}", e),
     }
 }
 
@@ -127,4 +121,3 @@ pub fn explicate_tail(e: &RVarAnf::Expr) -> (Tail, Vec<String>) {
 pub fn explicate_assign(e: &RVarAnf::Expr, var: &str, tail: &Tail) -> (Tail, Vec<String>) {
     explicate_impl(e, Some((var, tail)))
 }
-*/

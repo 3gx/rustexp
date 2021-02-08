@@ -50,8 +50,8 @@ pub macro int($e:expr) {
     Atom::Int($e)
 }
 pub macro var {
-    ($id:ident) => { var!(stringify!($id)) },
-    ($e:expr) => { $e.as_str().into_term() },
+    ($id:ident) => { Atom::Var(stringify!($id).to_string()) },
+    ($e:expr) => { $e.to_string().as_str().into_term() },
 }
 impl IntoTerm for Int {
     fn into_term(&self) -> Atom {
