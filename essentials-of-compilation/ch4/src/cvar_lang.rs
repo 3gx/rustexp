@@ -111,7 +111,9 @@ pub fn explicate_impl(e: &RVarAnf::Expr, var_n_tail: Option<(&str, &Tail)>) -> (
             }
             (tail, vars)
         }
-        _ => panic!("unhandled expression: {:?}", e),
+        RVarAnf::Expr::If(cnd, thn, els) => {
+            unimplemented!()
+        }
     }
 }
 
