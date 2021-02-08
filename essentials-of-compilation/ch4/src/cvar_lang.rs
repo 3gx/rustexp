@@ -104,34 +104,22 @@ fn explicate_if(
     unimplemented!()
 }
 
-pub fn explicate_impl(
-    e: &RVarAnf::Expr,
-    var_n_tail: Option<(&str, &Tail)>,
-    bbs: &Vec<BasicBlock>,
-) -> (Tail, Vec<BasicBlock>) {
-    let mk_tail = |e: Expr| {
-        (
-            match var_n_tail {
-                Some((var, tail)) => {
-                    Tail::Seq(Stmt::AssignVar(var.to_string(), e), Box::new(tail.clone()))
-                }
-                None => Tail::Return(e),
-            },
-            bbs.clone(),
-        )
-    };
+fn explicate_tail(e: &RVarAnf::Expr, bbs: Vec<BasicBlock>) -> (Tail, Vec<BasicBlock>) {
     match e {
-        RVarAnf::Expr::Atom(a) => mk_tail(Expr::Atom(a.clone())),
-        RVarAnf::Expr::Read => mk_tail(Expr::Read),
-        RVarAnf::Expr::UnaryOp(op, a) => mk_tail(Expr::UnaryOp(*op, a.clone())),
-        RVarAnf::Expr::BinaryOp(op, a1, a2) => mk_tail(Expr::BinaryOp(*op, a1.clone(), a2.clone())),
+        RVarAnf::Expr::Atom(a) => (Tail::Return(Expr::Atom(a.clone())), bbs),
+        RVarAnf::Expr::Read => (Tail::Return(Expr::Read), bbs),
+        RVarAnf::Expr::UnaryOp(op, a) => (Tail::Return(Expr::UnaryOp(*op, a.clone())), bbs),
+        RVarAnf::Expr::BinaryOp(op, a1, a2) => (
+            Tail::Return(Expr::BinaryOp(*op, a1.clone(), a2.clone())),
+            bbs,
+        ),
         RVarAnf::Expr::Let(x, expr, body) => {
-            let (tail, bbs) = explicate_impl(body, var_n_tail, bbs);
-            explicate_impl(expr, Some((x, &tail)), &bbs)
+            let (tail, bbs) = explicate_tail(body, bbs);
+            explicate_assign(expr, x, tail, bbs)
         }
         RVarAnf::Expr::If(cnd, thn, els) => {
-            let (thn, bbs) = explicate_impl(thn, var_n_tail, bbs);
-            let (els, bbs) = explicate_impl(els, var_n_tail, &bbs);
+            let (thn, bbs) = explicate_tail(thn, bbs);
+            let (els, bbs) = explicate_tail(els, bbs);
             let then_bb = BasicBlock(gensym("then_bb"), thn);
             let else_bb = BasicBlock(gensym("else_bb"), els);
             explicate_if(cnd, then_bb, else_bb, bbs)
@@ -139,8 +127,42 @@ pub fn explicate_impl(
     }
 }
 
-pub fn explicate_tail(e: &RVarAnf::Expr) -> CProgram {
-    let (tail, mut bbs) = explicate_impl(e, None, &vec![]);
+fn explicate_assign(
+    e: &RVarAnf::Expr,
+    var: &str,
+    tail: Tail,
+    bbs: Vec<BasicBlock>,
+) -> (Tail, Vec<BasicBlock>) {
+    let assign = |e: Expr| Stmt::AssignVar(var.to_string(), e);
+    match e {
+        RVarAnf::Expr::Atom(a) => (
+            Tail::Seq(assign(Expr::Atom(a.clone())), Box::new(tail)),
+            bbs,
+        ),
+        RVarAnf::Expr::Read => (Tail::Seq(assign(Expr::Read), Box::new(tail)), bbs),
+        RVarAnf::Expr::UnaryOp(op, a) => (
+            Tail::Seq(assign(Expr::UnaryOp(*op, a.clone())), Box::new(tail)),
+            bbs,
+        ),
+        RVarAnf::Expr::BinaryOp(op, a1, a2) => (
+            Tail::Seq(
+                assign(Expr::BinaryOp(*op, a1.clone(), a2.clone())),
+                Box::new(tail),
+            ),
+            bbs,
+        ),
+        RVarAnf::Expr::Let(x, expr, body) => {
+            let (tail, bbs) = explicate_assign(body, var, tail, bbs);
+            explicate_assign(expr, x, tail, bbs)
+        }
+        RVarAnf::Expr::If(cnd, thn, els) => {
+            unimplemented!()
+        }
+    }
+}
+
+pub fn explicate_expr(e: &RVarAnf::Expr) -> CProgram {
+    let (tail, mut bbs) = explicate_tail(e, vec![]);
     bbs.push(BasicBlock("start".to_string(), tail));
     CProgram(bbs)
 }

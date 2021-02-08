@@ -41,7 +41,7 @@ mod cvar_lang {
         println!("v1anf= {:?}", v1anf);
         assert_eq!(v1, v1anf);
 
-        let cprog = cvar_lang::explicate_tail(&p1anf);
+        let cprog = cvar_lang::explicate_expr(&p1anf);
         let cvar_lang::CProgram(tail) = &cprog;
         println!("tail= {:?}", tail);
 
