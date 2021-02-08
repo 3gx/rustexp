@@ -156,6 +156,8 @@ fn explicate_assign(
             explicate_assign(expr, x, tail, bbs)
         }
         RVarAnf::Expr::If(cnd, thn, els) => {
+            let mut bbs = bbs;
+            bbs.push(BasicBlock(gensym("bb"), tail));
             unimplemented!()
         }
     }

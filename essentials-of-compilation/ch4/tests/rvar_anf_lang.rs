@@ -39,7 +39,7 @@ mod rvar_anf_tests {
             use rvar_anf_lang::rvar_lang::*;
             let e1 = let_!([x 1]
                         let_!([y 101]
-                          r#if!( and!(eq!(x,0), eq!(y,read!())), // check short-circuit
+                          r#if!( and!(eq!(add!(add!(x,neg!(1)), 1),0), eq!(y,read!())), // check short-circuit
                                  add!(y,2),
                                  r#if!( or!(eq!(x,1), eq!(x,2)),
                                         add!(y,20),
