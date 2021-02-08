@@ -85,7 +85,7 @@ fn rco_atom(e: &RVarExpr) -> (Atom, Option<Expr>) {
 }
 // remove-complex-opera* {opera* = operations|operands}
 pub fn rco_exp(e: &RVarExpr) -> Expr {
-    fn rco_op((a, e): (Atom, Option<Expr>), f: impl FnOnce(Atom) -> Expr) -> Expr {
+    let rco_op = |(a, e): (Atom, Option<Expr>), f: &dyn Fn(Atom) -> Expr| -> Expr {
         r#match! { (a, e),
             (a, None) => f(a.clone()),
             (Atom::Var(x), Some(e)) => {
@@ -95,13 +95,13 @@ pub fn rco_exp(e: &RVarExpr) -> Expr {
             x@(Atom::Int(_), Some(_)) => panic!("unsuppoted combo {:?}", x),
             x@(Atom::Bool(_), Some(_)) => panic!("unsuppoted combo {:?}", x),
         }
-    }
-    fn simplify_and_rco_binop(op: &RVar::BinaryOpKind, e1: &RVarExpr, e2: &RVarExpr) -> Expr {
+    };
+    let simplify_and_rco_binop = |op: &RVar::BinaryOpKind, e1: &RVarExpr, e2: &RVarExpr| -> Expr {
         use RVar::BinaryOpKind as RVarOpKind;
         use RVar::CmpOpKind as RVarCmpKind;
         let rco_op_apply = |op, e1, e2| {
-            rco_op(rco_atom(e1), |x| {
-                rco_op(rco_atom(e2), |y| Expr::BinaryOp(op, x, y))
+            rco_op(rco_atom(e1), &|x| {
+                rco_op(rco_atom(e2), &|y| Expr::BinaryOp(op, x.clone(), y.clone()))
             })
         };
         match op {
@@ -116,14 +116,14 @@ pub fn rco_exp(e: &RVarExpr) -> Expr {
             },
             RVarOpKind::Add => rco_op_apply(BinaryOpKind::Add, e1, e2),
         }
-    }
+    };
     match e {
         RVarExpr::Int(i) => Expr::Atom(int!(*i)),
         RVarExpr::Bool(b) => Expr::Atom(Atom::Bool(*b)),
         RVarExpr::Var(x) => Expr::Atom(var!(&x)),
         RVarExpr::Read => Expr::Read,
         RVarExpr::BinaryOp(op, e1, e2) => simplify_and_rco_binop(op, e1, e2),
-        RVarExpr::UnaryOp(op, expr) => rco_op(rco_atom(expr), |x| Expr::UnaryOp(*op, x)),
+        RVarExpr::UnaryOp(op, expr) => rco_op(rco_atom(expr), &|x| Expr::UnaryOp(*op, x)),
         RVarExpr::Let(x, e, body) => Expr::Let(x.clone(), bx![rco_exp(e)], bx![rco_exp(body)]),
         RVarExpr::If(e1, e2, e3) => Expr::If(bx![rco_exp(e1)], bx![rco_exp(e2)], bx![rco_exp(e3)]),
     }
