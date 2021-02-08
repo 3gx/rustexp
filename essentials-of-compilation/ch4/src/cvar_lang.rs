@@ -35,7 +35,7 @@ pub enum Tail {
     Return(Expr),
     Seq(Stmt, Box<Tail>),
     Goto(String),
-    IfStmt((CmpOp, Atom, Atom), String, String),
+    IfStmt(Expr, String, String),
 }
 
 #[derive(Debug, Clone)]
@@ -95,11 +95,20 @@ pub fn interp_prog(prog: &CProgram) -> Value {
     }
 }
 
+fn explicate_if(
+    e: &RVarAnf::Expr,
+    then_bb: BasicBlock,
+    else_bb: BasicBlock,
+    bbs: Vec<BasicBlock>,
+) -> (Tail, Vec<BasicBlock>) {
+    unimplemented!()
+}
+
 pub fn explicate_impl(
     e: &RVarAnf::Expr,
     var_n_tail: Option<(&str, &Tail)>,
-    prog: &CProgram,
-) -> (Tail, CProgram) {
+    bbs: &Vec<BasicBlock>,
+) -> (Tail, Vec<BasicBlock>) {
     let mk_tail = |e: Expr| {
         (
             match var_n_tail {
@@ -108,7 +117,7 @@ pub fn explicate_impl(
                 }
                 None => Tail::Return(e),
             },
-            prog.clone(),
+            bbs.clone(),
         )
     };
     match e {
@@ -117,18 +126,21 @@ pub fn explicate_impl(
         RVarAnf::Expr::UnaryOp(op, a) => mk_tail(Expr::UnaryOp(*op, a.clone())),
         RVarAnf::Expr::BinaryOp(op, a1, a2) => mk_tail(Expr::BinaryOp(*op, a1.clone(), a2.clone())),
         RVarAnf::Expr::Let(x, expr, body) => {
-            let (tail, prog) = explicate_impl(body, var_n_tail, prog);
-            explicate_impl(expr, Some((x, &tail)), &prog)
+            let (tail, bbs) = explicate_impl(body, var_n_tail, bbs);
+            explicate_impl(expr, Some((x, &tail)), &bbs)
         }
         RVarAnf::Expr::If(cnd, thn, els) => {
-            unimplemented!()
+            let (thn, bbs) = explicate_impl(thn, var_n_tail, bbs);
+            let (els, bbs) = explicate_impl(els, var_n_tail, &bbs);
+            let then_bb = BasicBlock(gensym("then_bb"), thn);
+            let else_bb = BasicBlock(gensym("else_bb"), els);
+            explicate_if(cnd, then_bb, else_bb, bbs)
         }
     }
 }
 
 pub fn explicate_tail(e: &RVarAnf::Expr) -> CProgram {
-    let (tail, prog) = explicate_impl(e, None, &CProgram(vec![]));
-    let CProgram(mut bbs) = prog;
+    let (tail, mut bbs) = explicate_impl(e, None, &vec![]);
     bbs.push(BasicBlock("start".to_string(), tail));
     CProgram(bbs)
 }
