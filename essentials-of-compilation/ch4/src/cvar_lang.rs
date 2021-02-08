@@ -7,9 +7,9 @@ pub mod rvar_anf_lang;
 pub use rvar_anf_lang as RVarAnf;
 pub use RVarAnf::rvar_lang as RVar;
 
+use RVar::{gensym, gensym_reset, sym_get, sym_set, Env};
 pub use RVarAnf::{int, var, Atom, BinaryOpKind, Bool, Int, UnaryOpKind};
 use RVarAnf::{interp_atom, Value};
-use RVarAnf::{sym_get, sym_set, Env};
 
 #[derive(Debug, Clone)]
 pub enum Expr {
@@ -24,10 +24,18 @@ pub enum Stmt {
     AssignVar(String, Expr),
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum CmpOp {
+    Eq,
+    Lt,
+}
+
 #[derive(Debug, Clone)]
 pub enum Tail {
     Return(Expr),
     Seq(Stmt, Box<Tail>),
+    Goto(String),
+    IfStmt((CmpOp, Atom, Atom), String, String),
 }
 
 #[derive(Debug, Clone)]
@@ -70,6 +78,8 @@ pub fn interp_tail(env: &Env, tail: &Tail) -> Value {
             let new_env = interp_stmt(env, stmt);
             interp_tail(&new_env, tail)
         }
+        Tail::Goto(label) => unimplemented!(),
+        Tail::IfStmt(compare, thn, els) => unimplemented!(),
     }
 }
 
