@@ -82,10 +82,10 @@ pub fn interp_prog(prog: &CProgram) -> Value {
     }
 }
 
-pub fn explicate_impl(e: &RVarAnf::Expr, old_tail: Option<(&str, &Tail)>) -> (Tail, Vec<String>) {
+pub fn explicate_impl(e: &RVarAnf::Expr, var_n_tail: Option<(&str, &Tail)>) -> (Tail, Vec<String>) {
     let mk_tail = |e: Expr| {
         (
-            match old_tail {
+            match var_n_tail {
                 Some((var, tail)) => {
                     Tail::Seq(Stmt::AssignVar(var.to_string(), e), Box::new(tail.clone()))
                 }
@@ -100,7 +100,7 @@ pub fn explicate_impl(e: &RVarAnf::Expr, old_tail: Option<(&str, &Tail)>) -> (Ta
         RVarAnf::Expr::UnaryOp(op, a) => mk_tail(Expr::UnaryOp(*op, a.clone())),
         RVarAnf::Expr::BinaryOp(op, a1, a2) => mk_tail(Expr::BinaryOp(*op, a1.clone(), a2.clone())),
         RVarAnf::Expr::Let(x, expr, body) => {
-            let (tail, vars1) = explicate_impl(body, old_tail);
+            let (tail, vars1) = explicate_impl(body, var_n_tail);
             let (tail, vars2) = explicate_impl(expr, Some((x, &tail)));
             let mut vars = vec![x.clone()];
             for v in vars1.iter() {
@@ -118,6 +118,8 @@ pub fn explicate_impl(e: &RVarAnf::Expr, old_tail: Option<(&str, &Tail)>) -> (Ta
 pub fn explicate_tail(e: &RVarAnf::Expr) -> (Tail, Vec<String>) {
     explicate_impl(e, None)
 }
+/*
 pub fn explicate_assign(e: &RVarAnf::Expr, var: &str, tail: &Tail) -> (Tail, Vec<String>) {
     explicate_impl(e, Some((var, tail)))
 }
+*/
