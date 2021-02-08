@@ -4,33 +4,19 @@ use macros::r#match;
 
 #[path = "rvar_anf_lang.rs"]
 pub mod rvar_anf_lang;
-pub use rvar_anf_lang::rvar_lang;
+pub use rvar_anf_lang as RVarAnf;
+pub use RVarAnf::rvar_lang as RVar;
 
-type Int = i64;
-
-#[derive(Debug, Clone)]
-pub enum Atom {
-    Int(Int),
-    Var(String),
-}
-pub macro int($e:expr) {
-    Atom::Int($e)
-}
-pub macro var {
-    ($id:ident) => {
-        var!(stringify!($id))
-    },
-    ($id:expr) => {
-        Atom::Var($id.to_string())
-    }
-}
+use RVarAnf::{interp_atom, Value};
+use RVarAnf::{sym_get, sym_set, Env};
+use RVarAnf::{Atom, BinaryOpKind, Bool, Int, UnaryOpKind};
 
 #[derive(Debug, Clone)]
 pub enum Expr {
     Atom(Atom),
     Read,
-    Neg(Atom),
-    Add(Atom, Atom),
+    UnaryOp(UnaryOpKind, Atom),
+    BinaryOp(BinaryOpKind, Atom, Atom),
 }
 
 #[derive(Debug, Clone)]
@@ -47,37 +33,37 @@ pub enum Tail {
 #[derive(Debug, Clone)]
 pub struct CProgram(pub Vec<String>, pub Vec<(String, Tail)>);
 
-use rvar_lang::{sym_get, sym_set, EnvInt};
-
-pub fn interp_atom(env: &EnvInt, atom: &Atom) -> Int {
-    use Atom::*;
-    match atom {
-        Int(n) => n.clone(),
-        Var(x) => sym_get(env, x).unwrap().clone(),
-    }
-}
-
-pub fn interp_expr(env: &EnvInt, e: &Expr) -> Int {
+pub fn interp_expr(env: &Env, e: &Expr) -> Value {
     use Expr::*;
     match e {
         Atom(atom) => interp_atom(env, atom),
         Read => {
             let mut input = String::new();
             std::io::stdin().read_line(&mut input).unwrap();
-            input.trim().parse().unwrap()
+            Value::Int(input.trim().parse().unwrap())
         }
-        Neg(atom) => -interp_atom(env, atom),
-        Add(a1, a2) => interp_atom(env, a1) + interp_atom(env, a2),
+        UnaryOp(op, a) => match (op, interp_atom(env, a)) {
+            (UnaryOpKind::Not, Value::Bool(b)) => Value::Bool(!b),
+            (UnaryOpKind::Neg, Value::Int(i)) => Value::Int(-i),
+            x @ _ => panic!("type mismatch: {:?}", x),
+        },
+        BinaryOp(op, a1, a2) => match (op, interp_atom(env, a1), interp_atom(env, a2)) {
+            (BinaryOpKind::Add, Value::Int(a), Value::Int(b)) => Value::Int(a + b),
+            (BinaryOpKind::Eq, Value::Int(a), Value::Int(b)) => Value::Bool(a == b),
+            (BinaryOpKind::Eq, Value::Bool(a), Value::Bool(b)) => Value::Bool(a == b),
+            (BinaryOpKind::Lt, Value::Int(a), Value::Int(b)) => Value::Bool(a < b),
+            x @ _ => panic!("type mismatch: {:?}", x),
+        },
     }
 }
 
-pub fn interp_stmt(env: &EnvInt, stmt: &Stmt) -> EnvInt {
+pub fn interp_stmt(env: &Env, stmt: &Stmt) -> Env {
     match stmt {
         Stmt::AssignVar(var, exp) => sym_set(env, var, &interp_expr(env, exp)),
     }
 }
 
-pub fn interp_tail(env: &EnvInt, tail: &Tail) -> Int {
+pub fn interp_tail(env: &Env, tail: &Tail) -> Value {
     match tail {
         Tail::Return(exp) => interp_expr(env, exp),
         Tail::Seq(stmt, tail) => {
@@ -87,7 +73,7 @@ pub fn interp_tail(env: &EnvInt, tail: &Tail) -> Int {
     }
 }
 
-pub fn interp_prog(prog: &CProgram) -> Int {
+pub fn interp_prog(prog: &CProgram) -> Value {
     r#match! { prog,
         CProgram(_, blocks) if @{[(label, tail),..] = &blocks[..],
                                   "start" == label}
@@ -96,7 +82,7 @@ pub fn interp_prog(prog: &CProgram) -> Int {
     }
 }
 
-use rvar_anf_lang as RVarAnf;
+/*
 pub fn explicate_impl(e: &RVarAnf::Expr, old_tail: Option<(&str, &Tail)>) -> (Tail, Vec<String>) {
     fn from_atom(a: &RVarAnf::Atom) -> Atom {
         match a {
@@ -141,3 +127,4 @@ pub fn explicate_tail(e: &RVarAnf::Expr) -> (Tail, Vec<String>) {
 pub fn explicate_assign(e: &RVarAnf::Expr, var: &str, tail: &Tail) -> (Tail, Vec<String>) {
     explicate_impl(e, Some((var, tail)))
 }
+*/

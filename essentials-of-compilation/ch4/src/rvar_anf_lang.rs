@@ -29,7 +29,7 @@ macro __mk_op {
 
 use rvar_lang as RVar;
 use RVar::Expr as RVarExpr;
-use RVar::{gensym, sym_get, sym_set, Env, UnaryOpKind, Value};
+pub use RVar::{gensym, sym_get, sym_set, Env, UnaryOpKind, Value};
 
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub enum BinaryOpKind {
@@ -38,8 +38,8 @@ pub enum BinaryOpKind {
     Lt,
 }
 
-type Int = i64;
-type Bool = bool;
+pub type Int = i64;
+pub type Bool = bool;
 #[derive(Debug, Clone)]
 pub enum Atom {
     Int(Int),
@@ -137,7 +137,6 @@ pub fn interp_atom(env: &Env, e: &Atom) -> Value {
     }
 }
 pub fn interp_exp(env: &Env, e: &Expr) -> Value {
-    use {BinaryOpKind::*, UnaryOpKind::*};
     match e {
         Expr::Atom(atom) => interp_atom(env, atom),
         Expr::Read => {
@@ -145,15 +144,10 @@ pub fn interp_exp(env: &Env, e: &Expr) -> Value {
             std::io::stdin().read_line(&mut input).unwrap();
             Value::Int(input.trim().parse().unwrap())
         }
-        Expr::UnaryOp(Neg, e) => Value::Int(-interp_atom(env, e).int().unwrap()),
-        Expr::BinaryOp(Add, e1, e2) => {
-            Value::Int(interp_atom(env, e1).int().unwrap() + interp_atom(env, e2).int().unwrap())
-        }
         Expr::Let(x, e, body) => {
             let new_env = sym_set(env, x, &interp_exp(env, e));
             interp_exp(&new_env, body)
         }
-        Expr::UnaryOp(Not, a) => Value::Bool(!interp_atom(env, a).bool().unwrap()),
         Expr::If(e1, e2, e3) => {
             if *interp_exp(env, e1).bool().unwrap() {
                 interp_exp(env, e2)
@@ -161,6 +155,11 @@ pub fn interp_exp(env: &Env, e: &Expr) -> Value {
                 interp_exp(env, e3)
             }
         }
+        Expr::UnaryOp(op, a) => match (op, interp_atom(env, a)) {
+            (UnaryOpKind::Not, Value::Bool(b)) => Value::Bool(!b),
+            (UnaryOpKind::Neg, Value::Int(i)) => Value::Int(-i),
+            x @ _ => panic!("type mismatch: {:?}", x),
+        },
         Expr::BinaryOp(op, a1, a2) => match (op, interp_atom(env, a1), interp_atom(env, a2)) {
             (BinaryOpKind::Add, Value::Int(a), Value::Int(b)) => Value::Int(a + b),
             (BinaryOpKind::Eq, Value::Int(a), Value::Int(b)) => Value::Bool(a == b),
