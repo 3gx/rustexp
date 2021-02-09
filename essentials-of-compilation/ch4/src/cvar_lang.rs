@@ -7,7 +7,7 @@ pub mod rvar_anf_lang;
 pub use rvar_anf_lang as RVarAnf;
 pub use RVarAnf::rvar_lang as RVar;
 
-use RVar::{gensym, gensym_reset, sym_get, sym_set, Env};
+use RVar::{gensym, gensym_reset, /*sym_get,*/ sym_set, Env};
 pub use RVarAnf::{int, var, Atom, BinaryOpKind, Bool, Int, UnaryOpKind};
 use RVarAnf::{interp_atom, Value};
 
@@ -200,13 +200,14 @@ fn explicate_assign(
             let (tail, bbs) = explicate_assign(body, var, tail, bbs);
             explicate_assign(expr, x, tail, bbs)
         }
-        RVarAnf::Expr::If(cnd, thn, els) => {
+        RVarAnf::Expr::If(_cnd, _thn, _els) => {
             unimplemented!()
         }
     }
 }
 
 pub fn explicate_expr(e: &RVarAnf::Expr) -> CProgram {
+    gensym_reset();
     let (tail, mut bbs) = explicate_tail(e, vec![]);
     bbs.push(BasicBlock("start".to_string(), tail));
     CProgram(bbs)
