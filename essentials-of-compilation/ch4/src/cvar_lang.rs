@@ -98,18 +98,18 @@ pub fn interp_prog(cprog: &CProgram) -> Value {
 }
 
 fn explicate_if(
-    e: &RVarAnf::Expr,
+    e: RVarAnf::Expr,
     then_name: &str,
     else_name: &str,
     bbs: Vec<BasicBlock>,
 ) -> (Tail, Vec<BasicBlock>) {
     match e {
         RVarAnf::Expr::BinaryOp(cmp, a1, a2)
-            if *cmp == BinaryOpKind::Eq || *cmp == BinaryOpKind::Lt =>
+            if cmp == BinaryOpKind::Eq || cmp == BinaryOpKind::Lt =>
         {
             (
                 Tail::IfStmt(
-                    Expr::BinaryOp(*cmp, a1.clone(), a2.clone()),
+                    Expr::BinaryOp(cmp, a1, a2),
                     then_name.to_string(),
                     else_name.to_string(),
                 ),
@@ -117,7 +117,7 @@ fn explicate_if(
             )
         }
         RVarAnf::Expr::Atom(Atom::Bool(pred)) => (
-            Tail::Goto(if *pred {
+            Tail::Goto(if pred {
                 then_name.to_string()
             } else {
                 else_name.to_string()
@@ -133,43 +133,40 @@ fn explicate_if(
             bbs,
         ),
         RVarAnf::Expr::If(p_expr, t_expr, e_expr) => {
-            let (then_tail, bbs) = explicate_if(t_expr, then_name, else_name, bbs);
-            let (else_tail, mut bbs) = explicate_if(e_expr, then_name, else_name, bbs);
+            let (then_tail, bbs) = explicate_if(*t_expr, then_name, else_name, bbs);
+            let (else_tail, mut bbs) = explicate_if(*e_expr, then_name, else_name, bbs);
             let then_name = gensym("then_bb");
             let else_name = gensym("else_bb");
             bbs.push(BasicBlock(then_name.clone(), then_tail));
             bbs.push(BasicBlock(else_name.clone(), else_tail));
-            explicate_if(p_expr, &then_name, &else_name, bbs)
+            explicate_if(*p_expr, &then_name, &else_name, bbs)
         }
         RVarAnf::Expr::Let(x, expr, body) => {
-            let (if_tail, bbs) = explicate_if(body, then_name, else_name, bbs);
-            explicate_assign(*expr.clone(), x, if_tail, bbs)
+            let (if_tail, bbs) = explicate_if(*body, then_name, else_name, bbs);
+            explicate_assign(*expr.clone(), &x, if_tail, bbs)
         }
         x @ _ => panic!("invalid if predicate= {:?}", x),
     }
 }
 
-fn explicate_tail(e: &RVarAnf::Expr, bbs: Vec<BasicBlock>) -> (Tail, Vec<BasicBlock>) {
+fn explicate_tail(e: RVarAnf::Expr, bbs: Vec<BasicBlock>) -> (Tail, Vec<BasicBlock>) {
     match e {
-        RVarAnf::Expr::Atom(a) => (Tail::Return(Expr::Atom(a.clone())), bbs),
+        RVarAnf::Expr::Atom(a) => (Tail::Return(Expr::Atom(a)), bbs),
         RVarAnf::Expr::Read => (Tail::Return(Expr::Read), bbs),
-        RVarAnf::Expr::UnaryOp(op, a) => (Tail::Return(Expr::UnaryOp(*op, a.clone())), bbs),
-        RVarAnf::Expr::BinaryOp(op, a1, a2) => (
-            Tail::Return(Expr::BinaryOp(*op, a1.clone(), a2.clone())),
-            bbs,
-        ),
+        RVarAnf::Expr::UnaryOp(op, a) => (Tail::Return(Expr::UnaryOp(op, a)), bbs),
+        RVarAnf::Expr::BinaryOp(op, a1, a2) => (Tail::Return(Expr::BinaryOp(op, a1, a2)), bbs),
         RVarAnf::Expr::Let(x, expr, body) => {
-            let (tail, bbs) = explicate_tail(body, bbs);
-            explicate_assign(*expr.clone(), x, tail, bbs)
+            let (tail, bbs) = explicate_tail(*body, bbs);
+            explicate_assign(*expr.clone(), &x, tail, bbs)
         }
         RVarAnf::Expr::If(cnd, thn, els) => {
-            let (then_bb, bbs) = explicate_tail(thn, bbs);
-            let (else_bb, mut bbs) = explicate_tail(els, bbs);
+            let (then_bb, bbs) = explicate_tail(*thn, bbs);
+            let (else_bb, mut bbs) = explicate_tail(*els, bbs);
             let then_name = gensym("then_bb");
             let else_name = gensym("else_bb");
             bbs.push(BasicBlock(then_name.clone(), then_bb));
             bbs.push(BasicBlock(else_name.clone(), else_bb));
-            explicate_if(cnd, &then_name, &else_name, bbs)
+            explicate_if(*cnd, &then_name, &else_name, bbs)
         }
     }
 }
@@ -202,7 +199,7 @@ fn explicate_assign(
 }
 
 use std::collections::BTreeSet;
-pub fn explicate_expr(e: &RVarAnf::Expr) -> CProgram {
+pub fn explicate_expr(e: RVarAnf::Expr) -> CProgram {
     // RVar::gensym_reset(); // - leads to non-deterministic failures, map got corrupted, why?
     let (tail, mut bbs) = explicate_tail(e, vec![]);
     bbs.push(BasicBlock("start".to_string(), tail));
