@@ -1,7 +1,3 @@
-#[path = "./macros.rs"]
-mod macros;
-use macros::r#match;
-
 #[path = "rvar_anf_lang.rs"]
 pub mod rvar_anf_lang;
 pub use rvar_anf_lang as RVarAnf;
@@ -74,25 +70,31 @@ pub fn interp_stmt(env: &Env, stmt: &Stmt) -> Env {
     }
 }
 
-pub fn interp_tail(env: &Env, tail: &Tail) -> Value {
+pub fn interp_tail(env: &Env, tail: &Tail, bbs: &HashMap<String, Tail>) -> Value {
     match tail {
         Tail::Return(exp) => interp_expr(env, exp),
         Tail::Seq(stmt, tail) => {
             let new_env = interp_stmt(env, stmt);
-            interp_tail(&new_env, tail)
+            interp_tail(&new_env, tail, bbs)
         }
-        Tail::Goto(label) => unimplemented!(),
-        Tail::IfStmt(compare, thn, els) => unimplemented!(),
+        Tail::Goto(label) => interp_tail(env, bbs.get(label).unwrap(), bbs),
+        Tail::IfStmt(pred, thn, els) => match interp_expr(env, pred) {
+            Value::Bool(true) => interp_tail(env, bbs.get(thn).unwrap(), bbs),
+            Value::Bool(false) => interp_tail(env, bbs.get(els).unwrap(), bbs),
+            x @ _ => panic!("predicate must be Bool, got {:?}", x),
+        },
     }
 }
 
-pub fn interp_prog(prog: &CProgram) -> Value {
-    r#match! { prog,
-        CProgram(blocks) if @{[BasicBlock(label, tail),..] = &blocks[..],
-                                  "start" == label}
-                            => interp_tail(&vec![], tail),
-        _ => panic!("unhandled {:?}", prog),
+use std::collections::HashMap;
+pub fn interp_prog(cprog: &CProgram) -> Value {
+    let mut prog = HashMap::new();
+    let CProgram(bbs) = cprog;
+    for BasicBlock(name, tail) in bbs.clone() {
+        prog.insert(name, tail);
     }
+    let tail = prog.get(&"start".to_string()).unwrap();
+    interp_tail(&vec![], tail, &prog)
 }
 
 fn explicate_if(
