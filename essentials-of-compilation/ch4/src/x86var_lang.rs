@@ -98,22 +98,33 @@ use cvar_lang as CVarLang;
 pub fn select_inst_atom(a: &CVarLang::Atom) -> Arg {
     match a {
         CVarLang::Atom::Int(n) => Arg::Imm(*n),
+        CVarLang::Atom::Bool(b) => {
+            if *b {
+                Arg::Imm(1)
+            } else {
+                Arg::Imm(0)
+            }
+        }
         CVarLang::Atom::Var(x) => Arg::Var(x.clone()),
     }
 }
 
 pub fn select_inst_assign(dst: Arg, e: &CVarLang::Expr) -> Vec<Inst> {
     use CVarLang::Expr;
+    use CVarLang::{BinaryOpKind, UnaryOpKind};
     use Inst::*;
     use Reg::*;
     match e {
         Expr::Atom(a) => vec![Movq(select_inst_atom(a), dst)],
         Expr::Read => vec![Callq("Read".to_string(), 0), Movq(Arg::Reg(rax), dst)],
-        Expr::Neg(a) => vec![Movq(select_inst_atom(a), dst.clone()), Negq(dst)],
-        Expr::Add(a1, a2) => vec![
+        Expr::UnaryOp(UnaryOpKind::Neg, a) => {
+            vec![Movq(select_inst_atom(a), dst.clone()), Negq(dst)]
+        }
+        Expr::BinaryOp(BinaryOpKind::Add, a1, a2) => vec![
             Movq(select_inst_atom(a1), dst.clone()),
             Addq(select_inst_atom(a2), dst),
         ],
+        x @ _ => panic!("unhandled expression {:?}", x),
     }
 }
 
@@ -144,6 +155,7 @@ pub fn select_inst_tail(t: &CVarLang::Tail, block: BlockVar) -> BlockVar {
             }
             select_inst_tail(tail, BlockVar(info, list))
         }
+        x @ _ => panic!("unhandled tail stmt {:?}", x),
     }
 }
 
