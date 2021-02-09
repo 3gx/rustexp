@@ -139,6 +139,9 @@ fn explicate_if(
             bbs.push(BasicBlock(else_name.clone(), else_tail));
             explicate_if(p_expr, &then_name, &else_name, bbs)
         }
+        RVarAnf::Expr::Let(x, expr, body) => {
+            unimplemented!()
+        }
         x @ _ => panic!("invalid if predicate= {:?}", x),
     }
 }
