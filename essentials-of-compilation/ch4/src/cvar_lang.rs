@@ -124,12 +124,8 @@ fn explicate_if(
             }),
             bbs,
         ),
-        RVarAnf::Expr::Atom(Atom::Var(var)) => (
-            Tail::IfStmt(
-                Expr::Atom(Atom::Var(var)),
-                then_name.to_string(),
-                else_name.to_string(),
-            ),
+        RVarAnf::Expr::Atom(a @ Atom::Var(_)) => (
+            Tail::IfStmt(Expr::Atom(a), then_name.to_string(), else_name.to_string()),
             bbs,
         ),
         RVarAnf::Expr::If(p_expr, t_expr, e_expr) => {
@@ -145,7 +141,7 @@ fn explicate_if(
             let (if_tail, bbs) = explicate_if(*body, then_name, else_name, bbs);
             explicate_assign(&x, *expr, if_tail, bbs)
         }
-        x @ _ => panic!("invalid if predicate= {:?}", x),
+        x @ _ => panic!("invalid 'if' predicate= {:?}", x),
     }
 }
 
