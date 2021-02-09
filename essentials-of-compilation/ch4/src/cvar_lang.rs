@@ -97,8 +97,8 @@ pub fn interp_prog(prog: &CProgram) -> Value {
 
 fn explicate_if(
     e: &RVarAnf::Expr,
-    then_bb: BasicBlock,
-    else_bb: BasicBlock,
+    then_name: &str,
+    else_name: &str,
     bbs: Vec<BasicBlock>,
 ) -> (Tail, Vec<BasicBlock>) {
     match e {
@@ -108,45 +108,36 @@ fn explicate_if(
             (
                 Tail::IfStmt(
                     Expr::BinaryOp(*cmp, a1.clone(), a2.clone()),
-                    then_bb.0.clone(),
-                    else_bb.0.clone(),
+                    then_name.to_string(),
+                    else_name.to_string(),
                 ),
-                {
-                    let mut bbs = bbs;
-                    bbs.push(then_bb);
-                    bbs.push(else_bb);
-                    bbs
-                },
+                bbs,
             )
         }
         RVarAnf::Expr::Atom(Atom::Bool(pred)) => (
             Tail::IfStmt(
                 Expr::Atom(Atom::Bool(*pred)),
-                then_bb.0.clone(),
-                else_bb.0.clone(),
+                then_name.to_string(),
+                else_name.to_string(),
             ),
-            {
-                let mut bbs = bbs;
-                bbs.push(then_bb);
-                bbs.push(else_bb);
-                bbs
-            },
+            bbs,
         ),
         RVarAnf::Expr::Atom(Atom::Var(var)) => (
             Tail::IfStmt(
                 Expr::Atom(Atom::Var(var.clone())),
-                then_bb.0.clone(),
-                else_bb.0.clone(),
+                then_name.to_string(),
+                else_name.to_string(),
             ),
-            {
-                let mut bbs = bbs;
-                bbs.push(then_bb);
-                bbs.push(else_bb);
-                bbs
-            },
+            bbs,
         ),
         RVarAnf::Expr::If(p_expr, t_expr, e_expr) => {
-            unimplemented!()
+            let (then_tail, bbs) = explicate_if(t_expr, then_name, else_name, bbs);
+            let (else_tail, mut bbs) = explicate_if(e_expr, then_name, else_name, bbs);
+            let then_name = gensym("then_bb");
+            let else_name = gensym("else_bb");
+            bbs.push(BasicBlock(then_name.clone(), then_tail));
+            bbs.push(BasicBlock(else_name.clone(), else_tail));
+            explicate_if(p_expr, &then_name, &else_name, bbs)
         }
         x @ _ => panic!("invalid if predicate= {:?}", x),
     }
@@ -166,11 +157,13 @@ fn explicate_tail(e: &RVarAnf::Expr, bbs: Vec<BasicBlock>) -> (Tail, Vec<BasicBl
             explicate_assign(expr, x, tail, bbs)
         }
         RVarAnf::Expr::If(cnd, thn, els) => {
-            let (thn, bbs) = explicate_tail(thn, bbs);
-            let (els, bbs) = explicate_tail(els, bbs);
-            let then_bb = BasicBlock(gensym("then_bb"), thn);
-            let else_bb = BasicBlock(gensym("else_bb"), els);
-            explicate_if(cnd, then_bb, else_bb, bbs)
+            let (then_bb, bbs) = explicate_tail(thn, bbs);
+            let (else_bb, mut bbs) = explicate_tail(els, bbs);
+            let then_name = gensym("then_bb");
+            let else_name = gensym("else_bb");
+            bbs.push(BasicBlock(then_name.clone(), then_bb));
+            bbs.push(BasicBlock(else_name.clone(), else_bb));
+            explicate_if(cnd, &then_name, &else_name, bbs)
         }
     }
 }
