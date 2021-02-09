@@ -1,13 +1,12 @@
 #[cfg(test)]
 mod x86var_lang {
+    use ch4::x86var_lang as X86;
+    use CVar::{RVar, RVarAnf};
+    use X86::cvar_lang as CVar;
     #[test]
     fn t0() {
-        use ch4::x86var_lang;
-        use cvar_lang::rvar_anf_lang;
-        use x86var_lang::cvar_lang;
-        use x86var_lang::rvar_lang;
         let (p1, v1) = {
-            use rvar_lang::*;
+            use RVar::*;
             let p1 = r#let!([x add!(12, add!(neg!(20), neg!(add!(10,neg!(15)))))]
                     add!(add!(30, neg!(15)), x));
             let v1 = interp_exp(&vec![], &p1);
@@ -15,7 +14,7 @@ mod x86var_lang {
         };
         println!("p1= {:#?} ", p1);
 
-        use rvar_anf_lang::{interp_exp, rco_exp};
+        use RVarAnf::{interp_exp, rco_exp};
         let p1anf = rco_exp(&p1);
         println!("p1= {:#?} ", p1anf);
 
@@ -24,10 +23,10 @@ mod x86var_lang {
         println!("v1anf= {:?}", v1anf);
         assert_eq!(v1, v1anf);
 
-        let cprog = cvar_lang::explicate_expr(&p1anf);
+        let cprog = CVar::explicate_expr(&p1anf);
         println!("prog= {:#?}", cprog);
 
-        let v1clang = cvar_lang::interp_prog(&cprog);
+        let v1clang = CVar::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
 
@@ -35,12 +34,12 @@ mod x86var_lang {
             .0
             .iter()
             .find_map(
-                |cvar_lang::BasicBlock(name, tail)| if name == "start" { Some(tail) } else { None },
+                |CVar::BasicBlock(name, tail)| if name == "start" { Some(tail) } else { None },
             )
             .unwrap();
-        let x86var = x86var_lang::select_inst_tail(&tail, x86var_lang::BlockVar::new());
+        let x86var = X86::select_inst_tail(&tail, X86::BlockVar::new());
         println!("x86var= {:?}", x86var);
-        let val_x86var = x86var_lang::interp_block(&x86var);
+        let val_x86var = X86::interp_block(&x86var);
         println!("eval(x86var)= {:?}", val_x86var);
         assert_eq!(*v1.int().unwrap(), val_x86var);
 
@@ -51,24 +50,24 @@ mod x86var_lang {
         }
         print_vec(&x86var.1);
 
-        let x86var_lang::BlockVar(vars, _) = &x86var;
+        let X86::BlockVar(vars, _) = &x86var;
         println!("vars= {:?}", vars);
 
-        let x86var_home = x86var_lang::assign_homes(&x86var);
+        let x86var_home = X86::assign_homes(&x86var);
         println!("assgned_homes= {:?}", x86var_home);
         print_vec(&x86var_home.1);
 
-        let val_x86var_stack = x86var_lang::interp_block_stack(&x86var_home);
+        let val_x86var_stack = X86::interp_block_stack(&x86var_home);
         println!("eval(x86var_home)= {}", val_x86var_stack);
         assert_eq!(*v1.int().unwrap(), val_x86var_stack);
 
-        let x86var_patched = x86var_lang::patch_x86(&x86var_home);
+        let x86var_patched = X86::patch_x86(&x86var_home);
         println!("x86var_patched= {:?}", x86var_patched);
-        let val_x86var_patched = x86var_lang::interp_block_stack(&x86var_patched);
+        let val_x86var_patched = X86::interp_block_stack(&x86var_patched);
         assert_eq!(*v1.int().unwrap(), val_x86var_patched);
         print_vec(&x86var_patched.1);
 
-        println!("\n{}", x86var_lang::print_x86(&x86var_patched).as_str());
+        println!("\n{}", X86::print_x86(&x86var_patched).as_str());
         println!("result={:?}", v1);
     }
 
