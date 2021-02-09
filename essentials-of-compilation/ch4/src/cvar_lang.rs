@@ -101,7 +101,55 @@ fn explicate_if(
     else_bb: BasicBlock,
     bbs: Vec<BasicBlock>,
 ) -> (Tail, Vec<BasicBlock>) {
-    unimplemented!()
+    match e {
+        RVarAnf::Expr::BinaryOp(cmp, a1, a2)
+            if *cmp == BinaryOpKind::Eq || *cmp == BinaryOpKind::Lt =>
+        {
+            (
+                Tail::IfStmt(
+                    Expr::BinaryOp(*cmp, a1.clone(), a2.clone()),
+                    then_bb.0.clone(),
+                    else_bb.0.clone(),
+                ),
+                {
+                    let mut bbs = bbs;
+                    bbs.push(then_bb);
+                    bbs.push(else_bb);
+                    bbs
+                },
+            )
+        }
+        RVarAnf::Expr::Atom(Atom::Bool(pred)) => (
+            Tail::IfStmt(
+                Expr::Atom(Atom::Bool(*pred)),
+                then_bb.0.clone(),
+                else_bb.0.clone(),
+            ),
+            {
+                let mut bbs = bbs;
+                bbs.push(then_bb);
+                bbs.push(else_bb);
+                bbs
+            },
+        ),
+        RVarAnf::Expr::Atom(Atom::Var(var)) => (
+            Tail::IfStmt(
+                Expr::Atom(Atom::Var(var.clone())),
+                then_bb.0.clone(),
+                else_bb.0.clone(),
+            ),
+            {
+                let mut bbs = bbs;
+                bbs.push(then_bb);
+                bbs.push(else_bb);
+                bbs
+            },
+        ),
+        RVarAnf::Expr::If(p_expr, t_expr, e_expr) => {
+            unimplemented!()
+        }
+        x @ _ => panic!("invalid if predicate= {:?}", x),
+    }
 }
 
 fn explicate_tail(e: &RVarAnf::Expr, bbs: Vec<BasicBlock>) -> (Tail, Vec<BasicBlock>) {
@@ -156,8 +204,6 @@ fn explicate_assign(
             explicate_assign(expr, x, tail, bbs)
         }
         RVarAnf::Expr::If(cnd, thn, els) => {
-            let mut bbs = bbs;
-            bbs.push(BasicBlock(gensym("bb"), tail));
             unimplemented!()
         }
     }
