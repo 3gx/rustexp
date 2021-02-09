@@ -210,7 +210,7 @@ fn explicate_assign(
 
 use std::collections::BTreeSet;
 pub fn explicate_expr(e: &RVarAnf::Expr) -> CProgram {
-    //gensym_reset();
+    // RVar::gensym_reset(); // - leads to non-deterministic failures, map got corrupted, why?
     let (tail, mut bbs) = explicate_tail(e, vec![]);
     bbs.push(BasicBlock("start".to_string(), tail));
     let mut names = BTreeSet::new();
