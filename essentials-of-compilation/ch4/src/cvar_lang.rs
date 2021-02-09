@@ -140,6 +140,8 @@ fn explicate_if(
             explicate_if(p_expr, &then_name, &else_name, bbs)
         }
         RVarAnf::Expr::Let(x, expr, body) => {
+            let (then_tail, bbs) = explicate_if(body, then_name, else_name, bbs);
+            let (tail, bbs) = explicate_assign(expr, x, then_tail, bbs);
             unimplemented!()
         }
         x @ _ => panic!("invalid if predicate= {:?}", x),
