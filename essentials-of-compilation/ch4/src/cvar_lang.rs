@@ -143,7 +143,7 @@ fn explicate_if(
         }
         RVarAnf::Expr::Let(x, expr, body) => {
             let (if_tail, bbs) = explicate_if(body, then_name, else_name, bbs);
-            explicate_assign(expr, x, if_tail, bbs)
+            explicate_assign(*expr.clone(), x, if_tail, bbs)
         }
         x @ _ => panic!("invalid if predicate= {:?}", x),
     }
@@ -160,7 +160,7 @@ fn explicate_tail(e: &RVarAnf::Expr, bbs: Vec<BasicBlock>) -> (Tail, Vec<BasicBl
         ),
         RVarAnf::Expr::Let(x, expr, body) => {
             let (tail, bbs) = explicate_tail(body, bbs);
-            explicate_assign(expr, x, tail, bbs)
+            explicate_assign(*expr.clone(), x, tail, bbs)
         }
         RVarAnf::Expr::If(cnd, thn, els) => {
             let (then_bb, bbs) = explicate_tail(thn, bbs);
@@ -175,32 +175,25 @@ fn explicate_tail(e: &RVarAnf::Expr, bbs: Vec<BasicBlock>) -> (Tail, Vec<BasicBl
 }
 
 fn explicate_assign(
-    e: &RVarAnf::Expr,
+    e: RVarAnf::Expr,
     var: &str,
     tail: Tail,
     bbs: Vec<BasicBlock>,
 ) -> (Tail, Vec<BasicBlock>) {
-    let assign = |e: Expr| Stmt::AssignVar(var.to_string(), e);
+    let assign = |e, tail, bbs| {
+        (
+            Tail::Seq(Stmt::AssignVar(var.to_string(), e), Box::new(tail)),
+            bbs,
+        )
+    };
     match e {
-        RVarAnf::Expr::Atom(a) => (
-            Tail::Seq(assign(Expr::Atom(a.clone())), Box::new(tail)),
-            bbs,
-        ),
-        RVarAnf::Expr::Read => (Tail::Seq(assign(Expr::Read), Box::new(tail)), bbs),
-        RVarAnf::Expr::UnaryOp(op, a) => (
-            Tail::Seq(assign(Expr::UnaryOp(*op, a.clone())), Box::new(tail)),
-            bbs,
-        ),
-        RVarAnf::Expr::BinaryOp(op, a1, a2) => (
-            Tail::Seq(
-                assign(Expr::BinaryOp(*op, a1.clone(), a2.clone())),
-                Box::new(tail),
-            ),
-            bbs,
-        ),
+        RVarAnf::Expr::Atom(a) => assign(Expr::Atom(a.clone()), tail, bbs),
+        RVarAnf::Expr::Read => assign(Expr::Read, tail, bbs),
+        RVarAnf::Expr::UnaryOp(op, a) => assign(Expr::UnaryOp(op, a), tail, bbs),
+        RVarAnf::Expr::BinaryOp(op, a1, a2) => assign(Expr::BinaryOp(op, a1, a2), tail, bbs),
         RVarAnf::Expr::Let(x, expr, body) => {
-            let (tail, bbs) = explicate_assign(body, var, tail, bbs);
-            explicate_assign(expr, x, tail, bbs)
+            let (tail, bbs) = explicate_assign(*body, var, tail, bbs);
+            explicate_assign(*expr, &x, tail, bbs)
         }
         RVarAnf::Expr::If(_cnd, _thn, _els) => {
             unimplemented!()
