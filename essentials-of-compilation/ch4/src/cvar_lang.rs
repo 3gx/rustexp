@@ -115,11 +115,11 @@ fn explicate_if(
             )
         }
         RVarAnf::Expr::Atom(Atom::Bool(pred)) => (
-            Tail::IfStmt(
-                Expr::Atom(Atom::Bool(*pred)),
-                then_name.to_string(),
-                else_name.to_string(),
-            ),
+            Tail::Goto(if *pred {
+                then_name.to_string()
+            } else {
+                else_name.to_string()
+            }),
             bbs,
         ),
         RVarAnf::Expr::Atom(Atom::Var(var)) => (
