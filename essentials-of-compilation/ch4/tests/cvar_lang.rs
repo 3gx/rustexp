@@ -122,5 +122,11 @@ mod cvar_lang {
         let v1clang = cvar_lang::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
+        /*
+        for cvar_lang::BasicBlock(name, bb) in cprog.0 {
+            println!("{}:", name);
+            println!("{:#?}", bb);
+        }
+        */
     }
 }

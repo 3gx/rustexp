@@ -214,9 +214,3 @@ pub fn explicate_expr(e: &RVarAnf::Expr) -> CProgram {
     bbs.push(BasicBlock("start".to_string(), tail));
     CProgram(bbs)
 }
-
-/*
-pub fn explicate_assign(e: &RVarAnf::Expr, var: &str, tail: &Tail) -> (Tail, Vec<String>) {
-    explicate_impl(e, Some((var, tail)))
-}
-*/
