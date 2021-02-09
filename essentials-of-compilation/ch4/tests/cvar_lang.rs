@@ -81,6 +81,10 @@ mod cvar_lang {
         let cprog = cvar_lang::explicate_expr(&e1anf);
         let cvar_lang::CProgram(tail) = &cprog;
         println!("tail= {:?}", tail);
+
+        let v1clang = cvar_lang::interp_prog(&cprog);
+        println!("v1clang= {:?}", v1clang);
+        assert_eq!(v1anf, v1clang);
     }
 
     #[test]
@@ -114,5 +118,9 @@ mod cvar_lang {
         let cprog = cvar_lang::explicate_expr(&e1anf);
         let cvar_lang::CProgram(tail) = &cprog;
         println!("tail= {:?}", tail);
+
+        let v1clang = cvar_lang::interp_prog(&cprog);
+        println!("v1clang= {:?}", v1clang);
+        assert_eq!(v1anf, v1clang);
     }
 }
