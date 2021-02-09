@@ -3,7 +3,7 @@ pub mod rvar_anf_lang;
 pub use rvar_anf_lang as RVarAnf;
 pub use RVarAnf::rvar_lang as RVar;
 
-use RVar::{gensym, gensym_reset, /*sym_get,*/ sym_set, Env};
+use RVar::{gensym, /*gensym_reset, sym_get,*/ sym_set, Env};
 pub use RVarAnf::{int, var, Atom, BinaryOpKind, Bool, Int, UnaryOpKind};
 use RVarAnf::{interp_atom, Value};
 
@@ -70,7 +70,7 @@ pub fn interp_stmt(env: &Env, stmt: &Stmt) -> Env {
     }
 }
 
-pub fn interp_tail(env: &Env, tail: &Tail, bbs: &HashMap<String, Tail>) -> Value {
+pub fn interp_tail(env: &Env, tail: &Tail, bbs: &BTreeMap<String, Tail>) -> Value {
     match tail {
         Tail::Return(exp) => interp_expr(env, exp),
         Tail::Seq(stmt, tail) => {
@@ -86,9 +86,9 @@ pub fn interp_tail(env: &Env, tail: &Tail, bbs: &HashMap<String, Tail>) -> Value
     }
 }
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 pub fn interp_prog(cprog: &CProgram) -> Value {
-    let mut prog = HashMap::new();
+    let mut prog = BTreeMap::new();
     let CProgram(bbs) = cprog;
     for BasicBlock(name, tail) in bbs.clone() {
         prog.insert(name, tail);
@@ -208,9 +208,14 @@ fn explicate_assign(
     }
 }
 
+use std::collections::BTreeSet;
 pub fn explicate_expr(e: &RVarAnf::Expr) -> CProgram {
-    gensym_reset();
+    //gensym_reset();
     let (tail, mut bbs) = explicate_tail(e, vec![]);
     bbs.push(BasicBlock("start".to_string(), tail));
+    let mut names = BTreeSet::new();
+    for BasicBlock(name, _) in &bbs {
+        assert_eq!(names.insert(name), true);
+    }
     CProgram(bbs)
 }

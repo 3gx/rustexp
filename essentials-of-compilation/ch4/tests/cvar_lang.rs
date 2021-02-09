@@ -64,6 +64,7 @@ mod cvar_lang {
                                         add!(y,20),
                                         add!(y,30)))));
 
+            println!("interp_exp");
             let v1 = interp_exp(&vec![], &e1);
             (e1, v1)
         };
@@ -82,12 +83,12 @@ mod cvar_lang {
         let cvar_lang::CProgram(tail) = &cprog;
         println!("tail= {:?}", tail);
 
+        println!("interp_prog");
         let v1clang = cvar_lang::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
     }
 
-    /*
     #[test]
     fn t4() {
         use ch4::cvar_lang;
@@ -130,5 +131,4 @@ mod cvar_lang {
         }
         */
     }
-    */
 }
