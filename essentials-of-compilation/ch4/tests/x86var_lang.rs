@@ -23,6 +23,7 @@ mod x86var_lang {
         println!("v1anf= {:?}", v1anf);
         assert_eq!(v1, v1anf);
 
+        RVar::gensym_reset();
         let cprog = CVar::explicate_expr(&p1anf);
         println!("prog= {:#?}", cprog);
 

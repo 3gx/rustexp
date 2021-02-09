@@ -287,11 +287,12 @@ pub fn interp_program(p: &Program) -> Value {
     }
 }
 
+use std::collections::HashMap;
+
 lazy_static! {
     static ref MAP: Mutex<HashMap<String, usize>> = Mutex::new(HashMap::new());
 }
 use lazy_static::lazy_static; // 1.4.0
-use std::collections::HashMap;
 use std::sync::Mutex;
 
 pub fn gensym_reset() {
@@ -305,6 +306,40 @@ pub fn gensym(x: &str) -> String {
 
     x.to_string() + &counter.to_string()
 }
+/*
+static mut MAP: Option<HashMap<String, usize>> = None;
+
+use std::collections::HashMap;
+pub fn gensym_reset() {
+    unsafe {
+        if MAP.is_none() {
+            MAP = Some(HashMap::new());
+        }
+        let map = if let Some(ref mut map) = &mut MAP {
+            map
+        } else {
+            panic!()
+        };
+        map.clear();
+    }
+}
+pub fn gensym(x: &str) -> String {
+    unsafe {
+        if MAP.is_none() {
+            MAP = Some(HashMap::new());
+        }
+        let map = if let Some(ref mut map) = &mut MAP {
+            map
+        } else {
+            panic!()
+        };
+        let counter = map.entry(x.to_string()).or_insert(0);
+        *counter += 1;
+
+        x.to_string() + &counter.to_string()
+    }
+}
+*/
 
 type UMap = SymTable<String>;
 pub fn uniquify_expr(umap: &UMap, expr: &Expr) -> Expr {
