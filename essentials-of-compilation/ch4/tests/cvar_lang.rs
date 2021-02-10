@@ -199,7 +199,6 @@ mod cvar_lang {
         assert_eq!(v1, v1anf);
         println!("v1= {:?} ", v1);
 
-        /*
         let cprog = cvar_lang::explicate_expr(e1anf);
         let cvar_lang::CProgram(tail) = &cprog;
         println!("tail= {:?}", tail);
@@ -207,6 +206,5 @@ mod cvar_lang {
         let v1clang = cvar_lang::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
-        */
     }
 }

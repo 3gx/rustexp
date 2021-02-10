@@ -197,8 +197,18 @@ fn explicate_assign(
             let (tail, bbs) = explicate_assign(var, *body, tail, bbs);
             explicate_assign(&x, *expr, tail, bbs)
         }
-        RVarAnf::Expr::If(_cnd, _thn, _els) => {
-            unimplemented!()
+        RVarAnf::Expr::If(cnd, thn, els) => {
+            let mut bbs = bbs;
+            let tail_name = &gensym("tail_bb");
+            bbs.push(BasicBlock(tail_name.clone(), tail));
+            let (then_bb, bbs) = explicate_assign(var, *thn, Tail::Goto(tail_name.clone()), bbs);
+            let (else_bb, mut bbs) =
+                explicate_assign(var, *els, Tail::Goto(tail_name.clone()), bbs);
+            let then_name = &gensym("then_bb");
+            let else_name = &gensym("else_bb");
+            bbs.push(BasicBlock(then_name.clone(), then_bb));
+            bbs.push(BasicBlock(else_name.clone(), else_bb));
+            explicate_if(*cnd, then_name, else_name, bbs)
         }
     }
 }
