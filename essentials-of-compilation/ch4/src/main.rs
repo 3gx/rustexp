@@ -1,9 +1,8 @@
-#![cfg_attr(feature = "nightly", feature(specialization))]
-
-use gc::{Finalize, Gc, GcCell, Trace};
+//#![cfg_attr(feature = "nightly", feature(specialization))]
 
 fn main() {
     {
+        use gc::{Finalize, Gc, Trace};
         let x = Gc::new(1_u8);
         let y = Gc::new(Box::new(Gc::new(1_u8)));
 
@@ -20,6 +19,7 @@ fn main() {
     }
 
     {
+        use gc::{Finalize, Gc, GcCell, Trace};
         #[derive(Trace, Finalize, Debug)]
         struct Foo {
             cyclic: GcCell<Option<Gc<Foo>>>,
@@ -43,6 +43,7 @@ fn main() {
         *foo1.cyclic.borrow_mut() = Some(foo3.clone());
     }
     {
+        use gc::{Gc, GcCell};
         let x = Gc::new(GcCell::new(20));
         let y = Gc::clone(&x);
         println!("x= {:?}", x);
