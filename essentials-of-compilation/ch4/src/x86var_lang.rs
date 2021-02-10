@@ -62,7 +62,7 @@ pub struct Options {
 
 #[derive(Debug, Clone)]
 pub struct BlockVarOpts {
-    pub vars: Vec<String>,
+    pub vars: BTreeSet<String>,
     pub regs: BTreeMap<String, Reg>,
 }
 #[derive(Debug, Clone)]
@@ -74,14 +74,16 @@ impl BlockVar {
     pub fn new() -> BlockVar {
         BlockVar(
             BlockVarOpts {
-                vars: vec![],
+                vars: BTreeSet::new(),
                 regs: BTreeMap::new(),
             },
             vec![],
         )
     }
     pub fn with_vars(mut self, vars: Vec<String>) -> BlockVar {
-        self.0.vars = vars;
+        for v in vars {
+            self.0.vars.insert(v);
+        }
         self
     }
     pub fn with_regs(mut self, regs: BTreeMap<String, Reg>) -> BlockVar {
@@ -135,22 +137,64 @@ pub fn select_inst_stmt(s: &CVarLang::Stmt) -> Vec<Inst> {
     }
 }
 
+fn get_vars(inst: &Inst) -> BTreeSet<String> {
+    use Inst::*;
+    let mut vars = BTreeSet::new();
+    let mut add_var = |arg: &Arg| match arg {
+        Arg::Var(x) => {
+            vars.insert(x.clone());
+        }
+        _ => (),
+    };
+    match inst {
+        Addq(arg1, arg2) => {
+            add_var(arg1);
+            add_var(arg2);
+        }
+        Subq(arg1, arg2) => {
+            add_var(arg1);
+            add_var(arg2);
+        }
+        Movq(arg1, arg2) => {
+            add_var(arg1);
+            add_var(arg2);
+        }
+        Negq(arg) => {
+            add_var(arg);
+        }
+        Pushq(arg) => {
+            add_var(arg);
+        }
+        Popq(arg) => {
+            add_var(arg);
+        }
+        Callq(..) => (),
+        Jmp(..) => (),
+        Retq => (),
+    };
+    vars
+}
 pub fn select_inst_tail(t: &CVarLang::Tail, block: BlockVar) -> BlockVar {
     use CVarLang::Tail;
     use Reg::*;
 
     match t {
         Tail::Return(expr) => {
-            let BlockVar(info, mut list) = block;
+            let BlockVar(mut info, mut list) = block;
             for inst in select_inst_assign(Arg::Reg(rax), expr) {
-                list.push(inst)
+                for v in get_vars(&inst) {
+                    info.vars.insert(v);
+                }
+                list.push(inst);
             }
-            //list.push(Retq);
             BlockVar(info, list)
         }
         Tail::Seq(stmt, tail) => {
-            let BlockVar(info, mut list) = block;
+            let BlockVar(mut info, mut list) = block;
             for inst in select_inst_stmt(stmt) {
+                for v in get_vars(&inst) {
+                    info.vars.insert(v);
+                }
                 list.push(inst);
             }
             select_inst_tail(tail, BlockVar(info, list))
