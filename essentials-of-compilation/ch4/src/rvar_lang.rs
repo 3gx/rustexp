@@ -324,17 +324,17 @@ pub fn gensym(x: &str) -> String {
     });
     x.to_string() + &counter.to_string()
 }
-/*
-static mut MAP: Option<HashMap<String, usize>> = None;
 
-use std::collections::HashMap;
+/*
+static mut MAP: Option<RefCell<HashMap<String, usize>>> = None;
+
 pub fn gensym_reset() {
     unsafe {
         if MAP.is_none() {
-            MAP = Some(HashMap::new());
+            MAP = Some(RefCell::new(HashMap::new()));
         }
-        let map = if let Some(ref mut map) = &mut MAP {
-            map
+        let mut map = if let Some(ref mut map) = &mut MAP {
+            map.borrow_mut()
         } else {
             panic!()
         };
@@ -344,10 +344,10 @@ pub fn gensym_reset() {
 pub fn gensym(x: &str) -> String {
     unsafe {
         if MAP.is_none() {
-            MAP = Some(HashMap::new());
+            MAP = Some(RefCell::new(HashMap::new()));
         }
-        let map = if let Some(ref mut map) = &mut MAP {
-            map
+        let mut map = if let Some(ref mut map) = &mut MAP {
+            map.borrow_mut()
         } else {
             panic!()
         };
