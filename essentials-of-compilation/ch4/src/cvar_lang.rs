@@ -35,6 +35,9 @@ pub enum Tail {
 }
 
 #[derive(Debug, Clone)]
+pub struct BB(pub Tail);
+
+#[derive(Debug, Clone)]
 pub struct BasicBlock(pub String, pub Tail);
 
 #[derive(Debug, Clone)]
