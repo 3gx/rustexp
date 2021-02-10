@@ -97,7 +97,7 @@ pub fn interp_prog(cprog: &CProgram) -> Value {
     interp_tail(&vec![], tail, &prog)
 }
 
-fn explicate_if(
+fn explicate_ifpred(
     e: RVarAnf::Expr,
     then_name: &str,
     else_name: &str,
@@ -137,16 +137,16 @@ fn explicate_if(
             bbs,
         ),
         RVarAnf::Expr::If(p_expr, t_expr, e_expr) => {
-            let (then_tail, bbs) = explicate_if(*t_expr, then_name, else_name, bbs);
-            let (else_tail, mut bbs) = explicate_if(*e_expr, then_name, else_name, bbs);
+            let (then_tail, bbs) = explicate_ifpred(*t_expr, then_name, else_name, bbs);
+            let (else_tail, mut bbs) = explicate_ifpred(*e_expr, then_name, else_name, bbs);
             let then_name = &gensym("then_bb");
             let else_name = &gensym("else_bb");
             bbs.push(BasicBlock(then_name.clone(), then_tail));
             bbs.push(BasicBlock(else_name.clone(), else_tail));
-            explicate_if(*p_expr, then_name, else_name, bbs)
+            explicate_ifpred(*p_expr, then_name, else_name, bbs)
         }
         RVarAnf::Expr::Let(x, expr, body) => {
-            let (if_tail, bbs) = explicate_if(*body, then_name, else_name, bbs);
+            let (if_tail, bbs) = explicate_ifpred(*body, then_name, else_name, bbs);
             explicate_assign(&x, *expr, if_tail, bbs)
         }
         x @ _ => panic!("invalid 'if' predicate= {:?}", x),
@@ -171,7 +171,7 @@ fn explicate_tail(e: RVarAnf::Expr, bbs: Vec<BasicBlock>) -> (Tail, Vec<BasicBlo
             let else_name = &gensym("else_bb");
             bbs.push(BasicBlock(then_name.clone(), then_bb));
             bbs.push(BasicBlock(else_name.clone(), else_bb));
-            explicate_if(*cnd, then_name, else_name, bbs)
+            explicate_ifpred(*cnd, then_name, else_name, bbs)
         }
     }
 }
@@ -208,7 +208,7 @@ fn explicate_assign(
             let else_name = &gensym("else_bb");
             bbs.push(BasicBlock(then_name.clone(), then_bb));
             bbs.push(BasicBlock(else_name.clone(), else_bb));
-            explicate_if(*cnd, then_name, else_name, bbs)
+            explicate_ifpred(*cnd, then_name, else_name, bbs)
         }
     }
 }
