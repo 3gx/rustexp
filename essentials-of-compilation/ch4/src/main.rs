@@ -51,4 +51,68 @@ fn main() {
         println!("x= {:?}", y);
     }
     println!("Hello, world!");
+    {
+        let mut graph = {
+            use petgraph::stable_graph::StableGraph;
+            StableGraph::new()
+            /*
+            use petgraph::graph::Graph;
+            Graph::new()
+            */
+        };
+        let origin = graph.add_node("Denver");
+        let destination_1 = graph.add_node("San Diego");
+        let destination_2 = graph.add_node("New York");
+        let cost_1 = graph.add_edge(origin, destination_1, 250);
+        let cost_2 = graph.add_edge(origin, destination_2, 1099);
+        let cost_3 = graph.add_edge(origin, destination_2, 2099);
+
+        println!("{:?}", origin);
+        println!("{:?}", destination_1);
+        println!("{:?}", destination_1);
+        println!("{:?}", cost_1);
+        println!("{:?}", cost_2);
+        println!("{:?}", cost_3);
+        // graph.remove_node(origin);
+
+        //graph.remove_edge(cost_2);
+        for e in graph.edge_indices() {
+            println!("edge={:?}", graph[e]);
+        }
+
+        //let n = graph.neighbors(origin);
+        //        assert_eq!(graph.node_weight(origin).unwrap(), &"Denver");
+        //assert_eq!(graph[origin], "San Diego");
+        assert_eq!(graph[destination_1], "San Diego");
+        assert_eq!(graph[destination_2], "New York");
+        assert_eq!(graph.edge_weight(cost_1).unwrap(), &250);
+        assert_eq!(graph.edge_weight(cost_2).unwrap(), &1099);
+        assert_eq!(graph.edge_weight(cost_3).unwrap(), &2099);
+    }
+
+    {
+        use graphlib::Graph;
+
+        let mut graph: Graph<usize> = Graph::new();
+
+        // Add two vertices to the graph
+        let id1 = graph.add_vertex(1);
+        let id2 = graph.add_vertex(2);
+
+        // Add an edge between the two vertices
+        graph.add_edge(&id1, &id2).unwrap();
+
+        assert_eq!(*graph.fetch(&id1).unwrap(), 1);
+        assert_eq!(*graph.fetch(&id2).unwrap(), 2);
+
+        // The graph has 2 vertices and one edge at this point
+        assert_eq!(graph.vertex_count(), 2);
+        assert_eq!(graph.edge_count(), 1);
+
+        // Remove one of the connected vertices
+        graph.remove(&id1);
+
+        assert_eq!(graph.vertex_count(), 1);
+        assert_eq!(graph.edge_count(), 0);
+    }
 }
