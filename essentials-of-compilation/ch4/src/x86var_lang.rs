@@ -206,6 +206,9 @@ pub fn select_inst_tail(t: &CVarLang::Tail, block: BlockVar) -> BlockVar {
         x @ _ => panic!("unhandled tail stmt {:?}", x),
     }
 }
+pub fn select_inst_prog(prog: cvar_lang::CProgram) -> BlockVar {
+    unimplemented!()
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EnvKey {
