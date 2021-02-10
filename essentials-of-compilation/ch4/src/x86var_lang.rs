@@ -41,16 +41,26 @@ pub enum Arg {
     Deref(Reg, Int),
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum BinaryKind {
+    Addq,
+    Subq,
+    Movq,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum UnaryKind {
+    Negq,
+    Pushq,
+    Popq,
+}
+
 #[derive(Debug, Clone)]
 pub enum Inst {
-    Addq(Arg, Arg),
-    Subq(Arg, Arg),
-    Movq(Arg, Arg),
-    Negq(Arg),
+    Unary(UnaryKind, Arg),
+    Binary(BinaryKind, Arg, Arg),
     Callq(String, Int /*arity*/),
     Retq,
-    Pushq(Arg),
-    Popq(Arg),
     Jmp(String),
 }
 
@@ -112,19 +122,27 @@ pub fn select_inst_atom(a: &CVarLang::Atom) -> Arg {
 }
 
 pub fn select_inst_assign(dst: Arg, e: &CVarLang::Expr) -> Vec<Inst> {
+    use BinaryKind::*;
     use CVarLang::Expr;
     use CVarLang::{BinaryOpKind, UnaryOpKind};
     use Inst::*;
     use Reg::*;
+    use UnaryKind::*;
     match e {
-        Expr::Atom(a) => vec![Movq(select_inst_atom(a), dst)],
-        Expr::Read => vec![Callq("Read".to_string(), 0), Movq(Arg::Reg(rax), dst)],
+        Expr::Atom(a) => vec![Binary(Movq, select_inst_atom(a), dst)],
+        Expr::Read => vec![
+            Callq("Read".to_string(), 0),
+            Binary(Movq, Arg::Reg(rax), dst),
+        ],
         Expr::UnaryOp(UnaryOpKind::Neg, a) => {
-            vec![Movq(select_inst_atom(a), dst.clone()), Negq(dst)]
+            vec![
+                Binary(Movq, select_inst_atom(a), dst.clone()),
+                Unary(Negq, dst),
+            ]
         }
         Expr::BinaryOp(BinaryOpKind::Add, a1, a2) => vec![
-            Movq(select_inst_atom(a1), dst.clone()),
-            Addq(select_inst_atom(a2), dst),
+            Binary(Movq, select_inst_atom(a1), dst.clone()),
+            Binary(Addq, select_inst_atom(a2), dst),
         ],
         x @ _ => panic!("unhandled expression {:?}", x),
     }
@@ -147,25 +165,11 @@ fn get_vars(inst: &Inst) -> BTreeSet<String> {
         _ => (),
     };
     match inst {
-        Addq(arg1, arg2) => {
+        Binary(_, arg1, arg2) => {
             add_var(arg1);
             add_var(arg2);
         }
-        Subq(arg1, arg2) => {
-            add_var(arg1);
-            add_var(arg2);
-        }
-        Movq(arg1, arg2) => {
-            add_var(arg1);
-            add_var(arg2);
-        }
-        Negq(arg) => {
-            add_var(arg);
-        }
-        Pushq(arg) => {
-            add_var(arg);
-        }
-        Popq(arg) => {
+        Unary(_, arg) => {
             add_var(arg);
         }
         Callq(..) => (),
@@ -247,22 +251,26 @@ pub fn interp_inst(frame: &mut Vec<Int>, env: Env, inst: &Inst) -> Env {
         }
     }
     match inst {
-        Addq(arg1, arg2) => {
-            let result = interp_arg(frame, &env, arg1) + interp_arg(frame, &env, arg2);
-            assign(frame, env, arg2, result)
-        }
-        Movq(arg1, arg2) => {
-            let result = interp_arg(frame, &env, arg1);
-            assign(frame, env, arg2, result)
-        }
-        Subq(..) => panic!("unsupported instruction{:?}", inst),
-        Negq(arg) => {
-            let result = -interp_arg(frame, &env, arg);
-            assign(frame, env, arg, result)
-        }
+        Binary(op, arg1, arg2) => match op {
+            BinaryKind::Addq => {
+                let result = interp_arg(frame, &env, arg1) + interp_arg(frame, &env, arg2);
+                assign(frame, env, arg2, result)
+            }
+            BinaryKind::Movq => {
+                let result = interp_arg(frame, &env, arg1);
+                assign(frame, env, arg2, result)
+            }
+            BinaryKind::Subq => panic!("unsupported instruction{:?}", inst),
+        },
+        Unary(op, arg) => match op {
+            UnaryKind::Negq => {
+                let result = -interp_arg(frame, &env, arg);
+                assign(frame, env, arg, result)
+            }
+            UnaryKind::Pushq => panic!("unsupported instruction{:?}", inst),
+            UnaryKind::Popq => panic!("unsupported instruction{:?}", inst),
+        },
         Callq(..) => panic!("unsupported instruction{:?}", inst),
-        Pushq(..) => panic!("unsupported instruction{:?}", inst),
-        Popq(..) => panic!("unsupported instruction{:?}", inst),
         Jmp(..) => panic!("unsupported instruction{:?}", inst),
         Retq => env,
     }
@@ -304,13 +312,9 @@ pub fn assign_homes(block: &BlockVar) -> BlockStack {
     for inst in list {
         use Inst::*;
         let inst1 = match inst {
-            Addq(arg1, arg2) => Addq(home(arg1), home(arg2)),
-            Subq(arg1, arg2) => Subq(home(arg1), home(arg2)),
-            Movq(arg1, arg2) => Movq(home(arg1), home(arg2)),
-            Negq(arg) => Negq(home(arg)),
+            Binary(op, arg1, arg2) => Binary(*op, home(arg1), home(arg2)),
+            Unary(op, arg) => Unary(*op, home(arg)),
             Retq => Retq,
-            Pushq(_) => unimplemented!(),
-            Popq(_) => unimplemented!(),
             Jmp(_) => unimplemented!(),
             Callq(_, _) => unimplemented!(),
         };
@@ -340,19 +344,11 @@ pub fn patch_x86(block: &BlockStack) -> BlockStack {
         use Inst::*;
         use Reg::{rax, rbp};
         let insts1 = match inst {
-            Addq(Arg::Deref(rbp, idx1), Arg::Deref(rbp, idx2)) => vec![
-                Movq(Arg::Deref(rbp, *idx1), Arg::Reg(rax)),
-                Addq(Arg::Reg(rax), Arg::Deref(rbp, *idx2)),
+            Binary(BinaryKind::Movq, arg1, arg2) if arg1 == arg2 => vec![],
+            Binary(op, Arg::Deref(rbp, idx1), Arg::Deref(rbp, idx2)) => vec![
+                Binary(BinaryKind::Movq, Arg::Deref(rbp, *idx1), Arg::Reg(rax)),
+                Binary(*op, Arg::Reg(rax), Arg::Deref(rbp, *idx2)),
             ],
-            Subq(Arg::Deref(rbp, idx1), Arg::Deref(rbp, idx2)) => vec![
-                Movq(Arg::Deref(rbp, *idx1), Arg::Reg(rax)),
-                Subq(Arg::Reg(rax), Arg::Deref(rbp, *idx2)),
-            ],
-            Movq(Arg::Deref(rbp, idx1), Arg::Deref(rbp, idx2)) => vec![
-                Movq(Arg::Deref(rbp, *idx1), Arg::Reg(rax)),
-                Movq(Arg::Reg(rax), Arg::Deref(rbp, *idx2)),
-            ],
-            Movq(arg1, arg2) if arg1 == arg2 => vec![],
             _ => vec![inst.clone()],
         };
         for inst in insts1 {
@@ -376,11 +372,25 @@ fn print_x86arg(arg: &Arg) -> String {
 fn print_x86inst(inst: &Inst) -> String {
     use Inst::*;
     match inst {
-        Addq(arg1, arg2) => format!("addq\t{}, {}", print_x86arg(arg1), print_x86arg(arg2)),
-        Movq(arg1, arg2) => format!("movq\t{}, {}", print_x86arg(arg1), print_x86arg(arg2)),
-        Negq(arg) => format!("negq\t{}", print_x86arg(arg)),
-        //Retq => format!("retq"),
-        _ => panic!("unhanded {:?}", inst),
+        Binary(op, arg1, arg2) => {
+            let arg1 = print_x86arg(arg1);
+            let arg2 = print_x86arg(arg2);
+            let opcode = match op {
+                BinaryKind::Addq => "addq",
+                BinaryKind::Movq => "movq",
+                BinaryKind::Subq => "subq",
+            };
+            format!("{}\t{}, {}", opcode, arg1, arg2)
+        }
+        Unary(op, arg) => {
+            let arg = print_x86arg(arg);
+            let opcode = match op {
+                UnaryKind::Negq => "negq",
+                _ => panic!("unhadnled {:?}", inst),
+            };
+            format!("{}\t{}", opcode, arg)
+        }
+        _ => panic!("unhandled inst {:?}", inst),
     }
 }
 pub fn print_x86(block: &BlockStack) -> String {
@@ -439,14 +449,18 @@ pub fn liveness_analysis(block: &BlockVar) -> Vec<LiveSet> {
         let mut live_set = live_set.clone();
         use Inst::*;
         let wr = match inst {
-            Addq(a1, a2) => update_with_rdwr(&mut live_set, &[a1, a2], a2),
-            Subq(a1, a2) => update_with_rdwr(&mut live_set, &[a1, a2], a2),
-            Movq(a1, a2) => update_with_rdwr(&mut live_set, &[a1], a2),
-            Negq(arg) => update_with_rdwr(&mut live_set, &[arg], arg),
+            Binary(op, a1, a2) => match op {
+                BinaryKind::Addq => update_with_rdwr(&mut live_set, &[a1, a2], a2),
+                BinaryKind::Subq => update_with_rdwr(&mut live_set, &[a1, a2], a2),
+                BinaryKind::Movq => update_with_rdwr(&mut live_set, &[a1], a2),
+            },
+            Unary(op, arg) => match op {
+                UnaryKind::Negq => update_with_rdwr(&mut live_set, &[arg], arg),
+                UnaryKind::Pushq => unimplemented!(),
+                UnaryKind::Popq => unimplemented!(),
+            },
             Callq(_, _) => unimplemented!(),
             Retq => None,
-            Pushq(_) => unimplemented!(),
-            Popq(_) => unimplemented!(),
             Jmp(_) => unimplemented!(),
         };
         LiveSet(wr, live_set)
@@ -676,7 +690,7 @@ pub fn move_bias(b: &BlockVar) -> IGraph {
     let mut g = BTreeSet::new();
     let BlockVar(_, inst_list) = b;
     for inst in inst_list.clone() {
-        if let Inst::Movq(Arg::Var(x), Arg::Var(y)) = inst {
+        if let Inst::Binary(BinaryKind::Movq, Arg::Var(x), Arg::Var(y)) = inst {
             g.insert(IEdge(IVertex(x), IVertex(y)));
         }
     }
