@@ -40,6 +40,17 @@ pub struct BasicBlock(pub String, pub Tail);
 #[derive(Debug, Clone)]
 pub struct CProgram(pub Vec<BasicBlock>);
 
+trait AppendBB {
+    fn add_bb<'a>(&'a mut self, _: BasicBlock) -> String;
+}
+
+impl AppendBB for Vec<BasicBlock> {
+    fn add_bb<'a>(&'a mut self, bb: BasicBlock) -> String {
+        self.push(bb);
+        self.last().unwrap().0.clone()
+    }
+}
+
 pub fn interp_expr(env: &Env, e: &Expr) -> Value {
     use Expr::*;
     match e {
@@ -139,10 +150,8 @@ fn explicate_ifpred(
         RVarAnf::Expr::If(p_expr, t_expr, e_expr) => {
             let (then_tail, bbs) = explicate_ifpred(*t_expr, then_name, else_name, bbs);
             let (else_tail, mut bbs) = explicate_ifpred(*e_expr, then_name, else_name, bbs);
-            let then_name = &gensym("then_bb");
-            let else_name = &gensym("else_bb");
-            bbs.push(BasicBlock(then_name.clone(), then_tail));
-            bbs.push(BasicBlock(else_name.clone(), else_tail));
+            let then_name = &bbs.add_bb(BasicBlock(gensym("then_bb"), then_tail)).clone();
+            let else_name = &bbs.add_bb(BasicBlock(gensym("else_bb"), else_tail)).clone();
             explicate_ifpred(*p_expr, then_name, else_name, bbs)
         }
         RVarAnf::Expr::Let(x, expr, body) => {
