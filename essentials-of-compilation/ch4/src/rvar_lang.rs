@@ -289,6 +289,7 @@ pub fn interp_program(p: &Program) -> Value {
 
 use std::collections::HashMap;
 
+/*
 lazy_static! {
     static ref MAP: Mutex<HashMap<String, usize>> = Mutex::new(HashMap::new());
 }
@@ -304,6 +305,23 @@ pub fn gensym(x: &str) -> String {
     let counter = map.entry(x.to_string()).or_insert(0);
     *counter += 1;
 
+    x.to_string() + &counter.to_string()
+}
+*/
+use std::cell::RefCell;
+thread_local! {
+    static MAP: RefCell<HashMap<String, usize>> = RefCell::new(HashMap::new());
+}
+pub fn gensym_reset() {
+    MAP.with(|map| map.borrow_mut().clear());
+}
+pub fn gensym(x: &str) -> String {
+    let counter = MAP.with(|map| {
+        let mut map = map.borrow_mut();
+        let counter = map.entry(x.to_string()).or_insert(0);
+        *counter += 1;
+        *counter
+    });
     x.to_string() + &counter.to_string()
 }
 /*
