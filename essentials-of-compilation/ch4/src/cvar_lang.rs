@@ -104,6 +104,14 @@ fn explicate_if(
     bbs: Vec<BasicBlock>,
 ) -> (Tail, Vec<BasicBlock>) {
     match e {
+        RVarAnf::Expr::UnaryOp(UnaryOpKind::Not, a) => (
+            Tail::IfStmt(
+                Expr::UnaryOp(UnaryOpKind::Not, a),
+                then_name.to_string(),
+                else_name.to_string(),
+            ),
+            bbs,
+        ),
         RVarAnf::Expr::BinaryOp(cmp, a1, a2)
             if cmp == BinaryOpKind::Eq || cmp == BinaryOpKind::Lt =>
         {

@@ -63,6 +63,8 @@ mod cvar_lang {
                                  r#if!( or!(eq!(x,1), eq!(x,2)),
                                         add!(y,20),
                                         add!(y,30)))));
+            let ety = type_expr(&vec![], &e1);
+            println!("ety= {:?}", ety);
 
             println!("interp_exp");
             let v1 = interp_exp(&vec![], &e1);
@@ -129,6 +131,82 @@ mod cvar_lang {
             println!("{}:", name);
             println!("{:#?}", bb);
         }
+        */
+    }
+
+    #[test]
+    fn t5() {
+        use ch4::cvar_lang;
+        use cvar_lang::{RVar, RVarAnf};
+        let (e1, v1) = {
+            use RVar::*;
+            let e1 = let_!([x 1]
+                        let_!([y 101]
+                          r#if!( r#if!(or!(eq!(x,1), lt!(read!(),5)),
+                                       eq!(y,101), eq!(y,102)) ,
+                                        add!(y,20),
+                                        add!(y,30))));
+
+            let v1 = interp_exp(&vec![], &e1);
+            (e1, v1)
+        };
+        println!("e1= {:?} ", e1);
+        println!("v1= {:?} ", v1);
+
+        use RVarAnf::{interp_exp, rco_exp};
+        let e1anf = rco_exp(&e1);
+        println!("e1anf= {:?} ", e1anf);
+
+        let v1anf = interp_exp(&vec![], &e1anf);
+        assert_eq!(v1, v1anf);
+        println!("v1= {:?} ", v1);
+
+        let cprog = cvar_lang::explicate_expr(e1anf);
+        let cvar_lang::CProgram(tail) = &cprog;
+        println!("tail= {:?}", tail);
+
+        let v1clang = cvar_lang::interp_prog(&cprog);
+        println!("v1clang= {:?}", v1clang);
+        assert_eq!(v1anf, v1clang);
+    }
+
+    #[test]
+    fn t6() {
+        use ch4::cvar_lang;
+        use cvar_lang::{RVar, RVarAnf};
+        let (e1, v1) = {
+            use RVar::*;
+            let e1 = let_!([x 1]
+                        let_!([y 101]
+                          r#if!( let_!([x r#if!(or!(eq!(x,1), lt!(read!(),5)),
+                                       eq!(y,101), eq!(y,102))] not!(x)),
+                                        add!(y,20),
+                                        add!(y,30))));
+            let ety = type_expr(&vec![], &e1);
+            println!("ety= {:?}", ety);
+
+            let v1 = interp_exp(&vec![], &e1);
+            (e1, v1)
+        };
+        println!("e1= {:?} ", e1);
+        println!("v1= {:?} ", v1);
+
+        use RVarAnf::{interp_exp, rco_exp};
+        let e1anf = rco_exp(&e1);
+        println!("e1anf= {:?} ", e1anf);
+
+        let v1anf = interp_exp(&vec![], &e1anf);
+        assert_eq!(v1, v1anf);
+        println!("v1= {:?} ", v1);
+
+        /*
+        let cprog = cvar_lang::explicate_expr(e1anf);
+        let cvar_lang::CProgram(tail) = &cprog;
+        println!("tail= {:?}", tail);
+
+        let v1clang = cvar_lang::interp_prog(&cprog);
+        println!("v1clang= {:?}", v1clang);
+        assert_eq!(v1anf, v1clang);
         */
     }
 }

@@ -108,6 +108,9 @@ pub macro read() {
 pub macro neg {
     ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::UnaryOp) UnaryOpKind::Neg,) ) }
 }
+pub macro not {
+    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::UnaryOp) UnaryOpKind::Not,) ) }
+}
 pub macro add {
     ($($tt:tt)*) => {__mk_op!((@args $($tt)*)
                               (@expr (@ctor Expr::BinaryOp)
