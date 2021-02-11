@@ -207,6 +207,10 @@ pub fn select_inst_tail(t: &CVarLang::Tail, block: BlockVar) -> BlockVar {
     }
 }
 pub fn select_inst_prog(prog: cvar_lang::CProgram) -> BlockVar {
+    let cvar_lang::CProgram(bbs) = prog;
+    for cvar_lang::BasicBlock(name, tail) in bbs.iter() {
+        let block = select_inst_tail(tail, BlockVar::new());
+    }
     unimplemented!()
 }
 
