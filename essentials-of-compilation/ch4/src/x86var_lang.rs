@@ -210,7 +210,8 @@ pub fn select_inst_tail(t: &CVarLang::Tail, block: BlockVar) -> BlockVar {
             }
             select_inst_tail(tail, BlockVar(info, list))
         }
-        x @ _ => panic!("unhandled tail stmt {:?}", x),
+        Tail::Goto(..) => unimplemented!(),
+        Tail::IfStmt(..) => unimplemented!(),
     }
 }
 pub fn select_inst_prog(prog: cvar_lang::CProgram) -> Program {
