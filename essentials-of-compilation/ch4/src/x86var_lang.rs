@@ -263,7 +263,12 @@ fn interp_arg(frame: &Vec<Int>, env: &Env, arg: &Arg) -> Int {
     }
 }
 
-pub fn interp_inst(frame: &mut Vec<Int>, env: Env, inst: &Inst) -> Env {
+pub fn interp_inst(
+    frame: &mut Vec<Int>,
+    env: Env,
+    inst: &Inst,
+    prog: &BTreeMap<String, Vec<Inst>>,
+) -> Env {
     use Inst::*;
 
     fn assign(frame: &mut Vec<Int>, env: Env, arg: &Arg, result: Int) -> Env {
@@ -311,7 +316,7 @@ fn interp_bb(
     prog: &BTreeMap<String, Vec<Inst>>,
 ) -> Env {
     for inst in insts {
-        env = interp_inst(frame, env, inst);
+        env = interp_inst(frame, env, inst, prog);
     }
     env
 }
@@ -324,9 +329,9 @@ pub fn interp_block(block: &BlockVar) -> Int {
 }
 
 pub fn interp_prog(prog: &Program) -> Value {
-    let Program(opts, bbs) = prog;
+    let Program(_, bbs) = prog;
     let mut prog = BTreeMap::new();
-    for BasicBlock(name, vars, insts) in bbs.clone() {
+    for BasicBlock(name, _, insts) in bbs.clone() {
         prog.insert(name, insts);
     }
     let insts = prog.get(&"start".to_string()).unwrap();
@@ -380,7 +385,7 @@ pub fn interp_block_stack(block: &BlockStack) -> Int {
     let mut frame = vec![];
     frame.resize(*stack_size as usize, 0xDEADBEEF);
     for inst in list {
-        env = interp_inst(&mut frame, env, inst);
+        env = interp_inst(&mut frame, env, inst, &BTreeMap::new());
     }
     *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
 }
