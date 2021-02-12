@@ -7,6 +7,7 @@ use macros::r#match;
 pub mod cvar_lang;
 pub use cvar_lang::rvar_anf_lang;
 pub use rvar_anf_lang::rvar_lang;
+pub use rvar_anf_lang::Value;
 
 type Int = i64;
 
@@ -65,12 +66,6 @@ pub enum Inst {
 }
 
 #[derive(Debug, Clone)]
-pub struct Options {
-    pub vars: Option<Vec<String>>,
-    pub regs: Option<BTreeMap<String, Reg>>,
-}
-
-#[derive(Debug, Clone)]
 pub struct BlockVarOpts {
     pub vars: BTreeSet<String>,
     pub regs: BTreeMap<String, Reg>,
@@ -79,6 +74,18 @@ pub struct BlockVarOpts {
 pub struct BlockVar(pub BlockVarOpts, pub Vec<Inst>);
 #[derive(Debug, Clone)]
 pub struct BlockStack(pub Int, pub Vec<Inst>);
+
+#[derive(Debug, Clone)]
+pub struct BasicBlock(pub String, pub BTreeSet<String>, pub Vec<Inst>);
+
+#[derive(Debug, Clone)]
+pub struct Options {
+    pub stack: usize,
+    pub vars: BTreeSet<String>,
+    pub regs: BTreeMap<String, Reg>,
+}
+#[derive(Debug, Clone)]
+pub struct Program(pub Options, pub Vec<BasicBlock>);
 
 impl BlockVar {
     pub fn new() -> BlockVar {
@@ -206,12 +213,26 @@ pub fn select_inst_tail(t: &CVarLang::Tail, block: BlockVar) -> BlockVar {
         x @ _ => panic!("unhandled tail stmt {:?}", x),
     }
 }
-pub fn select_inst_prog(prog: cvar_lang::CProgram) -> BlockVar {
+pub fn select_inst_prog(prog: cvar_lang::CProgram) -> Program {
     let cvar_lang::CProgram(bbs) = prog;
-    for cvar_lang::BasicBlock(name, tail) in bbs.iter() {
-        let block = select_inst_tail(tail, BlockVar::new());
+    let mut x86bbs = Vec::new();
+    let mut all_vars = BTreeSet::new();
+    for cvar_lang::BasicBlock(name, tail) in bbs {
+        let BlockVar(BlockVarOpts { vars, regs }, insts) = select_inst_tail(&tail, BlockVar::new());
+        assert_eq!(regs.len(), 0);
+        for var in &vars {
+            all_vars.insert(var.clone());
+        }
+        x86bbs.push(BasicBlock(name, vars, insts))
     }
-    unimplemented!()
+    Program(
+        Options {
+            stack: 0,
+            vars: all_vars,
+            regs: BTreeMap::new(),
+        },
+        x86bbs,
+    )
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -282,14 +303,37 @@ pub fn interp_inst(frame: &mut Vec<Int>, env: Env, inst: &Inst) -> Env {
         Retq => env,
     }
 }
+
+fn interp_bb(
+    frame: &mut Vec<Int>,
+    mut env: Env,
+    insts: &Vec<Inst>,
+    prog: &BTreeMap<String, Vec<Inst>>,
+) -> Env {
+    for inst in insts {
+        env = interp_inst(frame, env, inst);
+    }
+    env
+}
 pub fn interp_block(block: &BlockVar) -> Int {
     let BlockVar(_, list) = block;
     let mut env: Env = vec![];
     let mut frame = vec![];
-    for inst in list {
-        env = interp_inst(&mut frame, env, inst);
-    }
+    env = interp_bb(&mut frame, env, list, &BTreeMap::new());
     *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
+}
+
+pub fn interp_prog(prog: &Program) -> Value {
+    let Program(opts, bbs) = prog;
+    let mut prog = BTreeMap::new();
+    for BasicBlock(name, vars, insts) in bbs.clone() {
+        prog.insert(name, insts);
+    }
+    let insts = prog.get(&"start".to_string()).unwrap();
+    let mut env: Env = vec![];
+    let mut frame = vec![];
+    env = interp_bb(&mut frame, env, &insts, &prog);
+    Value::Int(*env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap())
 }
 
 pub fn assign_homes(block: &BlockVar) -> BlockStack {

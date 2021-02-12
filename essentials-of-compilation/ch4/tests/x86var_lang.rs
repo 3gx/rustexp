@@ -275,21 +275,11 @@ mod x86var_lang {
         //println!("v1clang= {}", v1clang);
         assert_eq!(v1anf, v1clang);
 
-        use X86Var::BlockVar;
-        let tail = cprog
-            .0
-            .iter()
-            .find_map(
-                |CVar::BasicBlock(name, tail)| if name == "start" { Some(tail) } else { None },
-            )
-            .unwrap();
-        let x86var = X86Var::select_inst_tail(&tail, X86Var::BlockVar::new());
-        let BlockVar(_, inst_list) = &x86var;
+        let x86prog = X86Var::select_inst_prog(cprog);
+        print_vec(&x86prog.1);
+        let x86val = X86Var::interp_prog(&x86prog);
+        assert_eq!(v1, x86val);
         /*
-        for inst in inst_list {
-            println!("  {:?}", inst);
-        }
-        */
         let val_x86var = X86Var::interp_block(&x86var);
         //println!("eval(x86var)= {}", val_x86var);
         assert_eq!(v1, RVar::Value::Int(val_x86var));
@@ -344,8 +334,10 @@ mod x86var_lang {
 
         println!("\n{}", X86Var::print_x86(&x86var_patched).as_str());
         println!("result={:?}", v1);
+        */
     }
 
+    /*
     #[test]
     fn t4() {
         let (e1, v1) = {
@@ -382,4 +374,5 @@ mod x86var_lang {
         let x86var = X86Var::select_inst_prog(cprog);
         print_vec(&x86var.1);
     }
+    */
 }
