@@ -272,18 +272,14 @@ mod x86var_lang {
         let cprog = CVar::explicate_expr(p1anf);
 
         let v1clang = CVar::interp_prog(&cprog);
-        //println!("v1clang= {}", v1clang);
         assert_eq!(v1anf, v1clang);
 
         let x86prog = X86Var::select_inst_prog(cprog);
         print_vec(&x86prog.1);
         let x86val = X86Var::interp_prog(&x86prog);
         assert_eq!(v1, x86val);
-        /*
-        let val_x86var = X86Var::interp_block(&x86var);
-        //println!("eval(x86var)= {}", val_x86var);
-        assert_eq!(v1, RVar::Value::Int(val_x86var));
 
+        /*
         use X86Var::*;
         let lives = liveness_analysis(&x86var);
         println!("\n{:-^35}\t{:?}", "instruction", "live set");
@@ -337,7 +333,6 @@ mod x86var_lang {
         */
     }
 
-    /*
     #[test]
     fn t4() {
         let (e1, v1) = {
@@ -374,5 +369,4 @@ mod x86var_lang {
         let x86var = X86Var::select_inst_prog(cprog);
         print_vec(&x86var.1);
     }
-    */
 }
