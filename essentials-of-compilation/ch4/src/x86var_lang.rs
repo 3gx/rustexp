@@ -47,6 +47,7 @@ pub enum BinaryKind {
     Addq,
     Subq,
     Movq,
+    Cmpq,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -56,6 +57,12 @@ pub enum UnaryKind {
     Popq,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum JmpIfCnd {
+    Eq,
+    Lt,
+}
+
 #[derive(Debug, Clone)]
 pub enum Inst {
     Unary(UnaryKind, Arg),
@@ -63,6 +70,7 @@ pub enum Inst {
     Callq(String, Int /*arity*/),
     Retq,
     Jmp(String),
+    JmpIf(JmpIfCnd, String),
 }
 
 #[derive(Debug, Clone)]
@@ -181,6 +189,7 @@ fn get_vars(inst: &Inst) -> BTreeSet<String> {
         }
         Callq(..) => (),
         Jmp(..) => (),
+        JmpIf(..) => (),
         Retq => (),
     };
     vars
@@ -210,12 +219,39 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BlockVar) -> BlockVar {
             }
             select_inst_tail(tail, BlockVar(info, list))
         }
-        Tail::Goto(..) => unimplemented!(),
-        Tail::IfStmt(..) => unimplemented!(),
+        Tail::Goto(label) => {
+            let BlockVar(info, mut list) = block;
+            list.push(Inst::Jmp(label.clone()));
+            BlockVar(info, list)
+        }
+        Tail::IfStmt(expr, thn, els) => match expr {
+            CVar::Expr::BinaryOp(cmpop, a1, a2) => {
+                let a1 = select_inst_atom(a1);
+                let a2 = select_inst_atom(a2);
+                let mut insts = Vec::new();
+                let cond = match cmpop {
+                    CVar::BinaryOpKind::Eq => JmpIfCnd::Eq,
+                    CVar::BinaryOpKind::Lt => JmpIfCnd::Lt,
+                    x @ _ => panic!("unhandled 'if' binary predicate {:?}", x),
+                };
+                insts.push(Inst::Binary(BinaryKind::Cmpq, a1, a2));
+                insts.push(Inst::JmpIf(cond, thn.clone()));
+                insts.push(Inst::Jmp(els.clone()));
+                let BlockVar(mut info, mut list) = block;
+                for inst in insts {
+                    for v in get_vars(&inst) {
+                        info.vars.insert(v);
+                    }
+                    list.push(inst);
+                }
+                BlockVar(info, list)
+            }
+            x @ _ => panic!("unhandled 'if' predicate {:?}", x),
+        },
     }
 }
-pub fn select_inst_prog(prog: cvar_lang::CProgram) -> Program {
-    let cvar_lang::CProgram(bbs) = prog;
+pub fn select_inst_prog(cprog: cvar_lang::CProgram) -> Program {
+    let cvar_lang::CProgram(bbs) = cprog;
     let mut x86bbs = Vec::new();
     let mut all_vars = BTreeSet::new();
     for cvar_lang::BasicBlock(name, tail) in bbs {
@@ -268,7 +304,7 @@ pub fn interp_inst(
     frame: &mut Vec<Int>,
     env: Env,
     inst: &Inst,
-    prog: &BTreeMap<String, Vec<Inst>>,
+    _prog: &BTreeMap<String, Vec<Inst>>,
 ) -> Env {
     use Inst::*;
 
@@ -294,6 +330,14 @@ pub fn interp_inst(
                 let result = interp_arg(frame, &env, arg1);
                 assign(frame, env, arg2, result)
             }
+            BinaryKind::Cmpq => {
+                let result = if interp_arg(frame, &env, arg1) == interp_arg(frame, &env, arg2) {
+                    1
+                } else {
+                    0
+                };
+                assign(frame, env, arg2, result)
+            }
             BinaryKind::Subq => panic!("unsupported instruction{:?}", inst),
         },
         Unary(op, arg) => match op {
@@ -306,6 +350,7 @@ pub fn interp_inst(
         },
         Callq(..) => panic!("unsupported instruction{:?}", inst),
         Jmp(..) => panic!("unsupported instruction{:?}", inst),
+        JmpIf(..) => panic!("unsupported instruction{:?}", inst),
         Retq => env,
     }
 }
@@ -373,7 +418,8 @@ pub fn assign_homes(block: &BlockVar) -> BlockStack {
             Unary(op, arg) => Unary(*op, home(arg)),
             Retq => Retq,
             Jmp(_) => unimplemented!(),
-            Callq(_, _) => unimplemented!(),
+            JmpIf(..) => unimplemented!(),
+            Callq(..) => unimplemented!(),
         };
         list1.push(inst1);
     }
@@ -436,6 +482,7 @@ fn print_x86inst(inst: &Inst) -> String {
                 BinaryKind::Addq => "addq",
                 BinaryKind::Movq => "movq",
                 BinaryKind::Subq => "subq",
+                BinaryKind::Cmpq => "cmpq",
             };
             format!("{}\t{}, {}", opcode, arg1, arg2)
         }
@@ -510,6 +557,7 @@ pub fn liveness_analysis(block: &BlockVar) -> Vec<LiveSet> {
                 BinaryKind::Addq => update_with_rdwr(&mut live_set, &[a1, a2], a2),
                 BinaryKind::Subq => update_with_rdwr(&mut live_set, &[a1, a2], a2),
                 BinaryKind::Movq => update_with_rdwr(&mut live_set, &[a1], a2),
+                BinaryKind::Cmpq => unimplemented!(),
             },
             Unary(op, arg) => match op {
                 UnaryKind::Negq => update_with_rdwr(&mut live_set, &[arg], arg),
@@ -519,6 +567,7 @@ pub fn liveness_analysis(block: &BlockVar) -> Vec<LiveSet> {
             Callq(_, _) => unimplemented!(),
             Retq => None,
             Jmp(_) => unimplemented!(),
+            JmpIf(..) => unimplemented!(),
         };
         LiveSet(wr, live_set)
     };
