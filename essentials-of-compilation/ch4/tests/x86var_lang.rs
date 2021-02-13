@@ -369,4 +369,41 @@ mod x86var_lang {
         let x86var = X86Var::select_inst_prog(cprog);
         print_vec(&x86var.1);
     }
+
+    #[test]
+    fn t5() {
+        let (e1, v1) = {
+            use RVar::*;
+            let e1 = let_!([x 1]
+                        let_!([y 101]
+                          r#if!( let_!([x r#if!(or!(eq!(x,1), lt!(read!(),5)),
+                                       eq!(y,101), eq!(y,102))] not!(x)),
+                                        add!(y,20),
+                                        add!(y,30))));
+
+            let v1 = interp_exp(&vec![], &e1);
+            (e1, v1)
+        };
+        println!("e1= {:?} ", e1);
+        println!("v1= {:?} ", v1);
+
+        use RVarAnf::{interp_exp, rco_exp};
+        let e1anf = rco_exp(&e1);
+        println!("e1anf= {:?} ", e1anf);
+
+        let v1anf = interp_exp(&vec![], &e1anf);
+        assert_eq!(v1, v1anf);
+        println!("v1= {:?} ", v1);
+
+        let cprog = CVar::explicate_expr(e1anf);
+        let CVar::CProgram(tail) = &cprog;
+        println!("tail= {:?}", tail);
+
+        let v1clang = CVar::interp_prog(&cprog);
+        println!("v1clang= {:?}", v1clang);
+        assert_eq!(v1anf, v1clang);
+
+        let x86var = X86Var::select_inst_prog(cprog);
+        print_vec(&x86var.1);
+    }
 }

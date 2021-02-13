@@ -159,6 +159,13 @@ pub fn select_inst_assign(dst: Arg, e: &CVar::Expr) -> Vec<Inst> {
             Binary(Movq, select_inst_atom(a1), dst.clone()),
             Binary(Addq, select_inst_atom(a2), dst),
         ],
+        Expr::BinaryOp(BinaryOpKind::Eq, a1, a2) => {
+            vec![
+                Binary(Cmpq, select_inst_atom(a1), select_inst_atom(a2)),
+                //Binary(Addq, select_inst_atom(a2), dst)
+            ];
+            unimplemented!()
+        }
         x @ _ => panic!("unhandled expression {:?}", x),
     }
 }
@@ -236,6 +243,22 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BlockVar) -> BlockVar {
                 };
                 insts.push(Inst::Binary(BinaryKind::Cmpq, a1, a2));
                 insts.push(Inst::JmpIf(cond, thn.clone()));
+                insts.push(Inst::Jmp(els.clone()));
+                let BlockVar(mut info, mut list) = block;
+                for inst in insts {
+                    for v in get_vars(&inst) {
+                        info.vars.insert(v);
+                    }
+                    list.push(inst);
+                }
+                BlockVar(info, list)
+            }
+            CVar::Expr::UnaryOp(CVar::UnaryOpKind::Not, a) => {
+                let a1 = select_inst_atom(a);
+                let a2 = select_inst_atom(&CVar::Atom::Int(0));
+                let mut insts = Vec::new();
+                insts.push(Inst::Binary(BinaryKind::Cmpq, a1, a2));
+                insts.push(Inst::JmpIf(JmpIfCnd::Eq, thn.clone()));
                 insts.push(Inst::Jmp(els.clone()));
                 let BlockVar(mut info, mut list) = block;
                 for inst in insts {
