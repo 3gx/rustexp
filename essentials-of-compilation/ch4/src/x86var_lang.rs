@@ -113,25 +113,25 @@ impl BlockVar {
     }
 }
 
-use cvar_lang as CVarLang;
-pub fn select_inst_atom(a: &CVarLang::Atom) -> Arg {
+use cvar_lang as CVar;
+pub fn select_inst_atom(a: &CVar::Atom) -> Arg {
     match a {
-        CVarLang::Atom::Int(n) => Arg::Imm(*n),
-        CVarLang::Atom::Bool(b) => {
+        CVar::Atom::Int(n) => Arg::Imm(*n),
+        CVar::Atom::Bool(b) => {
             if *b {
                 Arg::Imm(1)
             } else {
                 Arg::Imm(0)
             }
         }
-        CVarLang::Atom::Var(x) => Arg::Var(x.clone()),
+        CVar::Atom::Var(x) => Arg::Var(x.clone()),
     }
 }
 
-pub fn select_inst_assign(dst: Arg, e: &CVarLang::Expr) -> Vec<Inst> {
+pub fn select_inst_assign(dst: Arg, e: &CVar::Expr) -> Vec<Inst> {
     use BinaryKind::*;
-    use CVarLang::Expr;
-    use CVarLang::{BinaryOpKind, UnaryOpKind};
+    use CVar::Expr;
+    use CVar::{BinaryOpKind, UnaryOpKind};
     use Inst::*;
     use Reg::*;
     use UnaryKind::*;
@@ -155,8 +155,8 @@ pub fn select_inst_assign(dst: Arg, e: &CVarLang::Expr) -> Vec<Inst> {
     }
 }
 
-pub fn select_inst_stmt(s: &CVarLang::Stmt) -> Vec<Inst> {
-    use CVarLang::Stmt;
+pub fn select_inst_stmt(s: &CVar::Stmt) -> Vec<Inst> {
+    use CVar::Stmt;
     match s {
         Stmt::AssignVar(x, e) => select_inst_assign(Arg::Var(x.clone()), e),
     }
@@ -185,8 +185,8 @@ fn get_vars(inst: &Inst) -> BTreeSet<String> {
     };
     vars
 }
-pub fn select_inst_tail(t: &CVarLang::Tail, block: BlockVar) -> BlockVar {
-    use CVarLang::Tail;
+pub fn select_inst_tail(t: &CVar::Tail, block: BlockVar) -> BlockVar {
+    use CVar::Tail;
     use Reg::*;
 
     match t {
