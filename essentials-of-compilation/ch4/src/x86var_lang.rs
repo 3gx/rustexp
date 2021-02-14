@@ -34,11 +34,25 @@ pub enum Reg {
     r15, // 12
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[allow(non_camel_case_types)]
+pub enum ByteReg {
+    ah,
+    al,
+    bh,
+    bl,
+    ch,
+    cl,
+    dh,
+    dl,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Arg {
     Imm(Int),
     Var(String),
     Reg(Reg),
+    ByteReg(ByteReg),
     Deref(Reg, Int),
 }
 
@@ -47,7 +61,9 @@ pub enum BinaryKind {
     Addq,
     Subq,
     Movq,
+    Xorq,
     Cmpq,
+    Movzbq,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -55,10 +71,11 @@ pub enum UnaryKind {
     Negq,
     Pushq,
     Popq,
+    Set(CndCode),
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum JmpIfCnd {
+pub enum CndCode {
     Eq,
     Lt,
 }
@@ -70,7 +87,7 @@ pub enum Inst {
     Callq(String, Int /*arity*/),
     Retq,
     Jmp(String),
-    JmpIf(JmpIfCnd, String),
+    JmpIf(CndCode, String),
 }
 
 #[derive(Debug, Clone)]
@@ -237,8 +254,8 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BlockVar) -> BlockVar {
                 let a2 = select_inst_atom(a2);
                 let mut insts = Vec::new();
                 let cond = match cmpop {
-                    CVar::BinaryOpKind::Eq => JmpIfCnd::Eq,
-                    CVar::BinaryOpKind::Lt => JmpIfCnd::Lt,
+                    CVar::BinaryOpKind::Eq => CndCode::Eq,
+                    CVar::BinaryOpKind::Lt => CndCode::Lt,
                     x @ _ => panic!("unhandled 'if' binary predicate {:?}", x),
                 };
                 insts.push(Inst::Binary(BinaryKind::Cmpq, a1, a2));
@@ -258,7 +275,7 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BlockVar) -> BlockVar {
                 let a2 = select_inst_atom(&CVar::Atom::Int(0));
                 let mut insts = Vec::new();
                 insts.push(Inst::Binary(BinaryKind::Cmpq, a1, a2));
-                insts.push(Inst::JmpIf(JmpIfCnd::Eq, thn.clone()));
+                insts.push(Inst::JmpIf(CndCode::Eq, thn.clone()));
                 insts.push(Inst::Jmp(els.clone()));
                 let BlockVar(mut info, mut list) = block;
                 for inst in insts {
@@ -298,6 +315,7 @@ pub fn select_inst_prog(cprog: cvar_lang::CProgram) -> Program {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EnvKey {
     Reg(Reg),
+    ByteReg(ByteReg),
     Var(String),
 }
 
@@ -317,6 +335,7 @@ fn interp_arg(frame: &Vec<Int>, env: &Env, arg: &Arg) -> Int {
     match arg {
         Arg::Imm(n) => *n,
         Arg::Reg(reg) => *env_get(env, &EnvKey::Reg(*reg)).unwrap(),
+        Arg::ByteReg(breg) => *env_get(env, &EnvKey::ByteReg(*breg)).unwrap(),
         Arg::Var(x) => *env_get(env, &EnvKey::Var(x.clone())).unwrap(),
         Arg::Deref(Reg::rbp, idx) => frame[(-idx - 8) as usize],
         Arg::Deref(..) => panic!("unimplemented {:?}", arg),
@@ -334,6 +353,7 @@ pub fn interp_inst(
     fn assign(frame: &mut Vec<Int>, env: Env, arg: &Arg, result: Int) -> Env {
         match arg.clone() {
             Arg::Reg(reg) => env_set(env, EnvKey::Reg(reg), result),
+            Arg::ByteReg(breg) => env_set(env, EnvKey::ByteReg(breg), result),
             Arg::Var(x) => env_set(env, EnvKey::Var(x), result),
             Arg::Deref(Reg::rbp, idx) => {
                 frame[(-idx - 8) as usize] = result;
@@ -349,9 +369,16 @@ pub fn interp_inst(
                 let result = interp_arg(frame, &env, arg1) + interp_arg(frame, &env, arg2);
                 assign(frame, env, arg2, result)
             }
+            BinaryKind::Xorq => {
+                let result = interp_arg(frame, &env, arg1) ^ interp_arg(frame, &env, arg2);
+                assign(frame, env, arg2, result)
+            }
             BinaryKind::Movq => {
                 let result = interp_arg(frame, &env, arg1);
                 assign(frame, env, arg2, result)
+            }
+            BinaryKind::Movzbq => {
+                unimplemented!()
             }
             BinaryKind::Cmpq => {
                 let result = if interp_arg(frame, &env, arg1) == interp_arg(frame, &env, arg2) {
@@ -370,6 +397,7 @@ pub fn interp_inst(
             }
             UnaryKind::Pushq => panic!("unsupported instruction{:?}", inst),
             UnaryKind::Popq => panic!("unsupported instruction{:?}", inst),
+            UnaryKind::Set(..) => panic!("unsupported instruction{:?}", inst),
         },
         Callq(..) => panic!("unsupported instruction{:?}", inst),
         Jmp(..) => panic!("unsupported instruction{:?}", inst),
@@ -492,6 +520,7 @@ fn print_x86arg(arg: &Arg) -> String {
         Arg::Imm(n) => format!("${}", n),
         x @ Arg::Var(_) => panic!("Can't have Arg::Var in final x86 {:?}", x),
         Arg::Reg(reg) => format!("%{:?}", reg),
+        Arg::ByteReg(breg) => format!("%{:?}", breg),
         Arg::Deref(reg, idx) => format!("{}(%{:?})", idx, reg),
     }
 }
@@ -506,6 +535,8 @@ fn print_x86inst(inst: &Inst) -> String {
                 BinaryKind::Movq => "movq",
                 BinaryKind::Subq => "subq",
                 BinaryKind::Cmpq => "cmpq",
+                BinaryKind::Xorq => "xorq",
+                BinaryKind::Movzbq => "movbzq",
             };
             format!("{}\t{}, {}", opcode, arg1, arg2)
         }
@@ -581,11 +612,14 @@ pub fn liveness_analysis(block: &BlockVar) -> Vec<LiveSet> {
                 BinaryKind::Subq => update_with_rdwr(&mut live_set, &[a1, a2], a2),
                 BinaryKind::Movq => update_with_rdwr(&mut live_set, &[a1], a2),
                 BinaryKind::Cmpq => unimplemented!(),
+                BinaryKind::Xorq => unimplemented!(),
+                BinaryKind::Movzbq => unimplemented!(),
             },
             Unary(op, arg) => match op {
                 UnaryKind::Negq => update_with_rdwr(&mut live_set, &[arg], arg),
                 UnaryKind::Pushq => unimplemented!(),
                 UnaryKind::Popq => unimplemented!(),
+                UnaryKind::Set(..) => unimplemented!(),
             },
             Callq(_, _) => unimplemented!(),
             Retq => None,
