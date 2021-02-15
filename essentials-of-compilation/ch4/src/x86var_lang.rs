@@ -54,6 +54,7 @@ pub enum Arg {
     Reg(Reg),
     ByteReg(ByteReg),
     Deref(Reg, Int),
+    EFlag, // 0: eq, 1: lt, 2: gt
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -317,6 +318,7 @@ pub enum EnvKey {
     Reg(Reg),
     ByteReg(ByteReg),
     Var(String),
+    EFlag,
 }
 
 pub type Env = Vec<(EnvKey, Int)>;
@@ -337,6 +339,7 @@ fn interp_arg(frame: &Vec<Int>, env: &Env, arg: &Arg) -> Int {
         Arg::Reg(reg) => *env_get(env, &EnvKey::Reg(*reg)).unwrap(),
         Arg::ByteReg(breg) => *env_get(env, &EnvKey::ByteReg(*breg)).unwrap(),
         Arg::Var(x) => *env_get(env, &EnvKey::Var(x.clone())).unwrap(),
+        Arg::EFlag => *env_get(env, &EnvKey::EFlag).unwrap(),
         Arg::Deref(Reg::rbp, idx) => frame[(-idx - 8) as usize],
         Arg::Deref(..) => panic!("unimplemented {:?}", arg),
     }
@@ -346,7 +349,7 @@ pub fn interp_inst(
     frame: &mut Vec<Int>,
     env: Env,
     inst: &Inst,
-    _prog: &BTreeMap<String, Vec<Inst>>,
+    prog: &BTreeMap<String, Vec<Inst>>,
 ) -> Env {
     use Inst::*;
 
@@ -355,6 +358,7 @@ pub fn interp_inst(
             Arg::Reg(reg) => env_set(env, EnvKey::Reg(reg), result),
             Arg::ByteReg(breg) => env_set(env, EnvKey::ByteReg(breg), result),
             Arg::Var(x) => env_set(env, EnvKey::Var(x), result),
+            Arg::EFlag => env_set(env, EnvKey::EFlag, result),
             Arg::Deref(Reg::rbp, idx) => {
                 frame[(-idx - 8) as usize] = result;
                 env
@@ -381,12 +385,17 @@ pub fn interp_inst(
                 unimplemented!()
             }
             BinaryKind::Cmpq => {
-                let result = if interp_arg(frame, &env, arg1) == interp_arg(frame, &env, arg2) {
+                let arg1 = interp_arg(frame, &env, arg1);
+                let arg2 = interp_arg(frame, &env, arg2);
+                let val = if arg1 == arg2 {
+                    0
+                } else if arg1 < arg2 {
                     1
                 } else {
-                    0
+                    assert!(arg1 > arg2);
+                    2
                 };
-                assign(frame, env, arg2, result)
+                assign(frame, env, &Arg::EFlag, val)
             }
             BinaryKind::Subq => panic!("unsupported instruction{:?}", inst),
         },
@@ -399,10 +408,21 @@ pub fn interp_inst(
             UnaryKind::Popq => panic!("unsupported instruction{:?}", inst),
             UnaryKind::Set(..) => panic!("unsupported instruction{:?}", inst),
         },
-        Callq(..) => panic!("unsupported instruction{:?}", inst),
-        Jmp(..) => panic!("unsupported instruction{:?}", inst),
-        JmpIf(..) => panic!("unsupported instruction{:?}", inst),
+        Jmp(label) => interp_bb(frame, env, prog.get(label).unwrap(), prog),
+        JmpIf(cnd, label) => {
+            let eflag = interp_arg(frame, &env, &Arg::EFlag);
+            let do_jmp = match cnd {
+                CndCode::Eq => eflag == 0,
+                CndCode::Lt => eflag == 1,
+            };
+            if do_jmp {
+                interp_bb(frame, env, prog.get(label).unwrap(), prog)
+            } else {
+                env
+            }
+        }
         Retq => env,
+        Callq(..) => panic!("unsupported instruction{:?}", inst),
     }
 }
 
@@ -520,6 +540,7 @@ fn print_x86arg(arg: &Arg) -> String {
         Arg::Imm(n) => format!("${}", n),
         x @ Arg::Var(_) => panic!("Can't have Arg::Var in final x86 {:?}", x),
         Arg::Reg(reg) => format!("%{:?}", reg),
+        Arg::EFlag => String::new(),
         Arg::ByteReg(breg) => format!("%{:?}", breg),
         Arg::Deref(reg, idx) => format!("{}(%{:?})", idx, reg),
     }

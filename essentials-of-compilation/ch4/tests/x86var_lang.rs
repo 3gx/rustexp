@@ -403,7 +403,10 @@ mod x86var_lang {
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
 
-        let x86var = X86Var::select_inst_prog(cprog);
-        print_vec(&x86var.1);
+        let x86prog = X86Var::select_inst_prog(cprog);
+        print_vec(&x86prog.1);
+
+        let x86val = X86Var::interp_prog(&x86prog);
+        assert_eq!(v1, x86val);
     }
 }
