@@ -348,13 +348,13 @@ fn interp_arg(frame: &Vec<Int>, env: &Env, arg: &Arg) -> Int {
 pub fn interp_inst(
     frame: &mut Vec<Int>,
     env: Env,
-    inst: &Inst,
+    mut insts: Vec<Inst>,
     prog: &BTreeMap<String, Vec<Inst>>,
 ) -> Env {
     use Inst::*;
 
-    fn assign(frame: &mut Vec<Int>, env: Env, arg: &Arg, result: Int) -> Env {
-        match arg.clone() {
+    fn assign(frame: &mut Vec<Int>, env: Env, arg: &Arg, result: Int) -> Option<Env> {
+        let env = match arg.clone() {
             Arg::Reg(reg) => env_set(env, EnvKey::Reg(reg), result),
             Arg::ByteReg(breg) => env_set(env, EnvKey::ByteReg(breg), result),
             Arg::Var(x) => env_set(env, EnvKey::Var(x), result),
@@ -365,21 +365,31 @@ pub fn interp_inst(
             }
             x @ Arg::Deref(_, _) => panic!("cannot assign to no rbp loc {:?}", x),
             x @ Arg::Imm(_) => panic!("cannot assignt to immediate {:?}", x),
-        }
+        };
+        Some(env)
     }
+    let inst = insts.pop();
+    if inst.is_none() {
+        return env;
+    }
+    let inst = &inst.unwrap();
+
     match inst {
         Binary(op, arg1, arg2) => match op {
             BinaryKind::Addq => {
                 let result = interp_arg(frame, &env, arg1) + interp_arg(frame, &env, arg2);
-                assign(frame, env, arg2, result)
+                let env = assign(frame, env, arg2, result).unwrap();
+                interp_inst(frame, env, insts, prog)
             }
             BinaryKind::Xorq => {
                 let result = interp_arg(frame, &env, arg1) ^ interp_arg(frame, &env, arg2);
-                assign(frame, env, arg2, result)
+                let env = assign(frame, env, arg2, result).unwrap();
+                interp_inst(frame, env, insts, prog)
             }
             BinaryKind::Movq | BinaryKind::Movzbq => {
                 let result = interp_arg(frame, &env, arg1);
-                assign(frame, env, arg2, result)
+                let env = assign(frame, env, arg2, result).unwrap();
+                interp_inst(frame, env, insts, prog)
             }
             /*
             BinaryKind::Movzbq => {
@@ -390,14 +400,16 @@ pub fn interp_inst(
             BinaryKind::Cmpq => {
                 let arg1 = interp_arg(frame, &env, arg1);
                 let arg2 = interp_arg(frame, &env, arg2);
-                assign(frame, env, &Arg::EFlag, (arg2 < arg1) as Int)
+                let env = assign(frame, env, &Arg::EFlag, (arg2 < arg1) as Int).unwrap();
+                interp_inst(frame, env, insts, prog)
             }
             BinaryKind::Subq => panic!("unsupported instruction{:?}", inst),
         },
         Unary(op, arg) => match op {
             UnaryKind::Negq => {
                 let result = -interp_arg(frame, &env, arg);
-                assign(frame, env, arg, result)
+                let env = assign(frame, env, arg, result).unwrap();
+                interp_inst(frame, env, insts, prog)
             }
             UnaryKind::Pushq => panic!("unsupported instruction{:?}", inst),
             UnaryKind::Popq => panic!("unsupported instruction{:?}", inst),
@@ -408,12 +420,13 @@ pub fn interp_inst(
                     CndCode::Lt => eflag,
                     CndCode::Eq => !eflag,
                 };
-                assign(frame, env, arg, result as Int)
+                let env = assign(frame, env, arg, result as Int).unwrap();
+                interp_inst(frame, env, insts, prog)
             }
         },
         Jmp(label) => {
             println!("jmp: {:?}", label);
-            interp_bb(
+            interp_inst(
                 frame,
                 env,
                 prog.get(label).unwrap().iter().rev().cloned().collect(),
@@ -432,7 +445,7 @@ pub fn interp_inst(
             };
             println!("do_jmp= {}", do_jmp);
             if do_jmp {
-                interp_bb(
+                interp_inst(
                     frame,
                     env,
                     prog.get(label).unwrap().iter().rev().cloned().collect(),
@@ -447,6 +460,7 @@ pub fn interp_inst(
     }
 }
 
+/*
 fn interp_bb(
     frame: &mut Vec<Int>,
     mut env: Env,
@@ -459,11 +473,13 @@ fn interp_bb(
     }
     env
 }
+*/
+
 pub fn interp_block(block: &BlockVar) -> Int {
     let BlockVar(_, list) = block;
     let mut env: Env = vec![];
     let mut frame = vec![];
-    env = interp_bb(
+    env = interp_inst(
         &mut frame,
         env,
         list.iter().rev().cloned().collect(),
@@ -481,7 +497,7 @@ pub fn interp_prog(prog: &Program) -> Value {
     let insts = prog.get(&"start".to_string()).unwrap();
     let mut env: Env = vec![];
     let mut frame = vec![];
-    env = interp_bb(
+    env = interp_inst(
         &mut frame,
         env,
         insts.iter().rev().cloned().collect(),
@@ -531,12 +547,14 @@ pub fn assign_homes(block: &BlockVar) -> BlockStack {
 
 pub fn interp_block_stack(block: &BlockStack) -> Int {
     let BlockStack(stack_size, list) = block;
-    let mut env: Env = vec![];
     let mut frame = vec![];
     frame.resize(*stack_size as usize, 0xDEADBEEF);
-    for inst in list {
-        env = interp_inst(&mut frame, env, inst, &BTreeMap::new());
-    }
+    let env = interp_inst(
+        &mut frame,
+        vec![],
+        list.iter().rev().cloned().collect(),
+        &BTreeMap::new(),
+    );
     *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
 }
 
