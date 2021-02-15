@@ -413,7 +413,12 @@ pub fn interp_inst(
         },
         Jmp(label) => {
             println!("jmp: {:?}", label);
-            interp_bb(frame, env, prog.get(label).unwrap(), prog)
+            interp_bb(
+                frame,
+                env,
+                prog.get(label).unwrap().iter().rev().cloned().collect(),
+                prog,
+            )
         }
 
         JmpIf(cc, label) => {
@@ -427,7 +432,12 @@ pub fn interp_inst(
             };
             println!("do_jmp= {}", do_jmp);
             if do_jmp {
-                interp_bb(frame, env, prog.get(label).unwrap(), prog)
+                interp_bb(
+                    frame,
+                    env,
+                    prog.get(label).unwrap().iter().rev().cloned().collect(),
+                    prog,
+                )
             } else {
                 env
             }
@@ -440,10 +450,11 @@ pub fn interp_inst(
 fn interp_bb(
     frame: &mut Vec<Int>,
     mut env: Env,
-    insts: &Vec<Inst>,
+    insts: Vec<Inst>,
     prog: &BTreeMap<String, Vec<Inst>>,
 ) -> Env {
-    for inst in insts {
+    let insts: Vec<Inst> = insts.into_iter().rev().collect();
+    for inst in &insts {
         env = interp_inst(frame, env, inst, prog);
     }
     env
@@ -452,7 +463,12 @@ pub fn interp_block(block: &BlockVar) -> Int {
     let BlockVar(_, list) = block;
     let mut env: Env = vec![];
     let mut frame = vec![];
-    env = interp_bb(&mut frame, env, list, &BTreeMap::new());
+    env = interp_bb(
+        &mut frame,
+        env,
+        list.iter().rev().cloned().collect(),
+        &BTreeMap::new(),
+    );
     *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
 }
 
@@ -465,7 +481,12 @@ pub fn interp_prog(prog: &Program) -> Value {
     let insts = prog.get(&"start".to_string()).unwrap();
     let mut env: Env = vec![];
     let mut frame = vec![];
-    env = interp_bb(&mut frame, env, &insts, &prog);
+    env = interp_bb(
+        &mut frame,
+        env,
+        insts.iter().rev().cloned().collect(),
+        &prog,
+    );
     Value::Int(*env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap())
 }
 
