@@ -377,13 +377,16 @@ pub fn interp_inst(
                 let result = interp_arg(frame, &env, arg1) ^ interp_arg(frame, &env, arg2);
                 assign(frame, env, arg2, result)
             }
-            BinaryKind::Movq => {
+            BinaryKind::Movq | BinaryKind::Movzbq => {
                 let result = interp_arg(frame, &env, arg1);
                 assign(frame, env, arg2, result)
             }
+            /*
             BinaryKind::Movzbq => {
-                unimplemented!()
+                let result = interp_arg(frame, &env, arg1);
+                assign(frame, env, arg2, result)
             }
+            */
             BinaryKind::Cmpq => {
                 let arg1 = interp_arg(frame, &env, arg1);
                 let arg2 = interp_arg(frame, &env, arg2);
@@ -406,7 +409,13 @@ pub fn interp_inst(
             }
             UnaryKind::Pushq => panic!("unsupported instruction{:?}", inst),
             UnaryKind::Popq => panic!("unsupported instruction{:?}", inst),
-            UnaryKind::Set(..) => panic!("unsupported instruction{:?}", inst),
+            UnaryKind::Set(cc) => {
+                let result = match cc {
+                    CndCode::Eq => 0,
+                    CndCode::Lt => 1,
+                };
+                assign(frame, env, arg, result)
+            }
         },
         Jmp(label) => interp_bb(frame, env, prog.get(label).unwrap(), prog),
         JmpIf(cnd, label) => {
