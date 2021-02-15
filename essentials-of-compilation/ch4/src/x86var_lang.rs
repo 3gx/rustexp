@@ -179,9 +179,9 @@ pub fn select_inst_assign(dst: Arg, e: &CVar::Expr) -> Vec<Inst> {
         Expr::BinaryOp(BinaryOpKind::Eq, a1, a2) => {
             vec![
                 Binary(Cmpq, select_inst_atom(a1), select_inst_atom(a2)),
-                //Binary(Addq, select_inst_atom(a2), dst)
-            ];
-            unimplemented!()
+                Unary(Set(CndCode::Eq), Arg::ByteReg(ByteReg::al)),
+                Binary(Movzbq, Arg::ByteReg(ByteReg::al), dst),
+            ]
         }
         x @ _ => panic!("unhandled expression {:?}", x),
     }
