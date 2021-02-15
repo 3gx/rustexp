@@ -408,18 +408,24 @@ pub fn interp_inst(
                     CndCode::Lt => eflag,
                     CndCode::Eq => !eflag,
                 };
-                assign(frame, env, arg, result as Int);
-                unimplemented!()
+                assign(frame, env, arg, result as Int)
             }
         },
-        Jmp(label) => interp_bb(frame, env, prog.get(label).unwrap(), prog),
+        Jmp(label) => {
+            println!("jmp: {:?}", label);
+            interp_bb(frame, env, prog.get(label).unwrap(), prog)
+        }
+
         JmpIf(cc, label) => {
+            println!("jmpif: {:?}", label);
             let eflag = interp_arg(frame, &env, &Arg::EFlag);
             let eflag = if eflag == 0 { false } else { true };
+            println!("eflag= {}", eflag);
             let do_jmp = match cc {
                 CndCode::Lt => eflag,
                 CndCode::Eq => !eflag,
             };
+            println!("do_jmp= {}", do_jmp);
             if do_jmp {
                 interp_bb(frame, env, prog.get(label).unwrap(), prog)
             } else {
