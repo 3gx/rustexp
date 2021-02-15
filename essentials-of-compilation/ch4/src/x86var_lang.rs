@@ -54,7 +54,7 @@ pub enum Arg {
     Reg(Reg),
     ByteReg(ByteReg),
     Deref(Reg, Int),
-    EFlag, // 0: eq, 1: lt, 2: gt
+    EFlag, // true if lt, false otherwise
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -179,7 +179,7 @@ pub fn select_inst_assign(dst: Arg, e: &CVar::Expr) -> Vec<Inst> {
         ],
         Expr::BinaryOp(BinaryOpKind::Eq, a1, a2) => {
             vec![
-                Binary(Cmpq, select_inst_atom(a1), select_inst_atom(a2)),
+                Binary(Cmpq, select_inst_atom(a2), select_inst_atom(a1)),
                 Unary(Set(CndCode::Eq), Arg::ByteReg(ByteReg::al)),
                 Binary(Movzbq, Arg::ByteReg(ByteReg::al), dst),
             ]
@@ -259,7 +259,7 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BlockVar) -> BlockVar {
                     CVar::BinaryOpKind::Lt => CndCode::Lt,
                     x @ _ => panic!("unhandled 'if' binary predicate {:?}", x),
                 };
-                insts.push(Inst::Binary(BinaryKind::Cmpq, a1, a2));
+                insts.push(Inst::Binary(BinaryKind::Cmpq, a2, a1));
                 insts.push(Inst::JmpIf(cond, thn.clone()));
                 insts.push(Inst::Jmp(els.clone()));
                 let BlockVar(mut info, mut list) = block;
@@ -275,7 +275,7 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BlockVar) -> BlockVar {
                 let a1 = select_inst_atom(a);
                 let a2 = select_inst_atom(&CVar::Atom::Int(0));
                 let mut insts = Vec::new();
-                insts.push(Inst::Binary(BinaryKind::Cmpq, a1, a2));
+                insts.push(Inst::Binary(BinaryKind::Cmpq, a2, a1));
                 insts.push(Inst::JmpIf(CndCode::Eq, thn.clone()));
                 insts.push(Inst::Jmp(els.clone()));
                 let BlockVar(mut info, mut list) = block;
@@ -390,15 +390,7 @@ pub fn interp_inst(
             BinaryKind::Cmpq => {
                 let arg1 = interp_arg(frame, &env, arg1);
                 let arg2 = interp_arg(frame, &env, arg2);
-                let val = if arg1 == arg2 {
-                    0
-                } else if arg1 < arg2 {
-                    1
-                } else {
-                    assert!(arg1 > arg2);
-                    2
-                };
-                assign(frame, env, &Arg::EFlag, val)
+                assign(frame, env, &Arg::EFlag, (arg2 < arg1) as Int)
             }
             BinaryKind::Subq => panic!("unsupported instruction{:?}", inst),
         },
@@ -410,19 +402,23 @@ pub fn interp_inst(
             UnaryKind::Pushq => panic!("unsupported instruction{:?}", inst),
             UnaryKind::Popq => panic!("unsupported instruction{:?}", inst),
             UnaryKind::Set(cc) => {
+                let eflag = interp_arg(frame, &env, &Arg::EFlag);
+                let eflag = if eflag == 0 { false } else { true };
                 let result = match cc {
-                    CndCode::Eq => 0,
-                    CndCode::Lt => 1,
+                    CndCode::Lt => eflag,
+                    CndCode::Eq => !eflag,
                 };
-                assign(frame, env, arg, result)
+                assign(frame, env, arg, result as Int);
+                unimplemented!()
             }
         },
         Jmp(label) => interp_bb(frame, env, prog.get(label).unwrap(), prog),
-        JmpIf(cnd, label) => {
+        JmpIf(cc, label) => {
             let eflag = interp_arg(frame, &env, &Arg::EFlag);
-            let do_jmp = match cnd {
-                CndCode::Eq => eflag == 0,
-                CndCode::Lt => eflag == 1,
+            let eflag = if eflag == 0 { false } else { true };
+            let do_jmp = match cc {
+                CndCode::Lt => eflag,
+                CndCode::Eq => !eflag,
             };
             if do_jmp {
                 interp_bb(frame, env, prog.get(label).unwrap(), prog)
@@ -431,7 +427,7 @@ pub fn interp_inst(
             }
         }
         Retq => env,
-        Callq(..) => panic!("unsupported instruction{:?}", inst),
+        Callq(..) => panic!("unsupported instruction: {:?}", inst),
     }
 }
 
