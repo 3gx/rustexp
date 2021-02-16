@@ -273,6 +273,24 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BlockVar) -> BlockVar {
             }
             CVar::Expr::UnaryOp(CVar::UnaryOpKind::Not, a) => {
                 let a1 = select_inst_atom(a);
+                let a2 = select_inst_atom(&CVar::Atom::Int(1));
+                let a3 = select_inst_atom(&CVar::Atom::Int(0));
+                let mut insts = Vec::new();
+                insts.push(Inst::Binary(BinaryKind::Xorq, a2.clone(), a1.clone()));
+                insts.push(Inst::Binary(BinaryKind::Cmpq, a3, a1));
+                insts.push(Inst::JmpIf(CndCode::Eq, els.clone()));
+                insts.push(Inst::Jmp(thn.clone()));
+                let BlockVar(mut info, mut list) = block;
+                for inst in insts {
+                    for v in get_vars(&inst) {
+                        info.vars.insert(v);
+                    }
+                    list.push(inst);
+                }
+                BlockVar(info, list)
+            }
+            CVar::Expr::Atom(atom @ CVar::Atom::Var(_)) => {
+                let a1 = select_inst_atom(atom);
                 let a2 = select_inst_atom(&CVar::Atom::Int(0));
                 let mut insts = Vec::new();
                 insts.push(Inst::Binary(BinaryKind::Cmpq, a2, a1));
@@ -318,7 +336,7 @@ pub enum EnvKey {
     Reg(Reg),
     ByteReg(ByteReg),
     Var(String),
-    EFlag,
+    EFlag, // 0: eq, 1: lt, 2: gt
 }
 
 pub type Env = Vec<(EnvKey, Int)>;
@@ -416,34 +434,28 @@ pub fn interp_inst(
             UnaryKind::Set(cc) => {
                 let eflag = interp_arg(frame, &env, &Arg::EFlag);
                 let eflag = if eflag == 0 { false } else { true };
-                let result = match cc {
+                let eflag = match cc {
                     CndCode::Lt => eflag,
                     CndCode::Eq => !eflag,
                 };
-                let env = assign(frame, env, arg, result as Int).unwrap();
+                let env = assign(frame, env, arg, eflag as Int).unwrap();
                 interp_inst(frame, env, insts, prog)
             }
         },
-        Jmp(label) => {
-            println!("jmp: {:?}", label);
-            interp_inst(
-                frame,
-                env,
-                prog.get(label).unwrap().iter().rev().cloned().collect(),
-                prog,
-            )
-        }
+        Jmp(label) => interp_inst(
+            frame,
+            env,
+            prog.get(label).unwrap().iter().rev().cloned().collect(),
+            prog,
+        ),
 
         JmpIf(cc, label) => {
-            println!("jmpif: {:?}", label);
             let eflag = interp_arg(frame, &env, &Arg::EFlag);
             let eflag = if eflag == 0 { false } else { true };
-            println!("eflag= {}", eflag);
             let do_jmp = match cc {
                 CndCode::Lt => eflag,
                 CndCode::Eq => !eflag,
             };
-            println!("do_jmp= {}", do_jmp);
             if do_jmp {
                 interp_inst(
                     frame,
