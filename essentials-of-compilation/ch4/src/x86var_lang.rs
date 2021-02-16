@@ -478,7 +478,7 @@ pub fn interp_inst(
                 interp_inst(frame, env, insts, prog)
             }
         }
-        Retq => env,
+        Retq => panic!("unsupported instructin: {:?}", inst),
         Callq(..) => panic!("unsupported instruction: {:?}", inst),
     }
 }
