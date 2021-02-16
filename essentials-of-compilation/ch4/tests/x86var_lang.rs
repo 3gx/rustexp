@@ -380,7 +380,7 @@ mod x86var_lang {
             let e1 = let_!([x 1]
                         let_!([y 101]
                           r#if!( let_!([x r#if!(or!(eq!(x,1), lt!(read!(),5)),
-                                       eq!(y,101), eq!(y,102))] not!(x)),
+                                       eq!(y,101), eq!(y,102))] not!(not!(x))),
                                         add!(y,20),
                                         add!(y,30))));
 
