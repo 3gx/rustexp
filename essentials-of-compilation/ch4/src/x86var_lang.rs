@@ -5,9 +5,10 @@ use macros::r#match;
 
 #[path = "cvar_lang.rs"]
 pub mod cvar_lang;
-pub use cvar_lang::rvar_anf_lang;
-pub use rvar_anf_lang::rvar_lang;
-pub use rvar_anf_lang::Value;
+pub use cvar_lang as CVar;
+pub use CVar::rvar_anf_lang as RVarAnf;
+pub use RVarAnf::rvar_lang as RVarLang;
+pub use RVarAnf::Value;
 
 type Int = i64;
 
@@ -139,7 +140,6 @@ impl BlockVar {
     }
 }
 
-use cvar_lang as CVar;
 pub fn select_inst_atom(a: &CVar::Atom) -> Arg {
     match a {
         CVar::Atom::Int(n) => Arg::Imm(*n),
@@ -315,11 +315,11 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BlockVar) -> BlockVar {
         },
     }
 }
-pub fn select_inst_prog(cprog: cvar_lang::CProgram) -> Program {
-    let cvar_lang::CProgram(bbs) = cprog;
+pub fn select_inst_prog(cprog: CVar::CProgram) -> Program {
+    let CVar::CProgram(bbs) = cprog;
     let mut x86bbs = Vec::new();
     let mut all_vars = BTreeSet::new();
-    for cvar_lang::BasicBlock(name, tail) in bbs {
+    for CVar::BasicBlock(name, tail) in bbs {
         let BlockVar(BlockVarOpts { vars, regs }, insts) = select_inst_tail(&tail, BlockVar::new());
         assert_eq!(regs.len(), 0);
         for var in &vars {
