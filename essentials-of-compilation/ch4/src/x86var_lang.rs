@@ -18,6 +18,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 pub enum Value {
     Int(Int),
     Bool(Bool),
+    EFlag(CndCode),
 }
 
 impl From<RVarAnf::Value> for Value {
@@ -91,10 +92,11 @@ pub enum UnaryKind {
     Set(CndCode),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CndCode {
     Eq,
     Lt,
+    Gt,
 }
 
 #[derive(Debug, Clone)]
@@ -357,7 +359,7 @@ pub enum EnvKey {
     Reg(Reg),
     ByteReg(ByteReg),
     Var(String),
-    EFlag, // 0: eq, 1: lt, 2: gt
+    EFlag(CndCode),
 }
 
 pub type Env = Vec<(EnvKey, Int)>;
@@ -440,13 +442,13 @@ pub fn interp_inst(
                 let arg1 = interp_arg(frame, &env, arg1);
                 let arg2 = interp_arg(frame, &env, arg2);
                 let eflag = if arg1 == arg2 {
-                    0
+                    CndCode::Eq
                 } else if arg1 < arg2 {
-                    1
+                    CndCode::Lt
                 } else {
-                    2
+                    CndCode::Gt
                 };
-                let env = assign(frame, env, &Arg::EFlag, eflag).unwrap();
+                let env = assign(frame, env, &Arg::EFlag, EnvKey::EFlag(eflag)).unwrap();
                 interp_inst(frame, env, insts, prog)
             }
             BinaryKind::Subq => panic!("unsupported instruction{:?}", inst),
