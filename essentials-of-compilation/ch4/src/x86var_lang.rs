@@ -17,7 +17,6 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum Value {
     Int(Int),
-    Bool(Bool),
     EFlag(CndCode),
 }
 
@@ -25,9 +24,24 @@ impl From<RVarAnf::Value> for Value {
     fn from(item: RVarAnf::Value) -> Self {
         match item {
             RVarAnf::Value::Int(i) => Value::Int(i),
-            RVarAnf::Value::Bool(b) => Value::Bool(b),
+            _ => panic!("cannot cast from bool: {:?}", item), //            RVarAnf::Value::Bool(b) => Value::Bool(b),
         }
     }
+}
+
+impl Value {
+    pub fn int(&self) -> Option<&Int> {
+        match self {
+            Value::Int(n) => Some(n),
+            Value::EFlag(_) => None,
+        }
+    }
+    //    pub fn bool(&self) -> Option<&Bool> {
+    //       match self {
+    //          Value::Int(_) => None,
+    //         //           Value::Bool(b) => Some(b),
+    //    }
+    // }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -359,24 +373,24 @@ pub enum EnvKey {
     Reg(Reg),
     ByteReg(ByteReg),
     Var(String),
-    EFlag(CndCode),
+    EFlag,
 }
 
-pub type Env = Vec<(EnvKey, Int)>;
-fn env_get<'a>(env: &'a Env, reg: &EnvKey) -> Option<&'a Int> {
+pub type Env = Vec<(EnvKey, Value)>;
+fn env_get<'a>(env: &'a Env, reg: &EnvKey) -> Option<&'a Value> {
     env.iter()
         .rev()
         .find_map(|x| if &x.0 != reg { None } else { Some(&x.1) })
 }
 
-fn env_set(mut env: Env, reg: EnvKey, val: Int) -> Env {
+fn env_set(mut env: Env, reg: EnvKey, val: Value) -> Env {
     env.push((reg, val));
     env
 }
 
-fn interp_arg(frame: &Vec<Int>, env: &Env, arg: &Arg) -> Int {
+fn interp_arg(frame: &Vec<Value>, env: &Env, arg: &Arg) -> Value {
     match arg {
-        Arg::Imm(n) => *n,
+        Arg::Imm(n) => Value::Int(*n),
         Arg::Reg(reg) => *env_get(env, &EnvKey::Reg(*reg)).unwrap(),
         Arg::ByteReg(breg) => *env_get(env, &EnvKey::ByteReg(*breg)).unwrap(),
         Arg::Var(x) => *env_get(env, &EnvKey::Var(x.clone())).unwrap(),
@@ -387,14 +401,14 @@ fn interp_arg(frame: &Vec<Int>, env: &Env, arg: &Arg) -> Int {
 }
 
 pub fn interp_inst(
-    frame: &mut Vec<Int>,
+    frame: &mut Vec<Value>,
     env: Env,
     mut insts: Vec<Inst>,
     prog: &BTreeMap<String, Vec<Inst>>,
 ) -> Env {
     use Inst::*;
 
-    fn assign(frame: &mut Vec<Int>, env: Env, arg: &Arg, result: Int) -> Option<Env> {
+    fn assign(frame: &mut Vec<Value>, env: Env, arg: &Arg, result: Value) -> Option<Env> {
         let env = match arg.clone() {
             Arg::Reg(reg) => env_set(env, EnvKey::Reg(reg), result),
             Arg::ByteReg(breg) => env_set(env, EnvKey::ByteReg(breg), result),
@@ -418,13 +432,15 @@ pub fn interp_inst(
     match inst {
         Binary(op, arg1, arg2) => match op {
             BinaryKind::Addq => {
-                let result = interp_arg(frame, &env, arg1) + interp_arg(frame, &env, arg2);
-                let env = assign(frame, env, arg2, result).unwrap();
+                let result = interp_arg(frame, &env, arg1).int().unwrap()
+                    + interp_arg(frame, &env, arg2).int().unwrap();
+                let env = assign(frame, env, arg2, Value::Int(result)).unwrap();
                 interp_inst(frame, env, insts, prog)
             }
             BinaryKind::Xorq => {
-                let result = interp_arg(frame, &env, arg1) ^ interp_arg(frame, &env, arg2);
-                let env = assign(frame, env, arg2, result).unwrap();
+                let result = interp_arg(frame, &env, arg1).int().unwrap()
+                    ^ interp_arg(frame, &env, arg2).int().unwrap();
+                let env = assign(frame, env, arg2, Value::Int(result)).unwrap();
                 interp_inst(frame, env, insts, prog)
             }
             BinaryKind::Movq | BinaryKind::Movzbq => {
@@ -439,8 +455,8 @@ pub fn interp_inst(
             }
             */
             BinaryKind::Cmpq => {
-                let arg1 = interp_arg(frame, &env, arg1);
-                let arg2 = interp_arg(frame, &env, arg2);
+                let arg1 = *interp_arg(frame, &env, arg1).int().unwrap();
+                let arg2 = *interp_arg(frame, &env, arg2).int().unwrap();
                 let eflag = if arg1 == arg2 {
                     CndCode::Eq
                 } else if arg1 < arg2 {
@@ -448,15 +464,15 @@ pub fn interp_inst(
                 } else {
                     CndCode::Gt
                 };
-                let env = assign(frame, env, &Arg::EFlag, EnvKey::EFlag(eflag)).unwrap();
+                let env = assign(frame, env, &Arg::EFlag, Value::EFlag(eflag)).unwrap();
                 interp_inst(frame, env, insts, prog)
             }
             BinaryKind::Subq => panic!("unsupported instruction{:?}", inst),
         },
         Unary(op, arg) => match op {
             UnaryKind::Negq => {
-                let result = -interp_arg(frame, &env, arg);
-                let env = assign(frame, env, arg, result).unwrap();
+                let result = -interp_arg(frame, &env, arg).int().unwrap();
+                let env = assign(frame, env, arg, Value::Int(result)).unwrap();
                 interp_inst(frame, env, insts, prog)
             }
             UnaryKind::Pushq => panic!("unsupported instruction{:?}", inst),
@@ -464,10 +480,11 @@ pub fn interp_inst(
             UnaryKind::Set(cc) => {
                 let eflag = interp_arg(frame, &env, &Arg::EFlag);
                 let eflag = match cc {
-                    CndCode::Lt => eflag == 1,
-                    CndCode::Eq => eflag == 0,
+                    CndCode::Lt => eflag == Value::EFlag(CndCode::Lt),
+                    CndCode::Eq => eflag == Value::EFlag(CndCode::Eq),
+                    CndCode::Gt => eflag == Value::EFlag(CndCode::Gt),
                 };
-                let env = assign(frame, env, arg, eflag as Int).unwrap();
+                let env = assign(frame, env, arg, Value::Int(eflag as Int)).unwrap();
                 interp_inst(frame, env, insts, prog)
             }
         },
@@ -481,8 +498,9 @@ pub fn interp_inst(
         JmpIf(cc, label) => {
             let eflag = interp_arg(frame, &env, &Arg::EFlag);
             let do_jmp = match cc {
-                CndCode::Lt => eflag == 1,
-                CndCode::Eq => eflag == 0,
+                CndCode::Lt => eflag == Value::EFlag(CndCode::Lt),
+                CndCode::Eq => eflag == Value::EFlag(CndCode::Eq),
+                CndCode::Gt => eflag == Value::EFlag(CndCode::Gt),
             };
             if do_jmp {
                 interp_inst(
@@ -515,7 +533,7 @@ fn interp_bb(
 }
 */
 
-pub fn interp_block(block: &BlockVar) -> Int {
+pub fn interp_block(block: &BlockVar) -> Value {
     let BlockVar(_, list) = block;
     let mut env: Env = vec![];
     let mut frame = vec![];
@@ -543,7 +561,7 @@ pub fn interp_prog(prog: &Program) -> Value {
         insts.iter().rev().cloned().collect(),
         &prog,
     );
-    Value::Int(*env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap())
+    *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
 }
 
 pub fn assign_homes(block: &BlockVar) -> BlockStack {
@@ -585,10 +603,10 @@ pub fn assign_homes(block: &BlockVar) -> BlockStack {
     BlockStack(stack_size, list1)
 }
 
-pub fn interp_block_stack(block: &BlockStack) -> Int {
+pub fn interp_block_stack(block: &BlockStack) -> Value {
     let BlockStack(stack_size, list) = block;
     let mut frame = vec![];
-    frame.resize(*stack_size as usize, 0xDEADBEEF);
+    frame.resize(*stack_size as usize, Value::Int(0));
     let env = interp_inst(
         &mut frame,
         vec![],
