@@ -8,11 +8,26 @@ pub mod cvar_lang;
 pub use cvar_lang as CVar;
 pub use CVar::rvar_anf_lang as RVarAnf;
 pub use RVarAnf::rvar_lang as RVarLang;
-pub use RVarAnf::Value;
 
 type Int = i64;
+type Bool = bool;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
+pub enum Value {
+    Int(Int),
+    Bool(Bool),
+}
+
+impl From<RVarAnf::Value> for Value {
+    fn from(item: RVarAnf::Value) -> Self {
+        match item {
+            RVarAnf::Value::Int(i) => Value::Int(i),
+            RVarAnf::Value::Bool(b) => Value::Bool(b),
+        }
+    }
+}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(non_camel_case_types)]

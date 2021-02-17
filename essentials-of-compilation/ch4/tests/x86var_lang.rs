@@ -277,7 +277,7 @@ mod x86var_lang {
         let x86prog = X86Var::select_inst_prog(cprog);
         print_vec(&x86prog.1);
         let x86val = X86Var::interp_prog(&x86prog);
-        assert_eq!(v1, x86val);
+        assert_eq!(X86Var::Value::from(v1), x86val);
 
         /*
         use X86Var::*;
@@ -370,7 +370,7 @@ mod x86var_lang {
         print_vec(&x86prog.1);
 
         let x86val = X86Var::interp_prog(&x86prog);
-        assert_eq!(v1, x86val);
+        assert_eq!(X86Var::Value::from(v1), x86val);
     }
 
     #[test]
@@ -410,6 +410,6 @@ mod x86var_lang {
         print_vec(&x86prog.1);
 
         let x86val = X86Var::interp_prog(&x86prog);
-        assert_eq!(v1, x86val);
+        assert_eq!(X86Var::Value::from(v1), x86val);
     }
 }
