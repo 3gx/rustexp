@@ -49,7 +49,7 @@ mod x86var_lang {
         println!("x86var= {:?}", x86var);
         let val_x86var = X86Var::interp_block(&x86var);
         println!("eval(x86var)= {:?}", val_x86var);
-        assert_eq!(X86Var::Value::from(v1.clone()), val_x86var);
+        assert_eq!(X86Var::Value::from(v1), val_x86var);
 
         print_vec(&x86var.1);
 
@@ -62,12 +62,12 @@ mod x86var_lang {
 
         let val_x86var_stack = X86Var::interp_block_stack(&x86var_home);
         println!("eval(x86var_home)= {:?}", val_x86var_stack);
-        assert_eq!(X86Var::Value::from(v1.clone()), val_x86var_stack);
+        assert_eq!(X86Var::Value::from(v1), val_x86var_stack);
 
         let x86var_patched = X86Var::patch_x86(&x86var_home);
         println!("x86var_patched= {:?}", x86var_patched);
         let val_x86var_patched = X86Var::interp_block_stack(&x86var_patched);
-        assert_eq!(X86Var::Value::from(v1.clone()), val_x86var_patched);
+        assert_eq!(X86Var::Value::from(v1), val_x86var_patched);
         print_vec(&x86var_patched.1);
 
         println!("\n{}", X86Var::print_x86(&x86var_patched).as_str());
@@ -117,7 +117,7 @@ mod x86var_lang {
         */
         let val_x86var = X86Var::interp_block(&x86var);
         //println!("eval(x86var)= {}", val_x86var);
-        assert_eq!(X86Var::Value::from(v1.clone()), val_x86var);
+        assert_eq!(X86Var::Value::from(v1), val_x86var);
 
         use X86Var::*;
         let lives = liveness_analysis(&x86var);
@@ -159,12 +159,12 @@ mod x86var_lang {
 
         let val_x86var_stack = X86Var::interp_block_stack(&x86var_home);
         //println!("eval(x86var_home)= {}", val_x86var_stack);
-        assert_eq!(X86Var::Value::from(v1.clone()), val_x86var_stack);
+        assert_eq!(X86Var::Value::from(v1), val_x86var_stack);
 
         let x86var_patched = X86Var::patch_x86(&x86var_home);
         //println!("x86var_patched= {:?}", x86var_patched);
         let val_x86var_patched = X86Var::interp_block_stack(&x86var_patched);
-        assert_eq!(X86Var::Value::from(v1.clone()), val_x86var_patched);
+        assert_eq!(X86Var::Value::from(v1), val_x86var_patched);
         print_vec(&x86var_patched.1);
 
         println!("\n{}", X86Var::print_x86(&x86var_patched).as_str());

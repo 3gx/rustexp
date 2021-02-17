@@ -36,12 +36,6 @@ impl Value {
             Value::EFlag(_) => None,
         }
     }
-    //    pub fn bool(&self) -> Option<&Bool> {
-    //       match self {
-    //          Value::Int(_) => None,
-    //         //           Value::Bool(b) => Some(b),
-    //    }
-    // }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -85,7 +79,7 @@ pub enum Arg {
     Reg(Reg),
     ByteReg(ByteReg),
     Deref(Reg, Int),
-    EFlag, // 0: eq, 1:lt, 2:gt
+    EFlag,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -479,11 +473,7 @@ pub fn interp_inst(
             UnaryKind::Popq => panic!("unsupported instruction{:?}", inst),
             UnaryKind::Set(cc) => {
                 let eflag = interp_arg(frame, &env, &Arg::EFlag);
-                let eflag = match cc {
-                    CndCode::Lt => eflag == Value::EFlag(CndCode::Lt),
-                    CndCode::Eq => eflag == Value::EFlag(CndCode::Eq),
-                    CndCode::Gt => eflag == Value::EFlag(CndCode::Gt),
-                };
+                let eflag = Value::EFlag(*cc) == eflag;
                 let env = assign(frame, env, arg, Value::Int(eflag as Int)).unwrap();
                 interp_inst(frame, env, insts, prog)
             }
@@ -497,12 +487,7 @@ pub fn interp_inst(
 
         JmpIf(cc, label) => {
             let eflag = interp_arg(frame, &env, &Arg::EFlag);
-            let do_jmp = match cc {
-                CndCode::Lt => eflag == Value::EFlag(CndCode::Lt),
-                CndCode::Eq => eflag == Value::EFlag(CndCode::Eq),
-                CndCode::Gt => eflag == Value::EFlag(CndCode::Gt),
-            };
-            if do_jmp {
+            if Value::EFlag(*cc) == eflag {
                 interp_inst(
                     frame,
                     env,
@@ -517,21 +502,6 @@ pub fn interp_inst(
         Callq(..) => panic!("unsupported instruction: {:?}", inst),
     }
 }
-
-/*
-fn interp_bb(
-    frame: &mut Vec<Int>,
-    mut env: Env,
-    insts: Vec<Inst>,
-    prog: &BTreeMap<String, Vec<Inst>>,
-) -> Env {
-    let insts: Vec<Inst> = insts.into_iter().rev().collect();
-    for inst in &insts {
-        env = interp_inst(frame, env, inst, prog);
-    }
-    env
-}
-*/
 
 pub fn interp_block(block: &BlockVar) -> Value {
     let BlockVar(_, list) = block;
