@@ -284,15 +284,16 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BlockVar) -> BlockVar {
             CVar::Expr::BinaryOp(cmpop, a1, a2) => {
                 let a1 = select_inst_atom(a1);
                 let a2 = select_inst_atom(a2);
-                let mut insts = Vec::new();
                 let cond = match cmpop {
                     CVar::BinaryOpKind::Eq => CndCode::Eq,
                     CVar::BinaryOpKind::Lt => CndCode::Lt,
                     x @ _ => panic!("unhandled 'if' binary predicate {:?}", x),
                 };
-                insts.push(Inst::Binary(BinaryKind::Cmpq, a2, a1));
-                insts.push(Inst::JmpIf(cond, thn.clone()));
-                insts.push(Inst::Jmp(els.clone()));
+                let insts = vec![
+                    Inst::Binary(BinaryKind::Cmpq, a2, a1),
+                    Inst::JmpIf(cond, thn.clone()),
+                    Inst::Jmp(els.clone()),
+                ];
                 let BlockVar(mut info, mut list) = block;
                 for inst in insts {
                     for v in get_vars(&inst) {
@@ -306,11 +307,13 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BlockVar) -> BlockVar {
                 let a1 = select_inst_atom(a);
                 let a2 = select_inst_atom(&CVar::Atom::Int(1));
                 let a3 = select_inst_atom(&CVar::Atom::Int(0));
-                let mut insts = Vec::new();
-                insts.push(Inst::Binary(BinaryKind::Xorq, a2.clone(), a1.clone()));
-                insts.push(Inst::Binary(BinaryKind::Cmpq, a3, a1));
-                insts.push(Inst::JmpIf(CndCode::Eq, els.clone()));
-                insts.push(Inst::Jmp(thn.clone()));
+                let insts = vec![
+                    Inst::Binary(BinaryKind::Xorq, a2.clone(), a1.clone()),
+                    Inst::Binary(BinaryKind::Cmpq, a3, a1),
+                    Inst::JmpIf(CndCode::Eq, els.clone()),
+                    Inst::Jmp(thn.clone()),
+                ];
+
                 let BlockVar(mut info, mut list) = block;
                 for inst in insts {
                     for v in get_vars(&inst) {
@@ -323,10 +326,11 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BlockVar) -> BlockVar {
             CVar::Expr::Atom(atom @ CVar::Atom::Var(_)) => {
                 let a1 = select_inst_atom(atom);
                 let a2 = select_inst_atom(&CVar::Atom::Int(0));
-                let mut insts = Vec::new();
-                insts.push(Inst::Binary(BinaryKind::Cmpq, a2, a1));
-                insts.push(Inst::JmpIf(CndCode::Eq, els.clone()));
-                insts.push(Inst::Jmp(thn.clone()));
+                let insts = vec![
+                    Inst::Binary(BinaryKind::Cmpq, a2, a1),
+                    Inst::JmpIf(CndCode::Eq, els.clone()),
+                    Inst::Jmp(thn.clone()),
+                ];
                 let BlockVar(mut info, mut list) = block;
                 for inst in insts {
                     for v in get_vars(&inst) {
