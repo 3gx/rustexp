@@ -19,11 +19,11 @@ mod x86var_lang {
             let v1 = interp_exp(&vec![], &p1);
             (p1, v1)
         };
-        println!("p1= {:#?} ", p1);
+        println!("p1= {:?} ", p1);
 
         use RVarAnf::{interp_exp, rco_exp};
         let p1anf = rco_exp(&p1);
-        println!("p1= {:#?} ", p1anf);
+        println!("p1= {:?} ", p1anf);
 
         let v1anf = interp_exp(&vec![], &p1anf);
 
@@ -32,12 +32,13 @@ mod x86var_lang {
 
         RVar::gensym_reset();
         let cprog = CVar::explicate_expr(p1anf);
-        println!("prog= {:#?}", cprog);
+        println!("prog= {:?}", cprog);
 
         let v1clang = CVar::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
 
+        /*
         let tail = cprog
             .0
             .iter()
@@ -72,6 +73,13 @@ mod x86var_lang {
 
         println!("\n{}", X86Var::print_x86(&x86var_patched).as_str());
         println!("result={:?}", v1);
+        */
+        let x86prog = X86Var::select_inst_prog(cprog);
+        print_vec(&x86prog.1);
+        let x86val = X86Var::interp_prog(&x86prog);
+        assert_eq!(X86Var::Value::from(v1), x86val);
+
+        //let x86prog = X86Var::assign_homes_prog(x86prog);
     }
 
     #[test]
