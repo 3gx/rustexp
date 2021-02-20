@@ -24,7 +24,7 @@ impl From<RVarAnf::Value> for Value {
     fn from(item: RVarAnf::Value) -> Self {
         match item {
             RVarAnf::Value::Int(i) => Value::Int(i),
-            _ => panic!("cannot cast from bool: {:?}", item), //            RVarAnf::Value::Bool(b) => Value::Bool(b),
+            _ => panic!("cannot cast from bool: {:?}", item),
         }
     }
 }

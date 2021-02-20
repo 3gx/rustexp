@@ -100,7 +100,6 @@ mod x86var_lang {
         //println!("v1clang= {}", v1clang);
         assert_eq!(v1anf, v1clang);
 
-        use X86Var::BlockVar;
         let tail = cprog
             .0
             .iter()
@@ -109,8 +108,9 @@ mod x86var_lang {
             )
             .unwrap();
         let x86var = X86Var::select_inst_tail(&tail, X86Var::BlockVar::new());
-        let BlockVar(_, inst_list) = &x86var;
         /*
+        use X86Var::BlockVar;
+        let BlockVar(_, inst_list) = &x86var;
         for inst in inst_list {
             println!("  {:?}", inst);
         }
@@ -119,6 +119,7 @@ mod x86var_lang {
         //println!("eval(x86var)= {}", val_x86var);
         assert_eq!(X86Var::Value::from(v1), val_x86var);
 
+        /*
         use X86Var::*;
         let lives = liveness_analysis(&x86var);
         println!("\n{:-^35}\t{:?}", "instruction", "live set");
@@ -154,6 +155,7 @@ mod x86var_lang {
             .with_vars(x86var.0.vars.iter().cloned().collect())
             .with_regs(regs)
             .with_inst(x86var.1);
+        */
         let x86var_home = X86Var::assign_homes(&x86var);
         print_vec(&x86var_home.1);
 
