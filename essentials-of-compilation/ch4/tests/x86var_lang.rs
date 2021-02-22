@@ -38,42 +38,6 @@ mod x86var_lang {
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
 
-        /*
-        let tail = cprog
-            .0
-            .iter()
-            .find_map(
-                |CVar::BasicBlock(name, tail)| if name == "start" { Some(tail) } else { None },
-            )
-            .unwrap();
-        let x86var = X86Var::select_inst_tail(&tail, X86Var::BlockVar::new());
-        println!("x86var= {:?}", x86var);
-        let val_x86var = X86Var::interp_block(&x86var);
-        println!("eval(x86var)= {:?}", val_x86var);
-        assert_eq!(X86Var::Value::from(v1), val_x86var);
-
-        print_vec(&x86var.1);
-
-        let X86Var::BlockVar(vars, _) = &x86var;
-        println!("vars= {:?}", vars);
-
-        let x86var_home = X86Var::assign_homes(&x86var);
-        println!("assgned_homes= {:?}", x86var_home);
-        print_vec(&x86var_home.1);
-
-        let val_x86var_stack = X86Var::interp_block_stack(&x86var_home);
-        println!("eval(x86var_home)= {:?}", val_x86var_stack);
-        assert_eq!(X86Var::Value::from(v1), val_x86var_stack);
-
-        let x86var_patched = X86Var::patch_x86(&x86var_home);
-        println!("x86var_patched= {:?}", x86var_patched);
-        let val_x86var_patched = X86Var::interp_block_stack(&x86var_patched);
-        assert_eq!(X86Var::Value::from(v1), val_x86var_patched);
-        print_vec(&x86var_patched.1);
-
-        println!("\n{}", X86Var::print_x86(&x86var_patched).as_str());
-        println!("result={:?}", v1);
-        */
         let x86prog = X86Var::select_inst_prog(cprog);
         print_vec(&x86prog.1);
         let x86val = X86Var::interp_prog(&x86prog);
