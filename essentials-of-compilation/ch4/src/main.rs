@@ -166,4 +166,12 @@ fn main() {
         let res = dijkstra(&graph, b, None, |_| 1);
         assert_eq!(res, expected_res);
     }
+    {
+        let mut vec = vec!["a".to_string(), "b".to_string()];
+        println!("vec={:?}", vec);
+        for v in &mut vec {
+            *v = v.clone() + "_test";
+        }
+        println!("vec={:?}", vec);
+    }
 }

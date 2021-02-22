@@ -886,8 +886,15 @@ fn liveness_analysis_bb(block: &BasicBlock) -> Vec<LiveSet> {
 
 pub fn liveness_analysis(prog: Program) -> Program {
     let Program(opts, bbs) = prog;
-    //    liveness_analysis_bb(&BasicBlock(BBOpts::new("".to_string()), list.clone()));
-    unimplemented!()
+    let bbs = bbs
+        .into_iter()
+        .map(|BasicBlock(bbopts, insts)| {
+            let liveset =
+                liveness_analysis_bb(&BasicBlock(BBOpts::new("".to_string()), insts.clone()));
+            BasicBlock(bbopts.liveset(liveset), insts)
+        })
+        .collect();
+    Program(opts, bbs)
 }
 
 // ---------------------------------------------------------------------------
