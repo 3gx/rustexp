@@ -82,9 +82,33 @@ mod x86var_lang {
         let cprog = CVar::explicate_expr(p1anf);
 
         let v1clang = CVar::interp_prog(&cprog);
-        //println!("v1clang= {}", v1clang);
         assert_eq!(v1anf, v1clang);
 
+        let v1clang = CVar::interp_prog(&cprog);
+        println!("v1clang= {:?}", v1clang);
+        assert_eq!(v1anf, v1clang);
+
+        let x86prog = X86Var::select_inst_prog(cprog);
+        print_vec(&x86prog.1);
+        let x86val = X86Var::interp_prog(&x86prog);
+        assert_eq!(X86Var::Value::from(v1), x86val);
+
+        let x86homes = X86Var::assign_homes_prog(x86prog);
+        println!("assgned_homes= {:?}", x86homes);
+        print_vec(&x86homes.1);
+        let x86val = X86Var::interp_prog(&x86homes);
+        assert_eq!(X86Var::Value::from(v1), x86val);
+
+        let x86patched = X86Var::patch_x86prog(x86homes);
+        println!("x86patched= {:?}", x86patched);
+        let x86val = X86Var::interp_prog(&x86patched);
+        assert_eq!(X86Var::Value::from(v1), x86val);
+
+        let asmstr = X86Var::print_x86prog(&x86patched);
+        println!("\n{}", asmstr);
+        println!("result={:?}", v1);
+
+        /*
         let tail = cprog
             .0
             .iter()
@@ -156,6 +180,7 @@ mod x86var_lang {
 
         println!("\n{}", X86Var::print_x86(&x86var_patched).as_str());
         println!("result={:?}", v1);
+        */
     }
 
     #[test]

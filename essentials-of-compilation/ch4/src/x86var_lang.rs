@@ -128,7 +128,24 @@ pub struct BlockVar(pub BlockVarOpts, pub Vec<Inst>);
 pub struct BlockStack(pub Int, pub Vec<Inst>);
 
 #[derive(Debug, Clone)]
-pub struct BasicBlock(pub String, pub BTreeSet<String>, pub Vec<Inst>);
+pub struct BBOpts {
+    name: String,
+    vars: BTreeSet<String>,
+}
+impl BBOpts {
+    pub fn new(name: String) -> Self {
+        BBOpts {
+            name,
+            vars: BTreeSet::new(),
+        }
+    }
+    pub fn vars(mut self, vars: BTreeSet<String>) -> Self {
+        self.vars = vars;
+        self
+    }
+}
+#[derive(Debug, Clone)]
+pub struct BasicBlock(pub BBOpts, pub Vec<Inst>);
 
 #[derive(Debug, Clone)]
 pub struct Options {
@@ -354,7 +371,7 @@ pub fn select_inst_prog(cprog: CVar::CProgram) -> Program {
         for var in &vars {
             all_vars.insert(var.clone());
         }
-        x86bbs.push(BasicBlock(name, vars, insts))
+        x86bbs.push(BasicBlock(BBOpts::new(name).vars(vars), insts))
     }
     Program(
         Options {
@@ -530,8 +547,8 @@ pub fn interp_prog(prog: &Program) -> Value {
         bbs,
     ) = prog;
     let mut prog = BTreeMap::new();
-    for BasicBlock(name, _, insts) in bbs.clone() {
-        prog.insert(name, insts);
+    for BasicBlock(bbopts, insts) in bbs.clone() {
+        prog.insert(bbopts.name, insts);
     }
     let insts = prog.get(&"start".to_string()).unwrap();
     let mut env: Env = vec![];
@@ -615,7 +632,7 @@ pub fn assign_homes_prog(prog: Program) -> Program {
         _ => arg.clone(),
     };
     let mut new_bbs = vec![];
-    for BasicBlock(name, vars, insts) in bbs {
+    for BasicBlock(bbopts, insts) in bbs {
         let mut new_insts = vec![];
         for inst in insts {
             use Inst::*;
@@ -626,7 +643,7 @@ pub fn assign_homes_prog(prog: Program) -> Program {
             };
             new_insts.push(new_inst);
         }
-        new_bbs.push(BasicBlock(name, vars, new_insts))
+        new_bbs.push(BasicBlock(bbopts, new_insts))
     }
     Program(Options { stack, vars, regs }, new_bbs)
 }
@@ -671,7 +688,7 @@ pub fn patch_x86(block: &BlockStack) -> BlockStack {
 pub fn patch_x86prog(prog: Program) -> Program {
     let Program(Options { stack, vars, regs }, bbs) = prog;
     let mut new_bbs = vec![];
-    for BasicBlock(name, vars, insts) in bbs {
+    for BasicBlock(bbopts, insts) in bbs {
         let mut new_insts: Vec<Inst> = vec![];
         for inst in insts {
             use Inst::*;
@@ -688,7 +705,7 @@ pub fn patch_x86prog(prog: Program) -> Program {
                 new_insts.push(inst)
             }
         }
-        new_bbs.push(BasicBlock(name, vars, new_insts))
+        new_bbs.push(BasicBlock(bbopts, new_insts))
     }
     Program(Options { stack, vars, regs }, new_bbs)
 }
@@ -772,13 +789,13 @@ pub fn print_x86prog(prog: &Program) -> String {
     ) = prog;
 
     let mut prog = String::new();
-    for BasicBlock(name, _, insts) in bbs {
-        prog.push_str(format!("{}:\n", name).as_str());
+    for BasicBlock(bbopts, insts) in bbs {
+        prog.push_str(format!("{}:\n", bbopts.name).as_str());
         for inst in insts {
             let inst_str = print_x86inst(inst);
             prog.push_str(&("\t".to_string() + &inst_str + "\n"));
         }
-        if name == "start" {
+        if bbopts.name == "start" {
             prog.push_str("\tjmp\tconclusion\n");
             prog.push_str("\n");
         }
