@@ -754,7 +754,40 @@ pub fn print_x86(block: &BlockStack) -> String {
 }
 
 pub fn print_x86prog(prog: &Program) -> String {
-    unimplemented!()
+    let Program(
+        Options {
+            stack,
+            vars: _,
+            regs: _,
+        },
+        bbs,
+    ) = prog;
+
+    let mut prog = String::new();
+    for BasicBlock(name, _, insts) in bbs {
+        prog.push_str(format!("{}", name).as_str());
+        for inst in insts {
+            let inst_str = print_x86inst(inst);
+            prog.push_str(&("\t".to_string() + &inst_str + "\n"));
+        }
+        if name == "start" {
+            prog.push_str("\tjmp\tconclusion\n");
+            prog.push_str("\n");
+        }
+        prog.push_str("");
+    }
+    prog.push_str("\t.globl _main\n");
+    prog.push_str("_main:\n");
+    prog.push_str("\tpush %rbp\n");
+    prog.push_str("\tmovq\t%rsp,%rbp\n");
+    prog.push_str(format!("\tsubq\t${},%rsp\n", stack).as_str());
+    prog.push_str("\tjmp start\n");
+    prog.push_str("\n");
+    prog.push_str("conclusion:\n");
+    prog.push_str(format!("\taddq\t ${}, %rsp\n", stack).as_str());
+    prog.push_str("\tpopq\t%rbp\n");
+    prog.push_str("\tretq\n");
+    prog
 }
 
 // ---------------------------------------------------------------------------
