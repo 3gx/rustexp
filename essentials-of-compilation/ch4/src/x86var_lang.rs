@@ -521,7 +521,14 @@ pub fn interp_block(block: &BlockVar) -> Value {
 }
 
 pub fn interp_prog(prog: &Program) -> Value {
-    let Program(_, bbs) = prog;
+    let Program(
+        Options {
+            stack,
+            vars: _,
+            regs: _,
+        },
+        bbs,
+    ) = prog;
     let mut prog = BTreeMap::new();
     for BasicBlock(name, _, insts) in bbs.clone() {
         prog.insert(name, insts);
@@ -529,6 +536,7 @@ pub fn interp_prog(prog: &Program) -> Value {
     let insts = prog.get(&"start".to_string()).unwrap();
     let mut env: Env = vec![];
     let mut frame = vec![];
+    frame.resize(*stack as usize, Value::Int(0));
     env = interp_inst(
         &mut frame,
         env,
