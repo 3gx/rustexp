@@ -132,7 +132,7 @@ pub struct BasicBlock(pub String, pub BTreeSet<String>, pub Vec<Inst>);
 
 #[derive(Debug, Clone)]
 pub struct Options {
-    pub stack: usize,
+    pub stack: Int,
     pub vars: BTreeSet<String>,
     pub regs: BTreeMap<String, Reg>,
 }
@@ -577,6 +577,52 @@ pub fn assign_homes(block: &BlockVar) -> BlockStack {
     BlockStack(stack_size, list1)
 }
 
+pub fn assign_homes_prog(prog: Program) -> Program {
+    let Program(
+        Options {
+            stack: _,
+            vars,
+            regs,
+        },
+        bbs,
+    ) = prog;
+    let mut var2idx: HashMap<String, Int> = HashMap::new();
+    let mut stack = 0;
+    for var in &vars {
+        assert!(!var2idx.contains_key(var));
+        if regs.get(var).is_none() {
+            stack += 8;
+            var2idx.insert(var.clone(), stack);
+        }
+    }
+    let home = |arg: &Arg| match arg {
+        Arg::Var(x) => {
+            if let Some(reg) = regs.get(x) {
+                Arg::Reg(*reg)
+            } else {
+                let idx = var2idx.get(x).unwrap();
+                Arg::Deref(Reg::rbp, -idx)
+            }
+        }
+        _ => arg.clone(),
+    };
+    let mut new_bbs = vec![];
+    for BasicBlock(name, vars, insts) in bbs {
+        let mut new_insts = vec![];
+        for inst in insts {
+            use Inst::*;
+            let new_inst = match inst {
+                Binary(op, arg1, arg2) => Binary(op, home(&arg1), home(&arg2)),
+                Unary(op, arg) => Unary(op, home(&arg)),
+                x @ _ => x,
+            };
+            new_insts.push(new_inst);
+        }
+        new_bbs.push(BasicBlock(name, vars, new_insts))
+    }
+    Program(Options { stack, vars, regs }, new_bbs)
+}
+
 pub fn interp_block_stack(block: &BlockStack) -> Value {
     let BlockStack(stack_size, list) = block;
     let mut frame = vec![];
@@ -612,6 +658,10 @@ pub fn patch_x86(block: &BlockStack) -> BlockStack {
         }
     }
     BlockStack(*stack_size, list1)
+}
+
+pub fn patch_x86prog(prog: Program) -> Program {
+    unimplemented!()
 }
 
 // ---------------------------------------------------------------------------

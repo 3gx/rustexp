@@ -79,7 +79,11 @@ mod x86var_lang {
         let x86val = X86Var::interp_prog(&x86prog);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
-        //let x86prog = X86Var::assign_homes_prog(x86prog);
+        let x86homes = X86Var::assign_homes_prog(x86prog);
+        println!("assgned_homes= {:?}", x86homes);
+        print_vec(&x86homes.1);
+        let x86patched = X86Var::patch_x86prog(x86homes);
+        println!("x86patched= {:?}", x86patched);
     }
 
     #[test]
