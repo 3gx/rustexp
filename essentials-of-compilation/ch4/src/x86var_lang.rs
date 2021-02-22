@@ -131,16 +131,22 @@ pub struct BlockStack(pub Int, pub Vec<Inst>);
 pub struct BBOpts {
     name: String,
     vars: BTreeSet<String>,
+    liveset: Vec<LiveSet>,
 }
 impl BBOpts {
     pub fn new(name: String) -> Self {
         BBOpts {
             name,
             vars: BTreeSet::new(),
+            liveset: Vec::new(),
         }
     }
     pub fn vars(mut self, vars: BTreeSet<String>) -> Self {
         self.vars = vars;
+        self
+    }
+    pub fn liveset(mut self, liveset: Vec<LiveSet>) -> Self {
+        self.liveset = liveset;
         self
     }
 }
