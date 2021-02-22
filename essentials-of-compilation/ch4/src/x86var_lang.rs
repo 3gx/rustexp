@@ -765,7 +765,7 @@ pub fn print_x86prog(prog: &Program) -> String {
 
     let mut prog = String::new();
     for BasicBlock(name, _, insts) in bbs {
-        prog.push_str(format!("{}", name).as_str());
+        prog.push_str(format!("{}:\n", name).as_str());
         for inst in insts {
             let inst_str = print_x86inst(inst);
             prog.push_str(&("\t".to_string() + &inst_str + "\n"));
@@ -774,10 +774,10 @@ pub fn print_x86prog(prog: &Program) -> String {
             prog.push_str("\tjmp\tconclusion\n");
             prog.push_str("\n");
         }
-        prog.push_str("");
+        prog.push_str("\n");
     }
-    prog.push_str("\t.globl _main\n");
-    prog.push_str("_main:\n");
+    prog.push_str("\t.globl main\n");
+    prog.push_str("main:\n");
     prog.push_str("\tpush %rbp\n");
     prog.push_str("\tmovq\t%rsp,%rbp\n");
     prog.push_str(format!("\tsubq\t${},%rsp\n", stack).as_str());
