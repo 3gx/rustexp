@@ -821,7 +821,7 @@ pub fn print_x86prog(prog: &Program) -> String {
 #[derive(Debug, Clone)]
 pub struct LiveSet(pub Option<String>, pub HashSet<String>);
 
-pub fn liveness_analysis(block: &BlockVar) -> Vec<LiveSet> {
+fn liveness_analysis_bb(block: &BasicBlock) -> Vec<LiveSet> {
     fn update_with_rdwr(live_set: &mut HashSet<String>, rd: &[&Arg], wr: &Arg) -> Option<String> {
         // before_k = (after_k - wr) + rd;
         match wr {
@@ -865,7 +865,7 @@ pub fn liveness_analysis(block: &BlockVar) -> Vec<LiveSet> {
         LiveSet(wr, live_set)
     };
 
-    let BlockVar(_, list) = block;
+    let BasicBlock(_, list) = block;
     let mut live_set_vec: Vec<LiveSet> = vec![LiveSet(None, HashSet::new())];
     for inst in list.iter().rev() {
         let live_set = update_live_set(inst, &live_set_vec.last().unwrap().1);
@@ -876,6 +876,11 @@ pub fn liveness_analysis(block: &BlockVar) -> Vec<LiveSet> {
     // pop last element, which is empty set
     live_set_vec.pop();
     live_set_vec
+}
+
+pub fn liveness_analysis(block: &BlockVar) -> Vec<LiveSet> {
+    let BlockVar(_, list) = block;
+    liveness_analysis_bb(&BasicBlock(BBOpts::new("".to_string()), list.clone()))
 }
 
 // ---------------------------------------------------------------------------

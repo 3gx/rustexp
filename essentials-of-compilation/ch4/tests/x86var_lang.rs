@@ -93,6 +93,16 @@ mod x86var_lang {
         let x86val = X86Var::interp_prog(&x86prog);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
+        /*
+        use X86Var::*;
+        let lives = liveness_analysis(&x86var);
+        println!("\n{:-^35}\t{:?}", "instruction", "live set");
+        for (live_set, inst) in lives.iter().zip(inst_list.iter()) {
+            println!("{:<35}\t{:?}", format!("{:?}", inst), live_set);
+        }
+        println!("");
+        */
+
         let x86homes = X86Var::assign_homes_prog(x86prog);
         println!("assgned_homes= {:?}", x86homes);
         print_vec(&x86homes.1);
