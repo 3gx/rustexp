@@ -884,9 +884,10 @@ fn liveness_analysis_bb(block: &BasicBlock) -> Vec<LiveSet> {
     live_set_vec
 }
 
-pub fn liveness_analysis(block: &BlockVar) -> Vec<LiveSet> {
-    let BlockVar(_, list) = block;
-    liveness_analysis_bb(&BasicBlock(BBOpts::new("".to_string()), list.clone()))
+pub fn liveness_analysis(prog: Program) -> Program {
+    let Program(opts, bbs) = prog;
+    //    liveness_analysis_bb(&BasicBlock(BBOpts::new("".to_string()), list.clone()));
+    unimplemented!()
 }
 
 // ---------------------------------------------------------------------------

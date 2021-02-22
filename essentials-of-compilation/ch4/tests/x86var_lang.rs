@@ -95,7 +95,7 @@ mod x86var_lang {
 
         /*
         use X86Var::*;
-        let lives = liveness_analysis(&x86var);
+        let lives = liveness_analysis_prog(&x86var);
         println!("\n{:-^35}\t{:?}", "instruction", "live set");
         for (live_set, inst) in lives.iter().zip(inst_list.iter()) {
             println!("{:<35}\t{:?}", format!("{:?}", inst), live_set);
