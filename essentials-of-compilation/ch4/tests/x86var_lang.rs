@@ -84,6 +84,10 @@ mod x86var_lang {
         print_vec(&x86homes.1);
         let x86patched = X86Var::patch_x86prog(x86homes);
         println!("x86patched= {:?}", x86patched);
+
+        let asmstr = X86Var::print_x86prog(&x86patched);
+        println!("\n{}", asmstr);
+        println!("result={:?}", v1);
     }
 
     #[test]

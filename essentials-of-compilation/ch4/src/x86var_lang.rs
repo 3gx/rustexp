@@ -661,7 +661,28 @@ pub fn patch_x86(block: &BlockStack) -> BlockStack {
 }
 
 pub fn patch_x86prog(prog: Program) -> Program {
-    unimplemented!()
+    let Program(Options { stack, vars, regs }, bbs) = prog;
+    let mut new_bbs = vec![];
+    for BasicBlock(name, vars, insts) in bbs {
+        let mut new_insts: Vec<Inst> = vec![];
+        for inst in insts {
+            use Inst::*;
+            use Reg::{rax, rbp};
+            let new_inst = match inst {
+                Binary(BinaryKind::Movq, arg1, arg2) if arg1 == arg2 => vec![],
+                Binary(op, Arg::Deref(rbp, idx1), Arg::Deref(rbp, idx2)) => vec![
+                    Binary(BinaryKind::Movq, Arg::Deref(rbp, idx1), Arg::Reg(rax)),
+                    Binary(op, Arg::Reg(rax), Arg::Deref(rbp, idx2)),
+                ],
+                x @ _ => vec![x],
+            };
+            for inst in new_inst {
+                new_insts.push(inst)
+            }
+        }
+        new_bbs.push(BasicBlock(name, vars, new_insts))
+    }
+    Program(Options { stack, vars, regs }, new_bbs)
 }
 
 // ---------------------------------------------------------------------------
@@ -730,6 +751,10 @@ pub fn print_x86(block: &BlockStack) -> String {
     prog.push_str("\tpopq\t%rbp\n");
     prog.push_str("\tretq\n");
     prog
+}
+
+pub fn print_x86prog(prog: &Program) -> String {
+    unimplemented!()
 }
 
 // ---------------------------------------------------------------------------
