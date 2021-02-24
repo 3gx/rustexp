@@ -939,10 +939,15 @@ pub fn printasm_cfg(prog: &Cfg) -> String {
         .map(|BasicBlock(bbopts, insts)| {
             let mut prog = String::new();
             prog.push_str(format!("{}:\n", bbopts.name).as_str());
-            for inst in insts {
-                let inst_str = print_x86inst(inst);
-                prog.push_str(&("\t".to_string() + &inst_str + "\n"));
-            }
+            prog.push_str(
+                &insts
+                    .iter()
+                    .map(|inst| {
+                        let inst_str = print_x86inst(inst);
+                        "\t".to_string().to_string() + &inst_str + "\n"
+                    })
+                    .collect::<String>(),
+            );
             if bbopts.name == "start" {
                 prog.push_str("\tjmp\tconclusion\n");
                 prog.push_str("\n");
