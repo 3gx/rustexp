@@ -165,7 +165,7 @@ pub struct Options {
 pub struct Program(pub Options, pub Vec<BasicBlock>);
 
 #[derive(Debug, Clone)]
-pub struct Cfg(pub Options, pub PetGraph<BasicBlock, usize>);
+pub struct Cfg(pub Options, pub PetGraph<BasicBlock, Option<usize>>);
 
 impl BlockVar {
     pub fn new() -> BlockVar {
@@ -892,9 +892,30 @@ fn liveness_analysis_bb(block: &BasicBlock) -> Vec<LiveSet> {
 pub fn prog2cfg(prog: Program) -> Cfg {
     let Program(opts, bbs) = prog;
     let mut cfg = PetGraph::new();
-    for bb in bbs {
-        cfg.add_node(bb);
+    let name2node: HashMap<_, _> = bbs
+        .into_iter()
+        .map(|bb| {
+            let name = bb.0.name.clone();
+            let idx = cfg.add_node(bb);
+            (name, idx)
+        })
+        .collect();
+    for (_, src_idx) in &name2node {
+        let BasicBlock(_, insts) = &cfg[*src_idx];
+        let nodes: BTreeSet<_> = insts
+            .iter()
+            .filter_map(|inst| match inst {
+                Inst::Jmp(label) => Some(label),
+                Inst::JmpIf(_, label) => Some(label),
+                _ => None,
+            })
+            .map(|label| name2node.get(label))
+            .collect();
+        for dst_idx in nodes {
+            cfg.add_edge(*src_idx, *dst_idx.unwrap(), None);
+        }
     }
+
     Cfg(opts, cfg)
 }
 

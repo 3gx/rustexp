@@ -66,6 +66,7 @@ fn main() {
         let cost_1 = graph.add_edge(origin, destination_1, 250);
         let cost_2 = graph.add_edge(origin, destination_2, 1099);
         let cost_3 = graph.add_edge(origin, destination_2, 2099);
+        let cost_3a = graph.add_edge(origin, destination_2, 2099);
 
         println!("{:?}", origin);
         println!("{:?}", destination_1);
@@ -73,6 +74,8 @@ fn main() {
         println!("{:?}", cost_1);
         println!("{:?}", cost_2);
         println!("{:?}", cost_3);
+        println!("{:?}", cost_3a);
+        assert_ne!(cost_3, cost_3a);
         // graph.remove_node(origin);
 
         //graph.remove_edge(cost_2);
