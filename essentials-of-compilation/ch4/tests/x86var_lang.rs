@@ -109,6 +109,8 @@ mod x86var_lang {
         println!("");
         */
 
+        let x86cfg = liveness_analysis_cfg(x86cfg);
+
         let x86homes = X86Var::assign_homes_cfg(x86cfg);
         println!("***assgned_homes***:");
         print_cfg(&x86homes.1);

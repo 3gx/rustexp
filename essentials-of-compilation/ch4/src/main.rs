@@ -91,6 +91,13 @@ fn main() {
         assert_eq!(graph.edge_weight(cost_1).unwrap(), &250);
         assert_eq!(graph.edge_weight(cost_2).unwrap(), &1099);
         assert_eq!(graph.edge_weight(cost_3).unwrap(), &2099);
+
+        let g1 = petgraph::Graph::from(graph);
+        assert_eq!(g1[destination_1], "San Diego");
+        assert_eq!(g1[destination_2], "New York");
+        assert_eq!(g1.edge_weight(cost_1).unwrap(), &250);
+        assert_eq!(g1.edge_weight(cost_2).unwrap(), &1099);
+        assert_eq!(g1.edge_weight(cost_3).unwrap(), &2099);
     }
 
     {

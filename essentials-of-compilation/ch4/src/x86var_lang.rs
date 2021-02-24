@@ -165,7 +165,7 @@ pub struct Options {
 pub struct Program(pub Options, pub Vec<BasicBlock>);
 
 #[derive(Debug, Clone)]
-pub struct Cfg(pub Options, pub CfgGraph<BasicBlock, Option<usize>>);
+pub struct Cfg(pub Options, pub CfgGraph<BasicBlock, Option<LiveSet>>);
 
 impl BlockVar {
     pub fn new() -> BlockVar {
@@ -982,7 +982,13 @@ pub fn printasm_cfg(prog: &Cfg) -> String {
 #[derive(Debug, Clone)]
 pub struct LiveSet(pub Option<String>, pub HashSet<String>);
 
-fn liveness_analysis_bb(block: &BasicBlock) -> Vec<LiveSet> {
+impl LiveSet {
+    pub fn new() -> Self {
+        LiveSet(None, HashSet::new())
+    }
+}
+
+fn liveness_analysis_bb(block: &BasicBlock, liveset: LiveSet) -> Vec<LiveSet> {
     fn update_with_rdwr(live_set: &mut HashSet<String>, rd: &[&Arg], wr: &Arg) -> Option<String> {
         // before_k = (after_k - wr) + rd;
         match wr {
@@ -1027,7 +1033,7 @@ fn liveness_analysis_bb(block: &BasicBlock) -> Vec<LiveSet> {
     };
 
     let BasicBlock(_, list) = block;
-    let mut live_set_vec: Vec<LiveSet> = vec![LiveSet(None, HashSet::new())];
+    let mut live_set_vec: Vec<LiveSet> = vec![liveset];
     for inst in list.iter().rev() {
         let live_set = update_live_set(inst, &live_set_vec.last().unwrap().1);
         live_set_vec.push(live_set);
@@ -1076,12 +1082,23 @@ pub fn liveness_analysis(prog: Program) -> Program {
     let bbs = bbs
         .into_iter()
         .map(|BasicBlock(bbopts, insts)| {
-            let liveset =
-                liveness_analysis_bb(&BasicBlock(BBOpts::new("".to_string()), insts.clone()));
+            let liveset = liveness_analysis_bb(
+                &BasicBlock(BBOpts::new("".to_string()), insts.clone()),
+                LiveSet::new(),
+            );
             BasicBlock(bbopts.liveset(liveset), insts)
         })
         .collect();
     Program(opts, bbs)
+}
+
+pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
+    let Cfg(Options { stack, vars, regs }, cfg) = prog;
+    let mut cfg = petgraph::Graph::from(cfg);
+    cfg.reverse();
+    let _rto = petgraph::algo::toposort(&cfg, None).unwrap();
+    let cfg = CfgGraph::from(cfg);
+    Cfg(Options { stack, vars, regs }, cfg)
 }
 
 // ---------------------------------------------------------------------------
