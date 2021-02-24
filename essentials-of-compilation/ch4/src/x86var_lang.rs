@@ -1096,8 +1096,17 @@ pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
     let Cfg(Options { stack, vars, regs }, cfg) = prog;
     let mut cfg = petgraph::Graph::from(cfg);
     cfg.reverse();
-    let _rto = petgraph::algo::toposort(&cfg, None).unwrap();
+    let rto = petgraph::algo::toposort(&cfg, None).unwrap();
     let cfg = CfgGraph::from(cfg);
+    rto.into_iter()
+        .map(|idx| &cfg[idx])
+        .for_each(|BasicBlock(_bbopts, insts)| {
+            liveness_analysis_bb(
+                &BasicBlock(BBOpts::new("".to_string()), insts.clone()),
+                LiveSet::new(),
+            );
+        });
+
     Cfg(Options { stack, vars, regs }, cfg)
 }
 
