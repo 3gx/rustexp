@@ -796,29 +796,25 @@ pub fn patch_x86prog(prog: Program) -> Program {
 }
 
 pub fn patch_cfg(prog: Cfg) -> Cfg {
-    let Cfg(Options { stack, vars, regs }, cfg) = prog;
-    let cfg = {
-        let mut cfg = cfg;
-        for BasicBlock(_, insts) in cfg.node_weights_mut() {
-            let old_insts = std::mem::replace(insts, vec![]);
-            for inst in old_insts {
+    let Cfg(Options { stack, vars, regs }, mut cfg) = prog;
+    cfg.node_weights_mut().for_each(|BasicBlock(_, insts)| {
+        *insts = std::mem::take(insts)
+            .into_iter()
+            .map(|inst| {
                 use Inst::*;
                 use Reg::{rax, rbp};
-                let new_inst = match inst {
+                match inst {
                     Binary(BinaryKind::Movq, arg1, arg2) if arg1 == arg2 => vec![],
                     Binary(op, Arg::Deref(rbp, idx1), Arg::Deref(rbp, idx2)) => vec![
                         Binary(BinaryKind::Movq, Arg::Deref(rbp, idx1), Arg::Reg(rax)),
                         Binary(op, Arg::Reg(rax), Arg::Deref(rbp, idx2)),
                     ],
                     x @ _ => vec![x],
-                };
-                for inst in new_inst {
-                    insts.push(inst)
                 }
-            }
-        }
-        cfg
-    };
+            })
+            .flatten()
+            .collect()
+    });
     Cfg(Options { stack, vars, regs }, cfg)
 }
 
