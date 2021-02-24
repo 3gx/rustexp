@@ -573,6 +573,31 @@ pub fn interp_prog(prog: &Program) -> Value {
     );
     *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
 }
+pub fn interp_cfg(prog: &Cfg) -> Value {
+    let Cfg(
+        Options {
+            stack,
+            vars: _,
+            regs: _,
+        },
+        cfg,
+    ) = prog;
+    let mut prog = BTreeMap::new();
+    for BasicBlock(bbopts, insts) in cfg.node_indices().map(|idx| &cfg[idx]).cloned() {
+        prog.insert(bbopts.name, insts);
+    }
+    let insts = prog.get(&"start".to_string()).unwrap();
+    let mut env: Env = vec![];
+    let mut frame = vec![];
+    frame.resize(*stack as usize, Value::Int(0));
+    env = interp_inst(
+        &mut frame,
+        env,
+        insts.iter().rev().cloned().collect(),
+        &prog,
+    );
+    *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
+}
 
 pub fn assign_homes(block: &BlockVar) -> BlockStack {
     let BlockVar(BlockVarOpts { vars, regs }, list) = block;
@@ -768,6 +793,33 @@ pub fn patch_x86prog(prog: Program) -> Program {
         new_bbs.push(BasicBlock(bbopts, new_insts))
     }
     Program(Options { stack, vars, regs }, new_bbs)
+}
+
+pub fn patch_cfg(prog: Cfg) -> Cfg {
+    let Cfg(Options { stack, vars, regs }, cfg) = prog;
+    let cfg = {
+        let mut cfg = cfg;
+        for BasicBlock(_, insts) in cfg.node_weights_mut() {
+            let old_insts = std::mem::replace(insts, vec![]);
+            for inst in old_insts {
+                use Inst::*;
+                use Reg::{rax, rbp};
+                let new_inst = match inst {
+                    Binary(BinaryKind::Movq, arg1, arg2) if arg1 == arg2 => vec![],
+                    Binary(op, Arg::Deref(rbp, idx1), Arg::Deref(rbp, idx2)) => vec![
+                        Binary(BinaryKind::Movq, Arg::Deref(rbp, idx1), Arg::Reg(rax)),
+                        Binary(op, Arg::Reg(rax), Arg::Deref(rbp, idx2)),
+                    ],
+                    x @ _ => vec![x],
+                };
+                for inst in new_inst {
+                    insts.push(inst)
+                }
+            }
+        }
+        cfg
+    };
+    Cfg(Options { stack, vars, regs }, cfg)
 }
 
 // ---------------------------------------------------------------------------

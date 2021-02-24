@@ -112,15 +112,17 @@ mod x86var_lang {
         let x86homes = X86Var::assign_homes_cfg(x86cfg);
         println!("***assgned_homes***:");
         print_cfg(&x86homes.1);
-        /*
+
         let x86val = X86Var::interp_cfg(&x86homes);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
         let x86patched = X86Var::patch_cfg(x86homes);
-        println!("x86patched= {:?}", x86patched);
+        println!("***patched_cfg***:");
+        print_cfg(&x86patched.1);
         let x86val = X86Var::interp_cfg(&x86patched);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
+        /*
         let asmstr = X86Var::print_cfg(&x86patched);
         println!("\n{}", asmstr);
         println!("result={:?}", v1);
