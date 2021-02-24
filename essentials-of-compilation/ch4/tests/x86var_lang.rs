@@ -122,11 +122,9 @@ mod x86var_lang {
         let x86val = X86Var::interp_cfg(&x86patched);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
-        /*
-        let asmstr = X86Var::print_cfg(&x86patched);
+        let asmstr = X86Var::printasm_cfg(&x86patched);
         println!("\n{}", asmstr);
         println!("result={:?}", v1);
-        */
 
         /*
         let tail = cprog

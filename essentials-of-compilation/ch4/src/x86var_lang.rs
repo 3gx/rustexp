@@ -923,6 +923,48 @@ pub fn print_x86prog(prog: &Program) -> String {
     prog
 }
 
+pub fn printasm_cfg(prog: &Cfg) -> String {
+    let Cfg(
+        Options {
+            stack,
+            vars: _,
+            regs: _,
+        },
+        cfg,
+    ) = prog;
+
+    let mut prog: String = cfg
+        .node_indices()
+        .map(|idx| &cfg[idx])
+        .map(|BasicBlock(bbopts, insts)| {
+            let mut prog = String::new();
+            prog.push_str(format!("{}:\n", bbopts.name).as_str());
+            for inst in insts {
+                let inst_str = print_x86inst(inst);
+                prog.push_str(&("\t".to_string() + &inst_str + "\n"));
+            }
+            if bbopts.name == "start" {
+                prog.push_str("\tjmp\tconclusion\n");
+                prog.push_str("\n");
+            }
+            prog.push_str("\n");
+            prog
+        })
+        .collect();
+    prog.push_str("\t.globl main\n");
+    prog.push_str("main:\n");
+    prog.push_str("\tpush %rbp\n");
+    prog.push_str("\tmovq\t%rsp,%rbp\n");
+    prog.push_str(format!("\tsubq\t${},%rsp\n", stack).as_str());
+    prog.push_str("\tjmp start\n");
+    prog.push_str("\n");
+    prog.push_str("conclusion:\n");
+    prog.push_str(format!("\taddq\t ${}, %rsp\n", stack).as_str());
+    prog.push_str("\tpopq\t%rbp\n");
+    prog.push_str("\tretq\n");
+    prog
+}
+
 // ---------------------------------------------------------------------------
 // liveness analysis
 
