@@ -1062,7 +1062,9 @@ pub fn prog2cfg(prog: Program) -> Cfg {
             .map(|label| name2node.get(label))
             .collect();
         for dst_idx in nodes {
-            cfg.add_edge(*src_idx, *dst_idx.unwrap(), None);
+            let dst_idx = dst_idx.unwrap();
+            assert!(cfg.find_edge(*src_idx, *dst_idx).is_none());
+            cfg.add_edge(*src_idx, *dst_idx, None);
         }
     }
 
