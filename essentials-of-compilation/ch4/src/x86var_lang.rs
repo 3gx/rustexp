@@ -938,20 +938,26 @@ pub fn printasm_cfg(prog: &Cfg) -> String {
         .map(|idx| &cfg[idx])
         .map(|BasicBlock(bbopts, insts)| {
             let mut prog = String::new();
+            // label
             prog.push_str(format!("{}:\n", bbopts.name).as_str());
-            prog.push_str(
-                &insts
-                    .iter()
-                    .map(|inst| {
-                        let inst_str = print_x86inst(inst);
-                        "\t".to_string().to_string() + &inst_str + "\n"
-                    })
-                    .collect::<String>(),
-            );
+
+            // instruction sequences
+            let insts_str = insts
+                .iter()
+                .map(|inst| {
+                    let inst_str = print_x86inst(inst);
+                    "\t".to_string().to_string() + &inst_str + "\n"
+                })
+                .collect::<String>();
+            prog.push_str(&insts_str);
+
+            // if it is start block, jump to conclusion at the end
             if bbopts.name == "start" {
                 prog.push_str("\tjmp\tconclusion\n");
                 prog.push_str("\n");
             }
+
+            // prettify
             prog.push_str("\n");
             prog
         })
