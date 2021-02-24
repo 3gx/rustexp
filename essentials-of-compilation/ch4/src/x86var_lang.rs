@@ -3,6 +3,8 @@ mod macros;
 #[allow(unused_imports)]
 use macros::r#match;
 
+use petgraph::stable_graph::StableGraph as PetGraph;
+
 #[path = "cvar_lang.rs"]
 pub mod cvar_lang;
 pub use cvar_lang as CVar;
@@ -161,6 +163,9 @@ pub struct Options {
 }
 #[derive(Debug, Clone)]
 pub struct Program(pub Options, pub Vec<BasicBlock>);
+
+#[derive(Debug, Clone)]
+pub struct Cfg(pub Options, pub PetGraph<BasicBlock, usize>);
 
 impl BlockVar {
     pub fn new() -> BlockVar {
@@ -882,6 +887,15 @@ fn liveness_analysis_bb(block: &BasicBlock) -> Vec<LiveSet> {
     // pop last element, which is empty set
     live_set_vec.pop();
     live_set_vec
+}
+
+pub fn prog2cfg(prog: Program) -> Cfg {
+    let Program(opts, bbs) = prog;
+    let mut cfg = PetGraph::new();
+    for bb in bbs {
+        cfg.add_node(bb);
+    }
+    Cfg(opts, cfg)
 }
 
 pub fn liveness_analysis(prog: Program) -> Program {

@@ -94,9 +94,11 @@ mod x86var_lang {
         assert_eq!(X86Var::Value::from(v1), x86val);
 
         use X86Var::*;
+        let x86cfg = prog2cfg(x86prog.clone());
+        println!("x86cfg= {:?}", x86cfg);
+        /*
         let x86prog = liveness_analysis(x86prog);
         print_vec(&x86prog.1);
-        /*
         println!("\n{:-^35}\t{:?}", "instruction", "live set");
         for (live_set, inst) in lives.iter().zip(inst_list.iter()) {
             println!("{:<35}\t{:?}", format!("{:?}", inst), live_set);
