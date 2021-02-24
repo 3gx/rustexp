@@ -126,6 +126,13 @@ mod x86var_lang {
         println!("\n{}", asmstr);
         println!("result={:?}", v1);
 
+        let g = x86patched.clone();
+        use petgraph;
+        let mut g1 = petgraph::Graph::from(g.1);
+        g1.reverse();
+        let g2 = petgraph::stable_graph::StableGraph::from(g1);
+        println!("g2= {:?}", g2);
+
         /*
         let tail = cprog
             .0
