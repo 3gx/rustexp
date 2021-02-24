@@ -10,6 +10,12 @@ mod x86var_lang {
         }
     }
 
+    fn print_cfg<T: std::fmt::Debug, E: std::fmt::Debug>(cfg: &X86Var::CfgGraph<T, E>) {
+        for idx in cfg.node_indices() {
+            println!("\t{:?}", cfg[idx]);
+        }
+    }
+
     #[test]
     fn t0() {
         let (p1, v1) = {
@@ -94,32 +100,31 @@ mod x86var_lang {
         assert_eq!(X86Var::Value::from(v1), x86val);
 
         use X86Var::*;
-        let x86cfg = prog2cfg(x86prog.clone());
+        let x86cfg = prog2cfg(x86prog);
         println!("x86cfg= {:?}", x86cfg);
         /*
-        let x86prog = liveness_analysis(x86prog);
-        print_vec(&x86prog.1);
-        println!("\n{:-^35}\t{:?}", "instruction", "live set");
         for (live_set, inst) in lives.iter().zip(inst_list.iter()) {
             println!("{:<35}\t{:?}", format!("{:?}", inst), live_set);
         }
         println!("");
         */
 
-        let x86homes = X86Var::assign_homes_prog(x86prog);
-        println!("assgned_homes= {:?}", x86homes);
-        print_vec(&x86homes.1);
-        let x86val = X86Var::interp_prog(&x86homes);
+        let x86homes = X86Var::assign_homes_cfg(x86cfg);
+        println!("***assgned_homes***:");
+        print_cfg(&x86homes.1);
+        /*
+        let x86val = X86Var::interp_cfg(&x86homes);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
-        let x86patched = X86Var::patch_x86prog(x86homes);
+        let x86patched = X86Var::patch_cfg(x86homes);
         println!("x86patched= {:?}", x86patched);
-        let x86val = X86Var::interp_prog(&x86patched);
+        let x86val = X86Var::interp_cfg(&x86patched);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
-        let asmstr = X86Var::print_x86prog(&x86patched);
+        let asmstr = X86Var::print_cfg(&x86patched);
         println!("\n{}", asmstr);
         println!("result={:?}", v1);
+        */
 
         /*
         let tail = cprog

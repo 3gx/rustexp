@@ -3,7 +3,7 @@ mod macros;
 #[allow(unused_imports)]
 use macros::r#match;
 
-use petgraph::stable_graph::StableGraph as PetGraph;
+pub use petgraph::stable_graph::StableGraph as CfgGraph;
 
 #[path = "cvar_lang.rs"]
 pub mod cvar_lang;
@@ -165,7 +165,7 @@ pub struct Options {
 pub struct Program(pub Options, pub Vec<BasicBlock>);
 
 #[derive(Debug, Clone)]
-pub struct Cfg(pub Options, pub PetGraph<BasicBlock, Option<usize>>);
+pub struct Cfg(pub Options, pub CfgGraph<BasicBlock, Option<usize>>);
 
 impl BlockVar {
     pub fn new() -> BlockVar {
@@ -659,6 +659,55 @@ pub fn assign_homes_prog(prog: Program) -> Program {
     Program(Options { stack, vars, regs }, new_bbs)
 }
 
+pub fn assign_homes_cfg(prog: Cfg) -> Cfg {
+    let Cfg(
+        Options {
+            stack: _,
+            vars,
+            regs,
+        },
+        cfg,
+    ) = prog;
+    let mut var2idx: HashMap<String, Int> = HashMap::new();
+    let mut stack = 0;
+    for var in &vars {
+        assert!(!var2idx.contains_key(var));
+        if regs.get(var).is_none() {
+            stack += 8;
+            var2idx.insert(var.clone(), stack);
+        }
+    }
+    let home = |arg: &Arg| match arg {
+        Arg::Var(x) => {
+            if let Some(reg) = regs.get(x) {
+                Arg::Reg(*reg)
+            } else {
+                let idx = var2idx.get(x).unwrap();
+                Arg::Deref(Reg::rbp, -idx)
+            }
+        }
+        _ => arg.clone(),
+    };
+    let cfg = {
+        let mut cfg = cfg;
+        for BasicBlock(_, insts) in cfg.node_weights_mut() {
+            let mut new_insts = vec![];
+            for inst in insts.iter_mut() {
+                use Inst::*;
+                let new_inst = match inst {
+                    Binary(op, arg1, arg2) => Binary(*op, home(&arg1), home(&arg2)),
+                    Unary(op, arg) => Unary(*op, home(&arg)),
+                    x @ _ => x.clone(),
+                };
+                new_insts.push(new_inst);
+            }
+            *insts = new_insts;
+        }
+        cfg
+    };
+    Cfg(Options { stack, vars, regs }, cfg)
+}
+
 pub fn interp_block_stack(block: &BlockStack) -> Value {
     let BlockStack(stack_size, list) = block;
     let mut frame = vec![];
@@ -891,7 +940,7 @@ fn liveness_analysis_bb(block: &BasicBlock) -> Vec<LiveSet> {
 
 pub fn prog2cfg(prog: Program) -> Cfg {
     let Program(opts, bbs) = prog;
-    let mut cfg = PetGraph::new();
+    let mut cfg = CfgGraph::new();
     let name2node: HashMap<_, _> = bbs
         .into_iter()
         .map(|bb| {
