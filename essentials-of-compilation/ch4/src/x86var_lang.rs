@@ -1238,7 +1238,21 @@ pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
 
 pub type IGraph1 = StableGraph<String, (), petgraph::Undirected>;
 pub fn interference_graph_cfg(cfg: &Cfg) -> IGraph1 {
+    let Cfg(_, cfg) = cfg;
     let mut g: IGraph1 = IGraph1::default();
+    for node_idx in cfg.node_indices() {
+        let BasicBlock(bbopts, _) = &cfg[node_idx];
+        let liveness = &bbopts.liveset;
+        for LiveSet(_, set) in liveness {
+            // XXX: use o(n^2) algorithm, since the write-based algorithm is incorrectly implemented
+            for a in set {
+                for b in set {
+                    //                    g.insert(IEdge(IVertex(a.clone()), IVertex(b.clone())));
+                }
+            }
+        }
+    }
+
     g
 }
 
