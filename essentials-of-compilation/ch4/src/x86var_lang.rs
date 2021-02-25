@@ -1102,53 +1102,43 @@ pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
     let mut cfg = petgraph::Graph::from(cfg);
     cfg.reverse();
     let rto_indices = petgraph::algo::toposort(&cfg, None).unwrap();
-    let mut cfg = CfgGraph::from(cfg);
+    let cfg = CfgGraph::from(cfg);
 
-    let get_out_edges_idx = |cfg: &CfgGraph, node_idx| {
+    let get_edges_idx = |cfg: &CfgGraph, node_idx, dir| {
         use petgraph::visit::EdgeRef;
-        let edges_idx: Vec<_> = cfg
-            .edges_directed(node_idx, petgraph::Direction::Outgoing)
+        let edges_idx = cfg
+            .edges_directed(node_idx, dir)
             .map(|edge| edge.id())
-            .collect();
-        edges_idx
-    };
-    let get_in_edges_idx = |cfg: &CfgGraph, node_idx| {
-        use petgraph::visit::EdgeRef;
-        let edges_idx: Vec<_> = cfg
-            .edges_directed(node_idx, petgraph::Direction::Incoming)
-            .map(|edge| edge.id())
-            .collect();
+            .collect::<Vec<_>>();
         edges_idx
     };
 
-    rto_indices
-        .into_iter()
-        .map(|idx| (idx, &cfg[idx]))
-        .for_each(|(node_idx, BasicBlock(_, insts))| {
-            // build live set from succs
-            let liveset = get_out_edges_idx(&cfg, node_idx)
-                .into_iter()
-                .map(|idx| {
-                    cfg.edge_weight(idx)
-                        .unwrap()
-                        .iter()
-                        .cloned()
-                        .collect::<Vec<String>>()
-                })
-                .flatten()
-                .collect::<HashSet<String>>();
-            let liveset = LiveSet::new().liveset(liveset);
-            let lives = liveness_analysis_bb(
-                &BasicBlock(BBOpts::new("".to_string()), insts.clone()),
-                liveset,
-            );
-            let LiveSet(_, last_liveset) = &lives[0];
-            let edge_idx = get_in_edges_idx(&cfg, node_idx);
-            for idx in edge_idx {
-                let edge = cfg.edge_weight_mut(idx).unwrap();
-                *edge = last_liveset.clone();
-            }
-        });
+    let mut cfg = cfg;
+    rto_indices.into_iter().for_each(|node_idx| {
+        let BasicBlock(_, insts) = &cfg[node_idx];
+        // build live set from successor BBs
+        let liveset = get_edges_idx(&cfg, node_idx, petgraph::Direction::Outgoing)
+            .into_iter()
+            .map(|idx| {
+                cfg.edge_weight(idx)
+                    .unwrap()
+                    .iter()
+                    .cloned()
+                    .collect::<Vec<String>>()
+            })
+            .flatten()
+            .collect::<HashSet<String>>();
+        let liveset = LiveSet::new().liveset(liveset);
+        let lives = liveness_analysis_bb(
+            &BasicBlock(BBOpts::new("".to_string()), insts.clone()),
+            liveset,
+        );
+        let LiveSet(_, last_liveset) = &lives[0];
+        for idx in get_edges_idx(&cfg, node_idx, petgraph::Direction::Incoming) {
+            let edge = cfg.edge_weight_mut(idx).unwrap();
+            *edge = last_liveset.clone();
+        }
+    });
     Cfg(Options { stack, vars, regs }, cfg)
 }
 
