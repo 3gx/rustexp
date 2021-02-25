@@ -155,6 +155,12 @@ impl BBOpts {
 #[derive(Debug, Clone)]
 pub struct BasicBlock(pub BBOpts, pub Vec<Inst>);
 
+impl std::default::Default for BasicBlock {
+    fn default() -> Self {
+        BasicBlock(BBOpts::new("".to_string()), vec![])
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Options {
     pub stack: Int,
@@ -1116,7 +1122,6 @@ pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
     let mut cfg = cfg;
     rto_indices.into_iter().for_each(|node_idx| {
         // get current bb from the Cfg
-        let BasicBlock(_, insts) = &cfg[node_idx];
 
         // build live set from successor BBs
         let liveset = get_edges_idx(&cfg, node_idx, petgraph::Direction::Outgoing)
@@ -1131,6 +1136,7 @@ pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
             .flatten()
             .collect::<HashSet<String>>();
 
+        let BasicBlock(_, insts) = &cfg[node_idx];
         // run liveness analysis of current bb
         let lives = liveness_analysis_bb(
             &BasicBlock(BBOpts::new("".to_string()), insts.clone()),
@@ -1145,6 +1151,13 @@ pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
                 let edge = cfg.edge_weight_mut(idx).unwrap();
                 *edge = liveset_at_entry.clone();
             });
+
+        // update bbopts
+        let BasicBlock(bbopts, insts) = std::mem::take(&mut cfg[node_idx]);
+        std::mem::swap(
+            &mut cfg[node_idx],
+            &mut BasicBlock(bbopts.liveset(lives), insts),
+        );
     });
     Cfg(Options { stack, vars, regs }, cfg)
 }
