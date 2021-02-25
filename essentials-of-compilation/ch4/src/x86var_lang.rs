@@ -164,7 +164,7 @@ pub struct Options {
 #[derive(Debug, Clone)]
 pub struct Program(pub Options, pub Vec<BasicBlock>);
 
-pub type CfgGraph = StableGraph<BasicBlock, Option<LiveSet>>;
+pub type CfgGraph = StableGraph<BasicBlock, HashSet<String>>;
 #[derive(Debug, Clone)]
 pub struct Cfg(pub Options, pub CfgGraph);
 
@@ -987,6 +987,10 @@ impl LiveSet {
     pub fn new() -> Self {
         LiveSet(None, HashSet::new())
     }
+    pub fn liveset(mut self, liveset: HashSet<String>) -> Self {
+        self.1 = liveset;
+        self
+    }
 }
 
 fn liveness_analysis_bb(block: &BasicBlock, liveset: LiveSet) -> Vec<LiveSet> {
@@ -1071,7 +1075,7 @@ pub fn prog2cfg(prog: Program) -> Cfg {
         for dst_idx in nodes {
             let dst_idx = dst_idx.unwrap();
             assert!(cfg.find_edge(*src_idx, *dst_idx).is_none());
-            cfg.add_edge(*src_idx, *dst_idx, None);
+            cfg.add_edge(*src_idx, *dst_idx, HashSet::new());
         }
     }
 
@@ -1101,28 +1105,49 @@ pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
     let mut cfg = CfgGraph::from(cfg);
 
     let get_out_edges_idx = |cfg: &CfgGraph, node_idx| {
-        let mut edges_idx: Vec<usize> = vec![];
-        let edges = cfg.edges_directed(node_idx, petgraph::Direction::Outgoing);
-        /*
-        for (_, edge_idx) in edges {
-            edges_idx.push(edge_idx);
-        }
-        */
+        use petgraph::visit::EdgeRef;
+        let edges_idx: Vec<_> = cfg
+            .edges_directed(node_idx, petgraph::Direction::Outgoing)
+            .map(|edge| edge.id())
+            .collect();
+        edges_idx
+    };
+    let get_in_edges_idx = |cfg: &CfgGraph, node_idx| {
+        use petgraph::visit::EdgeRef;
+        let edges_idx: Vec<_> = cfg
+            .edges_directed(node_idx, petgraph::Direction::Incoming)
+            .map(|edge| edge.id())
+            .collect();
         edges_idx
     };
 
     rto_indices
         .into_iter()
         .map(|idx| (idx, &cfg[idx]))
-        .for_each(|(node_idx, BasicBlock(_bbopts, insts))| {
-            // get list of successors
-            let out_edges_idx = get_out_edges_idx(&cfg, node_idx);
-            let liveset = LiveSet::new();
+        .for_each(|(node_idx, BasicBlock(_, insts))| {
+            // build live set from succs
+            let liveset = get_out_edges_idx(&cfg, node_idx)
+                .into_iter()
+                .map(|idx| {
+                    cfg.edge_weight(idx)
+                        .unwrap()
+                        .iter()
+                        .cloned()
+                        .collect::<Vec<String>>()
+                })
+                .flatten()
+                .collect::<HashSet<String>>();
+            let liveset = LiveSet::new().liveset(liveset);
             let lives = liveness_analysis_bb(
                 &BasicBlock(BBOpts::new("".to_string()), insts.clone()),
                 liveset,
             );
-            let last_livset = lives[0].clone();
+            let LiveSet(_, last_liveset) = &lives[0];
+            let edge_idx = get_in_edges_idx(&cfg, node_idx);
+            for idx in edge_idx {
+                let edge = cfg.edge_weight_mut(idx).unwrap();
+                *edge = last_liveset.clone();
+            }
         });
     Cfg(Options { stack, vars, regs }, cfg)
 }
