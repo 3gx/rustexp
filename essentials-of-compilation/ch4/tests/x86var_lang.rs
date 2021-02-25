@@ -112,6 +112,13 @@ mod x86var_lang {
         let x86cfg = liveness_analysis_cfg(x86cfg);
         println!("x86cfg= {:?}", x86cfg);
 
+        /*
+        let ginterfere = interference_graph_cfg(&x86cfg);
+        let gbias = move_bias_cfg(&x86cfg);
+        let regs = reg_alloc_g(&ginterfere, &gbias);
+        let x86cfg = x86cfg.regs(regs);
+        */
+
         let x86homes = X86Var::assign_homes_cfg(x86cfg);
         println!("***assgned_homes***:");
         print_cfg(&x86homes.1);

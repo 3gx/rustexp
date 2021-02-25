@@ -174,6 +174,13 @@ pub type CfgGraph = StableGraph<BasicBlock, HashSet<String>>;
 #[derive(Debug, Clone)]
 pub struct Cfg(pub Options, pub CfgGraph);
 
+impl Cfg {
+    pub fn regs(mut self, regs: BTreeMap<String, Reg>) -> Self {
+        self.0.regs = regs;
+        self
+    }
+}
+
 impl BlockVar {
     pub fn new() -> BlockVar {
         BlockVar(
@@ -1228,6 +1235,12 @@ pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
 
     g
 }
+
+/*
+pub fn interference_graph_g(cfg: &Cfg) -> IGraph {
+    unimplemented!();
+}
+*/
 
 // ---------------------------------------------------------------------------
 // graph coloring
