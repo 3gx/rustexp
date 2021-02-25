@@ -110,6 +110,7 @@ mod x86var_lang {
         */
 
         let x86cfg = liveness_analysis_cfg(x86cfg);
+        println!("x86cfg= {:?}", x86cfg);
 
         let x86homes = X86Var::assign_homes_cfg(x86cfg);
         println!("***assgned_homes***:");
@@ -127,13 +128,6 @@ mod x86var_lang {
         let asmstr = X86Var::printasm_cfg(&x86patched);
         println!("\n{}", asmstr);
         println!("result={:?}", v1);
-
-        let g = x86patched.clone();
-        use petgraph;
-        let mut g1 = petgraph::Graph::from(g.1);
-        g1.reverse();
-        let g2 = petgraph::stable_graph::StableGraph::from(g1);
-        println!("g2= {:?}", g2);
 
         /*
         let tail = cprog
