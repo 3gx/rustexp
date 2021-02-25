@@ -1115,7 +1115,9 @@ pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
 
     let mut cfg = cfg;
     rto_indices.into_iter().for_each(|node_idx| {
+        // get current bb from the Cfg
         let BasicBlock(_, insts) = &cfg[node_idx];
+
         // build live set from successor BBs
         let liveset = get_edges_idx(&cfg, node_idx, petgraph::Direction::Outgoing)
             .into_iter()
@@ -1128,16 +1130,21 @@ pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
             })
             .flatten()
             .collect::<HashSet<String>>();
-        let liveset = LiveSet::new().liveset(liveset);
+
+        // run liveness analysis of current bb
         let lives = liveness_analysis_bb(
             &BasicBlock(BBOpts::new("".to_string()), insts.clone()),
-            liveset,
+            LiveSet::new().liveset(liveset),
         );
-        let LiveSet(_, last_liveset) = &lives[0];
-        for idx in get_edges_idx(&cfg, node_idx, petgraph::Direction::Incoming) {
-            let edge = cfg.edge_weight_mut(idx).unwrap();
-            *edge = last_liveset.clone();
-        }
+
+        // assign live-set at entry to BB to incoming Cfg edges
+        let LiveSet(_, liveset_at_entry) = &lives[0];
+        get_edges_idx(&cfg, node_idx, petgraph::Direction::Incoming)
+            .into_iter()
+            .for_each(|idx| {
+                let edge = cfg.edge_weight_mut(idx).unwrap();
+                *edge = liveset_at_entry.clone();
+            });
     });
     Cfg(Options { stack, vars, regs }, cfg)
 }
