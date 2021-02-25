@@ -10,7 +10,7 @@ mod x86var_lang {
         }
     }
 
-    fn print_cfg<T: std::fmt::Debug, E: std::fmt::Debug>(cfg: &X86Var::CfgGraph<T, E>) {
+    fn print_cfg(cfg: &X86Var::CfgGraph) {
         for idx in cfg.node_indices() {
             println!("\t{:?}", cfg[idx]);
         }

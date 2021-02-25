@@ -3,7 +3,7 @@ mod macros;
 #[allow(unused_imports)]
 use macros::r#match;
 
-pub use petgraph::stable_graph::StableGraph as CfgGraph;
+pub use petgraph::stable_graph::StableGraph;
 
 #[path = "cvar_lang.rs"]
 pub mod cvar_lang;
@@ -164,8 +164,9 @@ pub struct Options {
 #[derive(Debug, Clone)]
 pub struct Program(pub Options, pub Vec<BasicBlock>);
 
+pub type CfgGraph = StableGraph<BasicBlock, Option<LiveSet>>;
 #[derive(Debug, Clone)]
-pub struct Cfg(pub Options, pub CfgGraph<BasicBlock, Option<LiveSet>>);
+pub struct Cfg(pub Options, pub CfgGraph);
 
 impl BlockVar {
     pub fn new() -> BlockVar {
@@ -1096,17 +1097,33 @@ pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
     let Cfg(Options { stack, vars, regs }, cfg) = prog;
     let mut cfg = petgraph::Graph::from(cfg);
     cfg.reverse();
-    petgraph::algo::toposort(&cfg, None)
-        .unwrap()
+    let rto_indices = petgraph::algo::toposort(&cfg, None).unwrap();
+    let mut cfg = CfgGraph::from(cfg);
+
+    let get_out_edges_idx = |cfg: &CfgGraph, node_idx| {
+        let mut edges_idx: Vec<usize> = vec![];
+        let edges = cfg.edges_directed(node_idx, petgraph::Direction::Outgoing);
+        /*
+        for (_, edge_idx) in edges {
+            edges_idx.push(edge_idx);
+        }
+        */
+        edges_idx
+    };
+
+    rto_indices
         .into_iter()
-        .map(|idx| &cfg[idx])
-        .for_each(|BasicBlock(_bbopts, insts)| {
-            liveness_analysis_bb(
+        .map(|idx| (idx, &cfg[idx]))
+        .for_each(|(node_idx, BasicBlock(_bbopts, insts))| {
+            // get list of successors
+            let out_edges_idx = get_out_edges_idx(&cfg, node_idx);
+            let liveset = LiveSet::new();
+            let lives = liveness_analysis_bb(
                 &BasicBlock(BBOpts::new("".to_string()), insts.clone()),
-                LiveSet::new(),
+                liveset,
             );
+            let last_livset = lives[0].clone();
         });
-    let cfg = CfgGraph::from(cfg);
     Cfg(Options { stack, vars, regs }, cfg)
 }
 
