@@ -1236,9 +1236,10 @@ pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
     g
 }
 
-type IGraph1 = petgraph::stable_graph::StableGraph<IVertex, (), petgraph::Undirected>;
+pub type IGraph1 = StableGraph<String, (), petgraph::Undirected>;
 pub fn interference_graph_cfg(cfg: &Cfg) -> IGraph1 {
-    unimplemented!()
+    let mut g: IGraph1 = IGraph1::default();
+    g
 }
 
 // ---------------------------------------------------------------------------
@@ -1379,7 +1380,8 @@ pub fn reg_alloc(ig: &IGraph, bg: &IGraph) -> BTreeMap<String, Reg> {
 }
 
 pub fn reg_alloc_g(ig: &IGraph1, bg: &IGraph1) -> BTreeMap<String, Reg> {
-    unimplemented!()
+    let mut regs = BTreeMap::new();
+    regs
 }
 
 // ---------------------------------------------------------------------------
@@ -1397,5 +1399,6 @@ pub fn move_bias(b: &BlockVar) -> IGraph {
 }
 
 pub fn move_bias_cfg(cfg: &Cfg) -> IGraph1 {
-    unimplemented!()
+    let mut g: IGraph1 = IGraph1::default();
+    g
 }
