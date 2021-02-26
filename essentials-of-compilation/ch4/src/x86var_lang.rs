@@ -964,7 +964,7 @@ pub fn printasm_cfg(prog: &Cfg) -> String {
         .map(|idx| {
             (
                 &cfg[idx],
-                cfg.neighbors_directed(idx, petgraph::Outgoing).next(),
+                cfg.neighbors_directed(idx, petgraph::Incoming).next(),
             )
         })
         .map(|(BasicBlock(bbopts, insts), ngb)| {
