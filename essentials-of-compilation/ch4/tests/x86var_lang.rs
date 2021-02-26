@@ -300,13 +300,16 @@ mod x86var_lang {
         let ginterfere = interference_graph_cfg(&x86cfg);
         let gbias = move_bias_cfg(&x86cfg);
         let regs = reg_alloc_g(&ginterfere, &gbias);
-        let x86cfg = x86cfg.regs(regs);
+        //let x86cfg = x86cfg.regs(regs);
         let x86val = X86Var::interp_cfg(&x86cfg);
         assert_eq!(X86Var::Value::from(v1), x86val);
-        let asmstr = X86Var::printasm_cfg(&x86cfg);
-        println!("\n{}", asmstr);
+        //let asmstr = X86Var::printasm_cfg(&x86cfg);
+        //println!("\n{}", asmstr);
 
         let x86homes = assign_homes_cfg(x86cfg);
+        //let asmstr = X86Var::printasm_cfg(&x86homes);
+        //println!("\n{}", asmstr);
+
         let x86val = X86Var::interp_cfg(&x86homes);
         assert_eq!(X86Var::Value::from(v1), x86val);
         let x86patched = X86Var::patch_cfg(x86homes);

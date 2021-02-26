@@ -877,7 +877,7 @@ fn print_x86inst(inst: &Inst) -> String {
             };
             format!("{}\t{}", opcode, arg)
         }
-        Callq(label, arity) => format!("callq\t{} ;{}-ary", label, arity),
+        Callq(label, _) => format!("callq\t{}", label),
         Retq => unimplemented!(),
         Jmp(label) => format!("jmp\t{}", label),
         JmpIf(cc, label) => format!("j{}\t{}", print_x86cc(cc), label),
