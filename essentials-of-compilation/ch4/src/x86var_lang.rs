@@ -982,16 +982,18 @@ pub fn printasm_cfg(prog: &Cfg) -> String {
                 .collect::<String>();
             prog.push_str(&insts_str);
 
-            // prettify
-            prog.push_str("\n");
-
             // if these are roots of Cfg , jump to conclusion at the end
             if ngb.is_none() {
-                prog.push_str("\t.globl main\n");
+                prog.push_str("\tjmp\tconclusion\n");
             }
+
+            // prettify
+            prog.push_str("\n");
             prog
         })
         .collect();
+    prog.push_str("\n");
+    prog.push_str("\t.globl _main\n");
     prog.push_str("main:\n");
     prog.push_str("\tpush %rbp\n");
     prog.push_str("\tmovq\t%rsp,%rbp\n");
