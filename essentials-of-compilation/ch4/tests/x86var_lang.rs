@@ -102,12 +102,6 @@ mod x86var_lang {
         use X86Var::*;
         let x86cfg = prog2cfg(x86prog);
         println!("x86cfg= {:?}", x86cfg);
-        /*
-        for (live_set, inst) in lives.iter().zip(inst_list.iter()) {
-            println!("{:<35}\t{:?}", format!("{:?}", inst), live_set);
-        }
-        println!("");
-        */
 
         let x86cfg = liveness_analysis_cfg(x86cfg);
         println!("x86cfg= {:?}", x86cfg);
@@ -133,80 +127,6 @@ mod x86var_lang {
         let asmstr = X86Var::printasm_cfg(&x86patched);
         println!("\n{}", asmstr);
         println!("result={:?}", v1);
-
-        /*
-        let tail = cprog
-            .0
-            .iter()
-            .find_map(
-                |CVar::BasicBlock(name, tail)| if name == "start" { Some(tail) } else { None },
-            )
-            .unwrap();
-        let x86var = X86Var::select_inst_tail(&tail, X86Var::BlockVar::new());
-        /*
-        use X86Var::BlockVar;
-        let BlockVar(_, inst_list) = &x86var;
-        for inst in inst_list {
-            println!("  {:?}", inst);
-        }
-        */
-        let val_x86var = X86Var::interp_block(&x86var);
-        //println!("eval(x86var)= {}", val_x86var);
-        assert_eq!(X86Var::Value::from(v1), val_x86var);
-
-        /*
-        use X86Var::*;
-        let lives = liveness_analysis(&x86var);
-        println!("\n{:-^35}\t{:?}", "instruction", "live set");
-        for (live_set, inst) in lives.iter().zip(inst_list.iter()) {
-            println!("{:<35}\t{:?}", format!("{:?}", inst), live_set);
-        }
-        println!("");
-
-        let g = interference_graph(&lives);
-        use std::collections::HashSet;
-        let mut gvars = HashSet::new();
-        for s in &g {
-            println!(" {:?}", s);
-            let IEdge(IVertex(a), IVertex(b)) = s;
-            gvars.insert(a.clone());
-            gvars.insert(b.clone());
-        }
-        println!("gvars= {:?}", gvars);
-
-        let gbias = move_bias(&x86var);
-        //let gbias = std::collections::BTreeSet::new();
-        for vtx in &gbias {
-            println!("bias: {:?}", vtx);
-        }
-
-        let regs = reg_alloc(&g, &gbias);
-        println!("\nregisters");
-        for (v, r) in &regs {
-            println!("var= {:?}  reg= {:?}", v, r);
-        }
-
-        let x86var = BlockVar::new()
-            .with_vars(x86var.0.vars.iter().cloned().collect())
-            .with_regs(regs)
-            .with_inst(x86var.1);
-        */
-        let x86var_home = X86Var::assign_homes(&x86var);
-        print_vec(&x86var_home.1);
-
-        let val_x86var_stack = X86Var::interp_block_stack(&x86var_home);
-        //println!("eval(x86var_home)= {}", val_x86var_stack);
-        assert_eq!(X86Var::Value::from(v1), val_x86var_stack);
-
-        let x86var_patched = X86Var::patch_x86(&x86var_home);
-        //println!("x86var_patched= {:?}", x86var_patched);
-        let val_x86var_patched = X86Var::interp_block_stack(&x86var_patched);
-        assert_eq!(X86Var::Value::from(v1), val_x86var_patched);
-        print_vec(&x86var_patched.1);
-
-        println!("\n{}", X86Var::print_x86(&x86var_patched).as_str());
-        println!("result={:?}", v1);
-        */
     }
 
     #[test]
@@ -317,58 +237,22 @@ mod x86var_lang {
         let x86val = X86Var::interp_prog(&x86prog);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
-        /*
         use X86Var::*;
-        let lives = liveness_analysis(&x86var);
-        println!("\n{:-^35}\t{:?}", "instruction", "live set");
-        for (live_set, inst) in lives.iter().zip(inst_list.iter()) {
-            println!("{:<35}\t{:?}", format!("{:?}", inst), live_set);
-        }
-        println!("");
-
-        let g = interference_graph(&lives);
-        use std::collections::HashSet;
-        let mut gvars = HashSet::new();
-        for s in &g {
-            println!(" {:?}", s);
-            let IEdge(IVertex(a), IVertex(b)) = s;
-            gvars.insert(a.clone());
-            gvars.insert(b.clone());
-        }
-        println!("gvars= {:?}", gvars);
-
-        let gbias = move_bias(&x86var);
-        //let gbias = std::collections::BTreeSet::new();
-        for vtx in &gbias {
-            println!("bias: {:?}", vtx);
-        }
-
-        let regs = reg_alloc(&g, &gbias);
-        println!("\nregisters");
-        for (v, r) in &regs {
-            println!("var= {:?}  reg= {:?}", v, r);
-        }
-
-        let x86var = BlockVar::new()
-            .with_vars(x86var.0.vars.iter().cloned().collect())
-            .with_regs(regs)
-            .with_inst(x86var.1);
-        let x86var_home = X86Var::assign_homes(&x86var);
-        print_vec(&x86var_home.1);
-
-        let val_x86var_stack = X86Var::interp_block_stack(&x86var_home);
-        //println!("eval(x86var_home)= {}", val_x86var_stack);
-        assert_eq!(v1, RVar::Value::Int(val_x86var_stack));
-
-        let x86var_patched = X86Var::patch_x86(&x86var_home);
-        //println!("x86var_patched= {:?}", x86var_patched);
-        let val_x86var_patched = X86Var::interp_block_stack(&x86var_patched);
-        assert_eq!(v1, RVar::Value::Int(val_x86var_patched));
-        print_vec(&x86var_patched.1);
-
-        println!("\n{}", X86Var::print_x86(&x86var_patched).as_str());
+        let x86cfg = prog2cfg(x86prog);
+        let x86cfg = liveness_analysis_cfg(x86cfg);
+        let ginterfere = interference_graph_cfg(&x86cfg);
+        let gbias = move_bias_cfg(&x86cfg);
+        let regs = reg_alloc_g(&ginterfere, &gbias);
+        let x86cfg = x86cfg.regs(regs);
+        let x86homes = assign_homes_cfg(x86cfg);
+        let x86val = X86Var::interp_cfg(&x86homes);
+        assert_eq!(X86Var::Value::from(v1), x86val);
+        let x86patched = X86Var::patch_cfg(x86homes);
+        let x86val = X86Var::interp_cfg(&x86patched);
+        assert_eq!(X86Var::Value::from(v1), x86val);
+        let asmstr = X86Var::printasm_cfg(&x86patched);
+        println!("\n{}", asmstr);
         println!("result={:?}", v1);
-        */
     }
 
     #[test]
@@ -409,6 +293,25 @@ mod x86var_lang {
 
         let x86val = X86Var::interp_prog(&x86prog);
         assert_eq!(X86Var::Value::from(v1), x86val);
+
+        use X86Var::*;
+        let x86cfg = prog2cfg(x86prog);
+        let x86cfg = liveness_analysis_cfg(x86cfg);
+        let ginterfere = interference_graph_cfg(&x86cfg);
+        let gbias = move_bias_cfg(&x86cfg);
+        let regs = reg_alloc_g(&ginterfere, &gbias);
+        let x86cfg = x86cfg.regs(regs);
+        let x86val = X86Var::interp_cfg(&x86cfg);
+        assert_eq!(X86Var::Value::from(v1), x86val);
+        let x86homes = assign_homes_cfg(x86cfg);
+        let x86val = X86Var::interp_cfg(&x86homes);
+        assert_eq!(X86Var::Value::from(v1), x86val);
+        let x86patched = X86Var::patch_cfg(x86homes);
+        let x86val = X86Var::interp_cfg(&x86patched);
+        assert_eq!(X86Var::Value::from(v1), x86val);
+        let asmstr = X86Var::printasm_cfg(&x86patched);
+        println!("\n{}", asmstr);
+        println!("result={:?}", v1);
     }
 
     #[test]

@@ -1007,10 +1007,14 @@ impl LiveSet {
 }
 
 fn liveness_analysis_bb(block: &BasicBlock, liveset: LiveSet) -> Vec<LiveSet> {
-    fn update_with_rdwr(live_set: &mut HashSet<String>, rd: &[&Arg], wr: &Arg) -> Option<String> {
+    fn update_with_rdwr(
+        live_set: &mut HashSet<String>,
+        rd: &[&Arg],
+        wr: Option<&Arg>,
+    ) -> Option<String> {
         // before_k = (after_k - wr) + rd;
         match wr {
-            Arg::Var(x) => live_set.remove(x),
+            Some(Arg::Var(x)) => live_set.remove(x),
             _ => false,
         };
         for arg in rd {
@@ -1020,7 +1024,7 @@ fn liveness_analysis_bb(block: &BasicBlock, liveset: LiveSet) -> Vec<LiveSet> {
             };
         }
         match wr {
-            Arg::Var(x) => Some(x.clone()),
+            Some(Arg::Var(x)) => Some(x.clone()),
             _ => None,
         }
     }
@@ -1029,23 +1033,23 @@ fn liveness_analysis_bb(block: &BasicBlock, liveset: LiveSet) -> Vec<LiveSet> {
         use Inst::*;
         let wr = match inst {
             Binary(op, a1, a2) => match op {
-                BinaryKind::Addq => update_with_rdwr(&mut live_set, &[a1, a2], a2),
-                BinaryKind::Subq => update_with_rdwr(&mut live_set, &[a1, a2], a2),
-                BinaryKind::Movq => update_with_rdwr(&mut live_set, &[a1], a2),
-                BinaryKind::Cmpq => unimplemented!(),
-                BinaryKind::Xorq => unimplemented!(),
-                BinaryKind::Movzbq => unimplemented!(),
+                BinaryKind::Addq => update_with_rdwr(&mut live_set, &[a1, a2], Some(a2)),
+                BinaryKind::Subq => update_with_rdwr(&mut live_set, &[a1, a2], Some(a2)),
+                BinaryKind::Movq => update_with_rdwr(&mut live_set, &[a1], Some(a2)),
+                BinaryKind::Cmpq => update_with_rdwr(&mut live_set, &[a1, a2], None),
+                BinaryKind::Xorq => update_with_rdwr(&mut live_set, &[a1], Some(a2)),
+                BinaryKind::Movzbq => update_with_rdwr(&mut live_set, &[a1], Some(a2)),
             },
             Unary(op, arg) => match op {
-                UnaryKind::Negq => update_with_rdwr(&mut live_set, &[arg], arg),
+                UnaryKind::Negq => update_with_rdwr(&mut live_set, &[arg], Some(arg)),
                 UnaryKind::Pushq => unimplemented!(),
                 UnaryKind::Popq => unimplemented!(),
                 UnaryKind::Set(..) => unimplemented!(),
             },
-            Callq(_, _) => unimplemented!(),
+            Callq(..) => None,
             Retq => None,
-            Jmp(_) => unimplemented!(),
-            JmpIf(..) => unimplemented!(),
+            Jmp(..) => None,
+            JmpIf(..) => None,
         };
         LiveSet(wr, live_set)
     };
