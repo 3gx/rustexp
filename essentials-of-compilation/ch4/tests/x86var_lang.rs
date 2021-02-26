@@ -69,7 +69,7 @@ mod x86var_lang {
     fn t1() {
         let (p1, v1) = {
             use RVar::*;
-            let p1 = r#let!([x add!(12, add!(neg!(20), neg!(add!(10,neg!(15)))))]
+            let p1 = r#let!([x add!(add!(neg!(20), neg!(add!(10,neg!(15)))),12)]
                     add!(add!(30, neg!(15)), x));
             let v1 = interp_exp(&vec![], &p1);
             (p1, v1)

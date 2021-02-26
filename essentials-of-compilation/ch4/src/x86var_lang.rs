@@ -1242,6 +1242,12 @@ pub struct IGraph1(
     pub StableGraph<String, (), petgraph::Undirected>,
 );
 
+impl IGraph1 {
+    pub fn node_index(&self, n: &str) -> Option<petgraph::prelude::NodeIndex> {
+        self.0.get(n).map(|x| *x)
+    }
+}
+
 pub fn interference_graph_cfg(cfg: &Cfg) -> IGraph1 {
     let Cfg(_, cfg) = cfg;
     let mut g = StableGraph::default();
@@ -1404,7 +1410,125 @@ pub fn reg_alloc(ig: &IGraph, bg: &IGraph) -> BTreeMap<String, Reg> {
 }
 
 pub fn reg_alloc_g(ig: &IGraph1, bg: &IGraph1) -> BTreeMap<String, Reg> {
+    type Color = usize;
+    type WorkSet = BTreeMap<String, BTreeSet<Color>>;
+    type ColorMap = BTreeMap<String, Color>;
+
+    let mut workset: WorkSet = BTreeMap::new();
+    for idx in ig.1.node_indices() {
+        workset.insert(ig.1[idx].clone(), BTreeSet::new());
+    }
+
+    fn find_candidates(w: &WorkSet) -> BTreeSet<String> {
+        let (_, mut satmax) = w.iter().next().unwrap();
+        let mut candidates = BTreeSet::<String>::new();
+        for (v, sat) in w.iter() {
+            if sat.len() == satmax.len() {
+                candidates.insert(v.clone());
+            } else if sat.len() > satmax.len() {
+                satmax = sat;
+                candidates = [v.to_string()].iter().cloned().collect();
+            }
+        }
+        candidates
+    }
+
+    fn find_adjacent(g: &IGraph1, v: &String) -> BTreeSet<String> {
+        let mut adjacent = BTreeSet::new();
+        if let Some(idx) = g.node_index(v) {
+            for ngb in g.1.neighbors(idx) {
+                adjacent.insert(g.1[ngb].clone());
+            }
+        }
+        adjacent
+    }
+
+    fn color_vertex(
+        adjacent: &BTreeSet<String>,
+        colormap: &ColorMap,
+        color: Option<Color>,
+    ) -> Option<Color> {
+        let can_use = |color| {
+            let mut can_use = true;
+            for v in adjacent {
+                if let Some(used_col) = colormap.get(v) {
+                    can_use = can_use && *used_col != color;
+                }
+            }
+            can_use
+        };
+        if let Some(color) = color {
+            if can_use(color) {
+                return Some(color);
+            }
+        }
+        let max_regs = 13;
+        for color in 0..max_regs {
+            if can_use(color) {
+                return Some(color);
+            }
+        }
+        return None;
+    }
+
+    fn pick_vertex(
+        candidates: &BTreeSet<String>,
+        colormap: &ColorMap,
+        bg: &IGraph1,
+    ) -> (String, Option<Color>) {
+        for edge_idx in bg.1.edge_indices() {
+            let (src, tgt) = bg.1.edge_endpoints(edge_idx).unwrap();
+            let a = &bg.1[src];
+            let b = &bg.1[tgt];
+            if !candidates.get(a).is_none() && !colormap.get(b).is_none() {
+                return (a.clone(), Some(*colormap.get(b).unwrap()));
+            }
+            if !candidates.get(b).is_none() && !colormap.get(a).is_none() {
+                return (b.clone(), Some(*colormap.get(a).unwrap()));
+            }
+        }
+        (candidates.iter().next().unwrap().clone(), None)
+    }
+
+    let mut colormap: ColorMap = BTreeMap::new();
+    while !workset.is_empty() {
+        let satset = find_candidates(&mut workset);
+        let (v, color) = pick_vertex(&satset, &colormap, bg);
+        println!("v= {:?}, candidate_color ={:?}", v, color);
+        workset.remove(&v);
+        let adjacent = find_adjacent(ig, &v);
+        let color = color_vertex(&adjacent, &colormap, color);
+        if let Some(color) = color {
+            assert_eq!(colormap.insert(v, color), None);
+            for v in adjacent {
+                if let Some(sat) = workset.get_mut(&v) {
+                    sat.insert(color);
+                }
+            }
+        }
+    }
+
+    let color2reg = vec![
+        Reg::rbx, // 0
+        Reg::rcx, // 1
+        Reg::rdx, // 2
+        Reg::rsi, // 3
+        Reg::rdi, // 4
+        Reg::r8,  // 5
+        Reg::r9,  // 6
+        Reg::r10, // 7
+        Reg::r11, // 8
+        Reg::r12, // 9
+        Reg::r13, // 10
+        Reg::r14, // 11
+        Reg::r15, // 12
+    ];
+
     let mut regs = BTreeMap::new();
+    for (v, color) in colormap {
+        println!("v= {:?} color={:?}", v, color);
+        regs.insert(v, color2reg[color]);
+    }
     regs
 }
 
