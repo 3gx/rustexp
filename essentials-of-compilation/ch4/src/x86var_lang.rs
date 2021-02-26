@@ -972,7 +972,7 @@ pub fn printasm_cfg(prog: &Cfg) -> String {
         .map(|idx| {
             (
                 &cfg[idx],
-                cfg.neighbors_directed(idx, petgraph::Incoming).next(),
+                cfg.neighbors_directed(idx, petgraph::Outgoing).next(),
             )
         })
         .map(|(BasicBlock(bbopts, insts), ngb)| {
@@ -1141,10 +1141,14 @@ pub fn liveness_analysis(prog: Program) -> Program {
 
 pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
     let Cfg(Options { stack, vars, regs }, cfg) = prog;
-    let mut cfg = petgraph::Graph::from(cfg);
-    cfg.reverse();
-    let rto_indices = petgraph::algo::toposort(&cfg, None).unwrap();
-    let cfg = CfgGraph::from(cfg);
+
+    let (mut cfg, rto_indices) = {
+        let mut cfg = petgraph::Graph::from(cfg);
+        cfg.reverse();
+        let rto = petgraph::algo::toposort(&cfg, None).unwrap();
+        cfg.reverse();
+        (CfgGraph::from(cfg), rto)
+    };
 
     let get_edges_idx = |cfg: &CfgGraph, node_idx, dir| {
         use petgraph::visit::EdgeRef;
@@ -1155,7 +1159,6 @@ pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
         edges_idx
     };
 
-    let mut cfg = cfg;
     rto_indices.into_iter().for_each(|node_idx| {
         // get current bb from the Cfg
 
