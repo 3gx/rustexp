@@ -819,6 +819,10 @@ pub fn patch_cfg(prog: Cfg) -> Cfg {
                 use Reg::{rax, rbp};
                 match inst {
                     Binary(BinaryKind::Movq, arg1, arg2) if arg1 == arg2 => vec![],
+                    Binary(BinaryKind::Movzbq, arg, Arg::Deref(rbp, idx)) => vec![
+                        Binary(BinaryKind::Movzbq, arg, Arg::Reg(rax)),
+                        Binary(BinaryKind::Movq, Arg::Reg(rax), Arg::Deref(rbp, idx)),
+                    ],
                     Binary(op, Arg::Deref(rbp, idx1), Arg::Deref(rbp, idx2)) => vec![
                         Binary(BinaryKind::Movq, Arg::Deref(rbp, idx1), Arg::Reg(rax)),
                         Binary(op, Arg::Reg(rax), Arg::Deref(rbp, idx2)),
@@ -845,11 +849,11 @@ fn print_x86arg(arg: &Arg) -> String {
         Arg::Deref(reg, idx) => format!("{}(%{:?})", idx, reg),
     }
 }
-fn print_x86cc(cc: &CndCode) -> String {
+fn print_x86cc(cc: &CndCode) -> &str {
     match cc {
-        CndCode::Eq => "e".to_string(),
-        CndCode::Lt => "l".to_string(),
-        CndCode::Gt => "g".to_string(),
+        CndCode::Eq => "e",
+        CndCode::Lt => "l",
+        CndCode::Gt => "g",
     }
 }
 
@@ -865,19 +869,23 @@ fn print_x86inst(inst: &Inst) -> String {
                 BinaryKind::Subq => "subq",
                 BinaryKind::Cmpq => "cmpq",
                 BinaryKind::Xorq => "xorq",
-                BinaryKind::Movzbq => "movbzq",
+                BinaryKind::Movzbq => "movzbq",
             };
             format!("{}\t{}, {}", opcode, arg1, arg2)
         }
         Unary(op, arg) => {
             let arg = print_x86arg(arg);
             let opcode = match op {
-                UnaryKind::Negq => "negq",
+                UnaryKind::Negq => "negq".to_string(),
+                UnaryKind::Set(cc) => format!("set{}", print_x86cc(cc)),
                 _ => panic!("unhadnled {:?}", inst),
             };
             format!("{}\t{}", opcode, arg)
         }
-        Callq(label, _) => format!("callq\t{}", label),
+        Callq(_label, _) => {
+            //format!("callq\t{}", label),
+            format!("int\t$3")
+        }
         Retq => unimplemented!(),
         Jmp(label) => format!("jmp\t{}", label),
         JmpIf(cc, label) => format!("j{}\t{}", print_x86cc(cc), label),
@@ -1061,7 +1069,7 @@ fn liveness_analysis_bb(block: &BasicBlock, liveset: LiveSet) -> Vec<LiveSet> {
                 UnaryKind::Negq => update_with_rdwr(&mut live_set, &[arg], Some(arg)),
                 UnaryKind::Pushq => unimplemented!(),
                 UnaryKind::Popq => unimplemented!(),
-                UnaryKind::Set(..) => unimplemented!(),
+                UnaryKind::Set(_) => update_with_rdwr(&mut live_set, &[], Some(arg)),
             },
             Callq(..) => None,
             Retq => None,
