@@ -896,6 +896,7 @@ pub fn print_x86(block: &BlockStack) -> String {
         prog.push_str(&("\t".to_string() + &inst + "\n"));
     }
     prog.push_str("\tjmp\tconclusion\n");
+
     prog.push_str("\n");
     prog.push_str("\t.globl _main\n");
     prog.push_str("_main:\n");
@@ -960,8 +961,13 @@ pub fn printasm_cfg(prog: &Cfg) -> String {
 
     let mut prog: String = cfg
         .node_indices()
-        .map(|idx| &cfg[idx])
-        .map(|BasicBlock(bbopts, insts)| {
+        .map(|idx| {
+            (
+                &cfg[idx],
+                cfg.neighbors_directed(idx, petgraph::Outgoing).next(),
+            )
+        })
+        .map(|(BasicBlock(bbopts, insts), ngb)| {
             let mut prog = String::new();
             // label
             prog.push_str(format!("{}:\n", bbopts.name).as_str());
@@ -976,18 +982,16 @@ pub fn printasm_cfg(prog: &Cfg) -> String {
                 .collect::<String>();
             prog.push_str(&insts_str);
 
-            // if it is start block, jump to conclusion at the end
-            if bbopts.name == "start" {
-                prog.push_str("\tjmp\tconclusion\n");
-                prog.push_str("\n");
-            }
-
             // prettify
             prog.push_str("\n");
+
+            // if these are roots of Cfg , jump to conclusion at the end
+            if ngb.is_none() {
+                prog.push_str("\t.globl main\n");
+            }
             prog
         })
         .collect();
-    prog.push_str("\t.globl main\n");
     prog.push_str("main:\n");
     prog.push_str("\tpush %rbp\n");
     prog.push_str("\tmovq\t%rsp,%rbp\n");
