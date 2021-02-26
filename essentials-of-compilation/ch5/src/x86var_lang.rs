@@ -123,17 +123,6 @@ pub enum Inst {
 // Basic Block
 
 #[derive(Debug, Clone)]
-pub struct BlockVarOpts {
-    pub vars: BTreeSet<String>,
-    pub regs: BTreeMap<String, Reg>,
-}
-#[derive(Debug, Clone)]
-pub struct BlockVar(pub BlockVarOpts, pub Vec<Inst>);
-
-// ---------------------------------------------------------------------------
-// Basic Block
-
-#[derive(Debug, Clone)]
 pub struct BasicBlock {
     name: String,
     vars: BTreeSet<String>,
@@ -151,6 +140,10 @@ impl BasicBlock {
             liveset: vec![],
             insts: vec![],
         }
+    }
+    pub fn name(mut self, name: String) -> Self {
+        self.name = name;
+        self
     }
     pub fn vars(mut self, vars: BTreeSet<String>) -> Self {
         self.vars = vars;
@@ -188,32 +181,6 @@ pub struct Cfg(pub Options, pub CfgGraph);
 impl Cfg {
     pub fn regs(mut self, regs: BTreeMap<String, Reg>) -> Self {
         self.0.regs = regs;
-        self
-    }
-}
-
-impl BlockVar {
-    pub fn new() -> BlockVar {
-        BlockVar(
-            BlockVarOpts {
-                vars: BTreeSet::new(),
-                regs: BTreeMap::new(),
-            },
-            vec![],
-        )
-    }
-    pub fn with_vars(mut self, vars: Vec<String>) -> BlockVar {
-        for v in vars {
-            self.0.vars.insert(v);
-        }
-        self
-    }
-    pub fn with_regs(mut self, regs: BTreeMap<String, Reg>) -> BlockVar {
-        self.0.regs = regs;
-        self
-    }
-    pub fn with_inst(mut self, inst: Vec<Inst>) -> BlockVar {
-        self.1 = inst;
         self
     }
 }
@@ -304,35 +271,35 @@ fn get_vars(inst: &Inst) -> BTreeSet<String> {
     vars
 }
 
-pub fn select_inst_tail(t: &CVar::Tail, block: BlockVar) -> BlockVar {
+pub fn select_inst_tail(t: &CVar::Tail, block: BasicBlock) -> BasicBlock {
     use CVar::Tail;
     use Reg::*;
 
     match t {
         Tail::Return(expr) => {
-            let BlockVar(mut info, mut list) = block;
+            let mut block = block;
             for inst in select_inst_assign(Arg::Reg(rax), expr) {
                 for v in get_vars(&inst) {
-                    info.vars.insert(v);
+                    block.vars.insert(v);
                 }
-                list.push(inst);
+                block.insts.push(inst);
             }
-            BlockVar(info, list)
+            block
         }
         Tail::Seq(stmt, tail) => {
-            let BlockVar(mut info, mut list) = block;
+            let mut block = block;
             for inst in select_inst_stmt(stmt) {
                 for v in get_vars(&inst) {
-                    info.vars.insert(v);
+                    block.vars.insert(v);
                 }
-                list.push(inst);
+                block.insts.push(inst);
             }
-            select_inst_tail(tail, BlockVar(info, list))
+            select_inst_tail(tail, block)
         }
         Tail::Goto(label) => {
-            let BlockVar(info, mut list) = block;
-            list.push(Inst::Jmp(label.clone()));
-            BlockVar(info, list)
+            let mut block = block;
+            block.insts.push(Inst::Jmp(label.clone()));
+            block
         }
         Tail::IfStmt(expr, thn, els) => match expr {
             CVar::Expr::BinaryOp(cmpop, a1, a2) => {
@@ -348,14 +315,15 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BlockVar) -> BlockVar {
                     Inst::JmpIf(cond, thn.clone()),
                     Inst::Jmp(els.clone()),
                 ];
-                let BlockVar(mut info, mut list) = block;
+
+                let mut block = block;
                 for inst in insts {
                     for v in get_vars(&inst) {
-                        info.vars.insert(v);
+                        block.vars.insert(v);
                     }
-                    list.push(inst);
+                    block.insts.push(inst);
                 }
-                BlockVar(info, list)
+                block
             }
             CVar::Expr::UnaryOp(CVar::UnaryOpKind::Not, a) => {
                 let a1 = select_inst_atom(a);
@@ -368,14 +336,14 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BlockVar) -> BlockVar {
                     Inst::Jmp(thn.clone()),
                 ];
 
-                let BlockVar(mut info, mut list) = block;
+                let mut block = block;
                 for inst in insts {
                     for v in get_vars(&inst) {
-                        info.vars.insert(v);
+                        block.vars.insert(v);
                     }
-                    list.push(inst);
+                    block.insts.push(inst);
                 }
-                BlockVar(info, list)
+                block
             }
             CVar::Expr::Atom(atom @ CVar::Atom::Var(_)) => {
                 let a1 = select_inst_atom(atom);
@@ -385,14 +353,14 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BlockVar) -> BlockVar {
                     Inst::JmpIf(CndCode::Eq, els.clone()),
                     Inst::Jmp(thn.clone()),
                 ];
-                let BlockVar(mut info, mut list) = block;
+                let mut block = block;
                 for inst in insts {
                     for v in get_vars(&inst) {
-                        info.vars.insert(v);
+                        block.vars.insert(v);
                     }
-                    list.push(inst);
+                    block.insts.push(inst);
                 }
-                BlockVar(info, list)
+                block
             }
             x @ _ => panic!("unhandled 'if' predicate {:?}", x),
         },
@@ -404,12 +372,12 @@ pub fn select_inst_prog(cprog: CVar::CProgram) -> Cfg {
     let mut x86bbs = Vec::new();
     let mut all_vars = BTreeSet::new();
     for CVar::BasicBlock(name, tail) in bbs {
-        let BlockVar(BlockVarOpts { vars, regs }, insts) = select_inst_tail(&tail, BlockVar::new());
-        assert_eq!(regs.len(), 0);
-        for var in &vars {
+        let block = select_inst_tail(&tail, BasicBlock::new(name));
+        assert_eq!(block.regs.len(), 0);
+        for var in &block.vars {
             all_vars.insert(var.clone());
         }
-        x86bbs.push(BasicBlock::new(name).vars(vars).insts(insts))
+        x86bbs.push(block)
     }
     let opts = Options {
         stack: 0,
