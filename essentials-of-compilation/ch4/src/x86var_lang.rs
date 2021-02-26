@@ -1245,12 +1245,11 @@ pub fn interference_graph_cfg(cfg: &Cfg) -> IGraph1 {
         let BasicBlock(bbopts, _) = &cfg[node_idx];
         let liveness = &bbopts.liveset;
         for LiveSet(_, set) in liveness {
-            for el in set {
-                var2node.entry(el).or_insert_with(|| g.add_node(el.clone()));
-            }
             for a in set {
                 for b in set {
-                    g.add_edge(var2node[a], var2node[b], ());
+                    let v1 = *var2node.entry(a).or_insert_with(|| g.add_node(a.clone()));
+                    let v2 = *var2node.entry(a).or_insert_with(|| g.add_node(b.clone()));
+                    g.add_edge(v1, v2, ());
                 }
             }
         }
@@ -1415,6 +1414,18 @@ pub fn move_bias(b: &BlockVar) -> IGraph {
 }
 
 pub fn move_bias_cfg(cfg: &Cfg) -> IGraph1 {
+    let Cfg(_, cfg) = cfg;
     let mut g: IGraph1 = IGraph1::default();
+    let mut var2node = HashMap::new();
+    for node_idx in cfg.node_indices() {
+        let BasicBlock(_, inst_list) = &cfg[node_idx];
+        for inst in inst_list {
+            if let Inst::Binary(BinaryKind::Movq, Arg::Var(x), Arg::Var(y)) = inst {
+                let v1 = *var2node.entry(x).or_insert_with(|| g.add_node(x.clone()));
+                let v2 = *var2node.entry(y).or_insert_with(|| g.add_node(y.clone()));
+                g.add_edge(v1, v2, ());
+            }
+        }
+    }
     g
 }
