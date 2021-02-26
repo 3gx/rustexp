@@ -119,6 +119,9 @@ pub enum Inst {
     JmpIf(CndCode, String),
 }
 
+// ---------------------------------------------------------------------------
+// Basic Block
+
 #[derive(Debug, Clone)]
 pub struct BlockVarOpts {
     pub vars: BTreeSet<String>,
@@ -127,10 +130,14 @@ pub struct BlockVarOpts {
 #[derive(Debug, Clone)]
 pub struct BlockVar(pub BlockVarOpts, pub Vec<Inst>);
 
+// ---------------------------------------------------------------------------
+// Basic Block
+
 #[derive(Debug, Clone)]
 pub struct BasicBlock {
     name: String,
     vars: BTreeSet<String>,
+    regs: BTreeMap<String, Reg>,
     liveset: Vec<LiveSet>,
     insts: Vec<Inst>,
 }
@@ -140,6 +147,7 @@ impl BasicBlock {
         BasicBlock {
             name,
             vars: BTreeSet::new(),
+            regs: BTreeMap::new(),
             liveset: vec![],
             insts: vec![],
         }
@@ -163,6 +171,9 @@ impl std::default::Default for BasicBlock {
         BasicBlock::new("".to_string())
     }
 }
+
+// ---------------------------------------------------------------------------
+// Program
 
 #[derive(Debug, Clone)]
 pub struct Options {
