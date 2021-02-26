@@ -1240,19 +1240,21 @@ pub type IGraph1 = StableGraph<String, (), petgraph::Undirected>;
 pub fn interference_graph_cfg(cfg: &Cfg) -> IGraph1 {
     let Cfg(_, cfg) = cfg;
     let mut g: IGraph1 = IGraph1::default();
+    let mut var2node = HashMap::new();
     for node_idx in cfg.node_indices() {
         let BasicBlock(bbopts, _) = &cfg[node_idx];
         let liveness = &bbopts.liveset;
         for LiveSet(_, set) in liveness {
-            // XXX: use o(n^2) algorithm, since the write-based algorithm is incorrectly implemented
+            for el in set {
+                var2node.entry(el).or_insert_with(|| g.add_node(el.clone()));
+            }
             for a in set {
                 for b in set {
-                    //                    g.insert(IEdge(IVertex(a.clone()), IVertex(b.clone())));
+                    g.add_edge(var2node[a], var2node[b], ());
                 }
             }
         }
     }
-
     g
 }
 
