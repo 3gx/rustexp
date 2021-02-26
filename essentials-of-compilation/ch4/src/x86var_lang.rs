@@ -838,13 +838,21 @@ pub fn patch_cfg(prog: Cfg) -> Cfg {
 fn print_x86arg(arg: &Arg) -> String {
     match arg {
         Arg::Imm(n) => format!("${}", n),
-        x @ Arg::Var(_) => panic!("Can't have Arg::Var in final x86 {:?}", x),
+        Arg::Var(x) => format!("{}", x),
         Arg::Reg(reg) => format!("%{:?}", reg),
         Arg::EFlag => String::new(),
         Arg::ByteReg(breg) => format!("%{:?}", breg),
         Arg::Deref(reg, idx) => format!("{}(%{:?})", idx, reg),
     }
 }
+fn print_x86cc(cc: &CndCode) -> String {
+    match cc {
+        CndCode::Eq => "e".to_string(),
+        CndCode::Lt => "l".to_string(),
+        CndCode::Gt => "g".to_string(),
+    }
+}
+
 fn print_x86inst(inst: &Inst) -> String {
     use Inst::*;
     match inst {
@@ -869,7 +877,10 @@ fn print_x86inst(inst: &Inst) -> String {
             };
             format!("{}\t{}", opcode, arg)
         }
-        _ => panic!("unhandled inst {:?}", inst),
+        Callq(label, arity) => format!("callq\t{} ;{}-ary", label, arity),
+        Retq => unimplemented!(),
+        Jmp(label) => format!("jmp\t{}", label),
+        JmpIf(cc, label) => format!("j{}\t{}", print_x86cc(cc), label),
     }
 }
 pub fn print_x86(block: &BlockStack) -> String {
