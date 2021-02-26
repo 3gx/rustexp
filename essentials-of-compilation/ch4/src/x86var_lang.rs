@@ -126,8 +126,6 @@ pub struct BlockVarOpts {
 }
 #[derive(Debug, Clone)]
 pub struct BlockVar(pub BlockVarOpts, pub Vec<Inst>);
-#[derive(Debug, Clone)]
-pub struct BlockStack(pub Int, pub Vec<Inst>);
 
 #[derive(Debug, Clone)]
 pub struct BBOpts {
@@ -549,19 +547,6 @@ pub fn interp_inst(
     }
 }
 
-pub fn interp_block(block: &BlockVar) -> Value {
-    let BlockVar(_, list) = block;
-    let mut env: Env = vec![];
-    let mut frame = vec![];
-    env = interp_inst(
-        &mut frame,
-        env,
-        list.iter().rev().cloned().collect(),
-        &BTreeMap::new(),
-    );
-    *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
-}
-
 pub fn interp_prog(prog: &Program) -> Value {
     let Program(
         Options {
@@ -611,45 +596,6 @@ pub fn interp_cfg(prog: &Cfg) -> Value {
         &prog,
     );
     *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
-}
-
-pub fn assign_homes(block: &BlockVar) -> BlockStack {
-    let BlockVar(BlockVarOpts { vars, regs }, list) = block;
-    let mut var2idx: HashMap<String, Int> = HashMap::new();
-    let mut stack_size = 0;
-    for var in vars {
-        assert!(!var2idx.contains_key(var));
-        if regs.get(var).is_none() {
-            stack_size += 8;
-            var2idx.insert(var.clone(), stack_size);
-        }
-    }
-
-    let home = |arg: &Arg| match arg {
-        Arg::Var(x) => {
-            if let Some(reg) = regs.get(x) {
-                Arg::Reg(*reg)
-            } else {
-                let idx = var2idx.get(x).unwrap();
-                Arg::Deref(Reg::rbp, -idx)
-            }
-        }
-        _ => arg.clone(),
-    };
-    let mut list1 = vec![];
-    for inst in list {
-        use Inst::*;
-        let inst1 = match inst {
-            Binary(op, arg1, arg2) => Binary(*op, home(arg1), home(arg2)),
-            Unary(op, arg) => Unary(*op, home(arg)),
-            Retq => Retq,
-            Jmp(_) => unimplemented!(),
-            JmpIf(..) => unimplemented!(),
-            Callq(..) => unimplemented!(),
-        };
-        list1.push(inst1);
-    }
-    BlockStack(stack_size, list1)
 }
 
 pub fn assign_homes_prog(prog: Program) -> Program {
@@ -747,42 +693,8 @@ pub fn assign_homes_cfg(prog: Cfg) -> Cfg {
     Cfg(Options { stack, vars, regs }, cfg)
 }
 
-pub fn interp_block_stack(block: &BlockStack) -> Value {
-    let BlockStack(stack_size, list) = block;
-    let mut frame = vec![];
-    frame.resize(*stack_size as usize, Value::Int(0));
-    let env = interp_inst(
-        &mut frame,
-        vec![],
-        list.iter().rev().cloned().collect(),
-        &BTreeMap::new(),
-    );
-    *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
-}
-
 // ---------------------------------------------------------------------------
 // patch instructions
-
-pub fn patch_x86(block: &BlockStack) -> BlockStack {
-    let BlockStack(stack_size, list) = block;
-    let mut list1 = vec![];
-    for inst in list {
-        use Inst::*;
-        use Reg::{rax, rbp};
-        let insts1 = match inst {
-            Binary(BinaryKind::Movq, arg1, arg2) if arg1 == arg2 => vec![],
-            Binary(op, Arg::Deref(rbp, idx1), Arg::Deref(rbp, idx2)) => vec![
-                Binary(BinaryKind::Movq, Arg::Deref(rbp, *idx1), Arg::Reg(rax)),
-                Binary(*op, Arg::Reg(rax), Arg::Deref(rbp, *idx2)),
-            ],
-            _ => vec![inst.clone()],
-        };
-        for inst in insts1 {
-            list1.push(inst)
-        }
-    }
-    BlockStack(*stack_size, list1)
-}
 
 pub fn patch_x86prog(prog: Program) -> Program {
     let Program(Options { stack, vars, regs }, bbs) = prog;
@@ -891,34 +803,6 @@ fn print_x86inst(inst: &Inst) -> String {
         JmpIf(cc, label) => format!("j{}\t{}", print_x86cc(cc), label),
     }
 }
-pub fn print_x86(block: &BlockStack) -> String {
-    let BlockStack(stack_size, list) = block;
-    let mut x86block = vec![];
-    for inst in list {
-        x86block.push(print_x86inst(inst))
-    }
-
-    let mut prog = String::new();
-    prog.push_str("start:\n");
-    for inst in x86block {
-        prog.push_str(&("\t".to_string() + &inst + "\n"));
-    }
-    prog.push_str("\tjmp\tconclusion\n");
-
-    prog.push_str("\n");
-    prog.push_str("\t.globl _main\n");
-    prog.push_str("_main:\n");
-    prog.push_str("\tpush %rbp\n");
-    prog.push_str("\tmovq\t%rsp,%rbp\n");
-    prog.push_str(format!("\tsubq\t${},%rsp\n", stack_size).as_str());
-    prog.push_str("\tjmp start\n");
-    prog.push_str("\n");
-    prog.push_str("conclusion:\n");
-    prog.push_str(format!("\taddq\t ${}, %rsp\n", stack_size).as_str());
-    prog.push_str("\tpopq\t%rbp\n");
-    prog.push_str("\tretq\n");
-    prog
-}
 
 pub fn print_x86prog(prog: &Program) -> String {
     let Program(
@@ -1015,6 +899,38 @@ pub fn printasm_cfg(prog: &Cfg) -> String {
     prog
 }
 
+pub fn prog2cfg(prog: Program) -> Cfg {
+    let Program(opts, bbs) = prog;
+    let mut cfg = CfgGraph::new();
+    let name2node: HashMap<_, _> = bbs
+        .into_iter()
+        .map(|bb| {
+            let name = bb.0.name.clone();
+            let idx = cfg.add_node(bb);
+            (name, idx)
+        })
+        .collect();
+    for (_, src_idx) in &name2node {
+        let BasicBlock(_, insts) = &cfg[*src_idx];
+        let nodes: BTreeSet<_> = insts
+            .iter()
+            .filter_map(|inst| match inst {
+                Inst::Jmp(label) => Some(label),
+                Inst::JmpIf(_, label) => Some(label),
+                _ => None,
+            })
+            .map(|label| name2node.get(label))
+            .collect();
+        for dst_idx in nodes {
+            let dst_idx = dst_idx.unwrap();
+            assert!(cfg.find_edge(*src_idx, *dst_idx).is_none());
+            cfg.add_edge(*src_idx, *dst_idx, HashSet::new());
+        }
+    }
+
+    Cfg(opts, cfg)
+}
+
 // ---------------------------------------------------------------------------
 // liveness analysis
 
@@ -1092,53 +1008,6 @@ fn liveness_analysis_bb(block: &BasicBlock, liveset: LiveSet) -> Vec<LiveSet> {
     live_set_vec
 }
 
-pub fn prog2cfg(prog: Program) -> Cfg {
-    let Program(opts, bbs) = prog;
-    let mut cfg = CfgGraph::new();
-    let name2node: HashMap<_, _> = bbs
-        .into_iter()
-        .map(|bb| {
-            let name = bb.0.name.clone();
-            let idx = cfg.add_node(bb);
-            (name, idx)
-        })
-        .collect();
-    for (_, src_idx) in &name2node {
-        let BasicBlock(_, insts) = &cfg[*src_idx];
-        let nodes: BTreeSet<_> = insts
-            .iter()
-            .filter_map(|inst| match inst {
-                Inst::Jmp(label) => Some(label),
-                Inst::JmpIf(_, label) => Some(label),
-                _ => None,
-            })
-            .map(|label| name2node.get(label))
-            .collect();
-        for dst_idx in nodes {
-            let dst_idx = dst_idx.unwrap();
-            assert!(cfg.find_edge(*src_idx, *dst_idx).is_none());
-            cfg.add_edge(*src_idx, *dst_idx, HashSet::new());
-        }
-    }
-
-    Cfg(opts, cfg)
-}
-
-pub fn liveness_analysis(prog: Program) -> Program {
-    let Program(opts, bbs) = prog;
-    let bbs = bbs
-        .into_iter()
-        .map(|BasicBlock(bbopts, insts)| {
-            let liveset = liveness_analysis_bb(
-                &BasicBlock(BBOpts::new("".to_string()), insts.clone()),
-                LiveSet::new(),
-            );
-            BasicBlock(bbopts.liveset(liveset), insts)
-        })
-        .collect();
-    Program(opts, bbs)
-}
-
 pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
     let Cfg(Options { stack, vars, regs }, cfg) = prog;
 
@@ -1204,70 +1073,6 @@ pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
 // ---------------------------------------------------------------------------
 // interference graph
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct IVertex(pub String);
-
-#[derive(Debug, Clone)]
-pub struct IEdge(pub IVertex, pub IVertex);
-
-impl Eq for IEdge {}
-
-// (a,b) = (b,a)
-impl PartialEq for IEdge {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0 && self.1 == other.1 || self.0 == other.1 && self.1 == other.0
-    }
-}
-
-// This will make it easier to find the right connections
-impl PartialEq<IVertex> for IEdge {
-    fn eq(&self, other: &IVertex) -> bool {
-        self.0 == *other || self.1 == *other
-    }
-}
-
-// order such that if (a,b) ~ (b,a)
-impl Ord for IEdge {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        use std::cmp::{max, min};
-        let v0 = (min(&self.0, &self.1), max(&self.0, &self.1));
-        let v1 = (min(&other.0, &other.1), max(&other.0, &other.1));
-        v0.cmp(&v1)
-    }
-}
-
-impl PartialOrd for IEdge {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-type IGraph = BTreeSet<IEdge>;
-pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
-    let mut g = BTreeSet::new();
-
-    for LiveSet(_wr, set) in liveness {
-        // XXX: use o(n^2) algorithm, since the write-based algorithm is incorrectly implemented
-        for a in set {
-            for b in set {
-                g.insert(IEdge(IVertex(a.clone()), IVertex(b.clone())));
-            }
-        }
-        /*
-        // write-based algorithm to build interference graph
-        if let Some(wr) = wr {
-            let mut set = set.clone();
-            set.remove(wr);
-            for el in set {
-                g.insert(IEdge(IVertex(wr.clone()), IVertex(el)));
-            }
-        }
-        */
-    }
-
-    g
-}
-
 #[derive(Debug, Clone)]
 pub struct IGraph1(
     pub HashMap<String, petgraph::prelude::NodeIndex>,
@@ -1305,141 +1110,31 @@ pub fn interference_graph_cfg(cfg: &Cfg) -> IGraph1 {
 }
 
 // ---------------------------------------------------------------------------
-// graph coloring
+// move bias graph
 
-pub fn reg_alloc(ig: &IGraph, bg: &IGraph) -> BTreeMap<String, Reg> {
-    type Color = usize;
-    type WorkSet = BTreeMap<String, BTreeSet<Color>>;
-    type ColorMap = BTreeMap<String, Color>;
-
-    let mut workset: WorkSet = BTreeMap::new();
-    for s in ig {
-        let IEdge(IVertex(a), IVertex(b)) = s.clone();
-        workset.insert(a, BTreeSet::new());
-        workset.insert(b, BTreeSet::new());
-    }
-
-    fn find_candidates(w: &WorkSet) -> BTreeSet<String> {
-        let (_, mut satmax) = w.iter().next().unwrap();
-        let mut candidates = BTreeSet::<String>::new();
-        for (v, sat) in w.iter() {
-            if sat.len() == satmax.len() {
-                candidates.insert(v.clone());
-            } else if sat.len() > satmax.len() {
-                satmax = sat;
-                candidates = [v.to_string()].iter().cloned().collect();
-            }
-        }
-        candidates
-    }
-
-    fn find_adjacent(g: &IGraph, v: &String) -> BTreeSet<String> {
-        let mut adjacent = BTreeSet::new();
-        for IEdge(IVertex(v1), IVertex(v2)) in g {
-            if v1 == v {
-                adjacent.insert(v2.clone());
-            } else if v2 == v {
-                adjacent.insert(v1.clone());
-            }
-        }
-        //println!(" -- v= {:?} adjacent= {:?}", v, adjacent);
-        adjacent
-    }
-
-    fn color_vertex(
-        adjacent: &BTreeSet<String>,
-        colormap: &ColorMap,
-        color: Option<Color>,
-    ) -> Option<Color> {
-        let can_use = |color| {
-            let mut can_use = true;
-            for v in adjacent {
-                if let Some(used_col) = colormap.get(v) {
-                    can_use = can_use && *used_col != color;
-                }
-            }
-            can_use
-        };
-        if let Some(color) = color {
-            if can_use(color) {
-                return Some(color);
-            }
-        }
-        let max_regs = 13;
-        for color in 0..max_regs {
-            if can_use(color) {
-                return Some(color);
-            }
-        }
-        return None;
-    }
-
-    fn pick_vertex(
-        candidates: &BTreeSet<String>,
-        colormap: &ColorMap,
-        bg: &IGraph,
-    ) -> (String, Option<Color>) {
-        for IEdge(IVertex(a), IVertex(b)) in bg {
-            /*
-            println!(
-                "a,b= {:?}, candidates={:?}, colormap={:?} - {:?}",
-                (a, b),
-                candidates,
-                colormap,
-                (candidates.get(a), colormap.get(a)),
-            );
-            */
-            if !candidates.get(a).is_none() && !colormap.get(b).is_none() {
-                return (a.clone(), Some(*colormap.get(b).unwrap()));
-            }
-            if !candidates.get(b).is_none() && !colormap.get(a).is_none() {
-                return (b.clone(), Some(*colormap.get(a).unwrap()));
-            }
-        }
-        (candidates.iter().next().unwrap().clone(), None)
-    }
-
-    let mut colormap: ColorMap = BTreeMap::new();
-    while !workset.is_empty() {
-        let satset = find_candidates(&mut workset);
-        let (v, color) = pick_vertex(&satset, &colormap, bg);
-        println!("v= {:?}, candidate_color ={:?}", v, color);
-        workset.remove(&v);
-        let adjacent = find_adjacent(ig, &v);
-        let color = color_vertex(&adjacent, &colormap, color);
-        if let Some(color) = color {
-            assert_eq!(colormap.insert(v, color), None);
-            for v in adjacent {
-                if let Some(sat) = workset.get_mut(&v) {
-                    sat.insert(color);
-                }
+pub fn move_bias_cfg(cfg: &Cfg) -> IGraph1 {
+    let Cfg(_, cfg) = cfg;
+    let mut g = StableGraph::default();
+    let mut var2node = HashMap::new();
+    for node_idx in cfg.node_indices() {
+        let BasicBlock(_, inst_list) = &cfg[node_idx];
+        for inst in inst_list {
+            if let Inst::Binary(BinaryKind::Movq, Arg::Var(x), Arg::Var(y)) = inst {
+                let v1 = *var2node
+                    .entry(x.clone())
+                    .or_insert_with(|| g.add_node(x.clone()));
+                let v2 = *var2node
+                    .entry(y.clone())
+                    .or_insert_with(|| g.add_node(y.clone()));
+                g.add_edge(v1, v2, ());
             }
         }
     }
-
-    let color2reg = vec![
-        Reg::rbx, // 0
-        Reg::rcx, // 1
-        Reg::rdx, // 2
-        Reg::rsi, // 3
-        Reg::rdi, // 4
-        Reg::r8,  // 5
-        Reg::r9,  // 6
-        Reg::r10, // 7
-        Reg::r11, // 8
-        Reg::r12, // 9
-        Reg::r13, // 10
-        Reg::r14, // 11
-        Reg::r15, // 12
-    ];
-
-    let mut regs = BTreeMap::new();
-    for (v, color) in colormap {
-        println!("v= {:?} color={:?}", v, color);
-        regs.insert(v, color2reg[color]);
-    }
-    regs
+    IGraph1(var2node, g)
 }
+
+// ---------------------------------------------------------------------------
+// graph coloring
 
 pub fn reg_alloc_g(ig: &IGraph1, bg: &IGraph1) -> BTreeMap<String, Reg> {
     type Color = usize;
@@ -1562,39 +1257,4 @@ pub fn reg_alloc_g(ig: &IGraph1, bg: &IGraph1) -> BTreeMap<String, Reg> {
         regs.insert(v, color2reg[color]);
     }
     regs
-}
-
-// ---------------------------------------------------------------------------
-// move bias graph
-
-pub fn move_bias(b: &BlockVar) -> IGraph {
-    let mut g = BTreeSet::new();
-    let BlockVar(_, inst_list) = b;
-    for inst in inst_list.clone() {
-        if let Inst::Binary(BinaryKind::Movq, Arg::Var(x), Arg::Var(y)) = inst {
-            g.insert(IEdge(IVertex(x), IVertex(y)));
-        }
-    }
-    g
-}
-
-pub fn move_bias_cfg(cfg: &Cfg) -> IGraph1 {
-    let Cfg(_, cfg) = cfg;
-    let mut g = StableGraph::default();
-    let mut var2node = HashMap::new();
-    for node_idx in cfg.node_indices() {
-        let BasicBlock(_, inst_list) = &cfg[node_idx];
-        for inst in inst_list {
-            if let Inst::Binary(BinaryKind::Movq, Arg::Var(x), Arg::Var(y)) = inst {
-                let v1 = *var2node
-                    .entry(x.clone())
-                    .or_insert_with(|| g.add_node(x.clone()));
-                let v2 = *var2node
-                    .entry(y.clone())
-                    .or_insert_with(|| g.add_node(y.clone()));
-                g.add_edge(v1, v2, ());
-            }
-        }
-    }
-    IGraph1(var2node, g)
 }
