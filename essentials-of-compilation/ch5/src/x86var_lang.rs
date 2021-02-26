@@ -165,9 +165,6 @@ pub struct Options {
     pub vars: BTreeSet<String>,
     pub regs: BTreeMap<String, Reg>,
 }
-#[derive(Debug, Clone)]
-pub struct Program(pub Options, pub Vec<BasicBlock>);
-
 pub type CfgGraph = StableGraph<BasicBlock, HashSet<String>>;
 #[derive(Debug, Clone)]
 pub struct Cfg(pub Options, pub CfgGraph);
@@ -290,6 +287,7 @@ fn get_vars(inst: &Inst) -> BTreeSet<String> {
     };
     vars
 }
+
 pub fn select_inst_tail(t: &CVar::Tail, block: BlockVar) -> BlockVar {
     use CVar::Tail;
     use Reg::*;
@@ -384,7 +382,8 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BlockVar) -> BlockVar {
         },
     }
 }
-pub fn select_inst_prog(cprog: CVar::CProgram) -> Program {
+
+pub fn select_inst_prog(cprog: CVar::CProgram) -> Cfg {
     let CVar::CProgram(bbs) = cprog;
     let mut x86bbs = Vec::new();
     let mut all_vars = BTreeSet::new();
@@ -396,14 +395,43 @@ pub fn select_inst_prog(cprog: CVar::CProgram) -> Program {
         }
         x86bbs.push(BasicBlock(BBOpts::new(name).vars(vars), insts))
     }
-    Program(
-        Options {
-            stack: 0,
-            vars: all_vars,
-            regs: BTreeMap::new(),
-        },
-        x86bbs,
-    )
+    let opts = Options {
+        stack: 0,
+        vars: all_vars,
+        regs: BTreeMap::new(),
+    };
+    let bbs = x86bbs;
+    let mut cfg = CfgGraph::new();
+    let name2node: HashMap<_, _> = bbs
+        .into_iter()
+        .map(|bb| {
+            let name = bb.0.name.clone();
+            let idx = cfg.add_node(bb);
+            (name, idx)
+        })
+        .collect();
+    for (_, src_idx) in &name2node {
+        let BasicBlock(_, insts) = &cfg[*src_idx];
+        let nodes: BTreeSet<_> = insts
+            .iter()
+            .filter_map(|inst| match inst {
+                Inst::Jmp(label) => Some(label),
+                Inst::JmpIf(_, label) => Some(label),
+                Inst::Unary(..) => None,
+                Inst::Binary(..) => None,
+                Inst::Callq(..) => None,
+                Inst::Retq => None,
+            })
+            .map(|label| name2node.get(label))
+            .collect();
+        for dst_idx in nodes {
+            let dst_idx = dst_idx.unwrap();
+            assert!(cfg.find_edge(*src_idx, *dst_idx).is_none());
+            cfg.add_edge(*src_idx, *dst_idx, HashSet::new());
+        }
+    }
+
+    Cfg(opts, cfg)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -547,31 +575,6 @@ pub fn interp_inst(
     }
 }
 
-pub fn interp_prog(prog: &Program) -> Value {
-    let Program(
-        Options {
-            stack,
-            vars: _,
-            regs: _,
-        },
-        bbs,
-    ) = prog;
-    let mut prog = BTreeMap::new();
-    for BasicBlock(bbopts, insts) in bbs.clone() {
-        prog.insert(bbopts.name, insts);
-    }
-    let insts = prog.get(&"start".to_string()).unwrap();
-    let mut env: Env = vec![];
-    let mut frame = vec![];
-    frame.resize(*stack as usize, Value::Int(0));
-    env = interp_inst(
-        &mut frame,
-        env,
-        insts.iter().rev().cloned().collect(),
-        &prog,
-    );
-    *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
-}
 pub fn interp_cfg(prog: &Cfg) -> Value {
     let Cfg(
         Options {
@@ -596,52 +599,6 @@ pub fn interp_cfg(prog: &Cfg) -> Value {
         &prog,
     );
     *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
-}
-
-pub fn assign_homes_prog(prog: Program) -> Program {
-    let Program(
-        Options {
-            stack: _,
-            vars,
-            regs,
-        },
-        bbs,
-    ) = prog;
-    let mut var2idx: HashMap<String, Int> = HashMap::new();
-    let mut stack = 0;
-    for var in &vars {
-        assert!(!var2idx.contains_key(var));
-        if regs.get(var).is_none() {
-            stack += 8;
-            var2idx.insert(var.clone(), stack);
-        }
-    }
-    let home = |arg: &Arg| match arg {
-        Arg::Var(x) => {
-            if let Some(reg) = regs.get(x) {
-                Arg::Reg(*reg)
-            } else {
-                let idx = var2idx.get(x).unwrap();
-                Arg::Deref(Reg::rbp, -idx)
-            }
-        }
-        _ => arg.clone(),
-    };
-    let mut new_bbs = vec![];
-    for BasicBlock(bbopts, insts) in bbs {
-        let mut new_insts = vec![];
-        for inst in insts {
-            use Inst::*;
-            let new_inst = match inst {
-                Binary(op, arg1, arg2) => Binary(op, home(&arg1), home(&arg2)),
-                Unary(op, arg) => Unary(op, home(&arg)),
-                x @ _ => x,
-            };
-            new_insts.push(new_inst);
-        }
-        new_bbs.push(BasicBlock(bbopts, new_insts))
-    }
-    Program(Options { stack, vars, regs }, new_bbs)
 }
 
 pub fn assign_homes_cfg(prog: Cfg) -> Cfg {
@@ -695,31 +652,6 @@ pub fn assign_homes_cfg(prog: Cfg) -> Cfg {
 
 // ---------------------------------------------------------------------------
 // patch instructions
-
-pub fn patch_x86prog(prog: Program) -> Program {
-    let Program(Options { stack, vars, regs }, bbs) = prog;
-    let mut new_bbs = vec![];
-    for BasicBlock(bbopts, insts) in bbs {
-        let mut new_insts: Vec<Inst> = vec![];
-        for inst in insts {
-            use Inst::*;
-            use Reg::{rax, rbp};
-            let new_inst = match inst {
-                Binary(BinaryKind::Movq, arg1, arg2) if arg1 == arg2 => vec![],
-                Binary(op, Arg::Deref(rbp, idx1), Arg::Deref(rbp, idx2)) => vec![
-                    Binary(BinaryKind::Movq, Arg::Deref(rbp, idx1), Arg::Reg(rax)),
-                    Binary(op, Arg::Reg(rax), Arg::Deref(rbp, idx2)),
-                ],
-                x @ _ => vec![x],
-            };
-            for inst in new_inst {
-                new_insts.push(inst)
-            }
-        }
-        new_bbs.push(BasicBlock(bbopts, new_insts))
-    }
-    Program(Options { stack, vars, regs }, new_bbs)
-}
 
 pub fn patch_cfg(prog: Cfg) -> Cfg {
     let Cfg(Options { stack, vars, regs }, mut cfg) = prog;
@@ -804,44 +736,7 @@ fn print_x86inst(inst: &Inst) -> String {
     }
 }
 
-pub fn print_x86prog(prog: &Program) -> String {
-    let Program(
-        Options {
-            stack,
-            vars: _,
-            regs: _,
-        },
-        bbs,
-    ) = prog;
-
-    let mut prog = String::new();
-    for BasicBlock(bbopts, insts) in bbs {
-        prog.push_str(format!("{}:\n", bbopts.name).as_str());
-        for inst in insts {
-            let inst_str = print_x86inst(inst);
-            prog.push_str(&("\t".to_string() + &inst_str + "\n"));
-        }
-        if bbopts.name == "start" {
-            prog.push_str("\tjmp\tconclusion\n");
-            prog.push_str("\n");
-        }
-        prog.push_str("\n");
-    }
-    prog.push_str("\t.globl main\n");
-    prog.push_str("main:\n");
-    prog.push_str("\tpush %rbp\n");
-    prog.push_str("\tmovq\t%rsp,%rbp\n");
-    prog.push_str(format!("\tsubq\t${},%rsp\n", stack).as_str());
-    prog.push_str("\tjmp start\n");
-    prog.push_str("\n");
-    prog.push_str("conclusion:\n");
-    prog.push_str(format!("\taddq\t ${}, %rsp\n", stack).as_str());
-    prog.push_str("\tpopq\t%rbp\n");
-    prog.push_str("\tretq\n");
-    prog
-}
-
-pub fn printasm_cfg(prog: &Cfg) -> String {
+pub fn print_x86prog(prog: &Cfg) -> String {
     let Cfg(
         Options {
             stack,
@@ -897,38 +792,6 @@ pub fn printasm_cfg(prog: &Cfg) -> String {
     prog.push_str("\tpopq\t%rbp\n");
     prog.push_str("\tretq\n");
     prog
-}
-
-pub fn prog2cfg(prog: Program) -> Cfg {
-    let Program(opts, bbs) = prog;
-    let mut cfg = CfgGraph::new();
-    let name2node: HashMap<_, _> = bbs
-        .into_iter()
-        .map(|bb| {
-            let name = bb.0.name.clone();
-            let idx = cfg.add_node(bb);
-            (name, idx)
-        })
-        .collect();
-    for (_, src_idx) in &name2node {
-        let BasicBlock(_, insts) = &cfg[*src_idx];
-        let nodes: BTreeSet<_> = insts
-            .iter()
-            .filter_map(|inst| match inst {
-                Inst::Jmp(label) => Some(label),
-                Inst::JmpIf(_, label) => Some(label),
-                _ => None,
-            })
-            .map(|label| name2node.get(label))
-            .collect();
-        for dst_idx in nodes {
-            let dst_idx = dst_idx.unwrap();
-            assert!(cfg.find_edge(*src_idx, *dst_idx).is_none());
-            cfg.add_edge(*src_idx, *dst_idx, HashSet::new());
-        }
-    }
-
-    Cfg(opts, cfg)
 }
 
 // ---------------------------------------------------------------------------
@@ -1074,18 +937,18 @@ pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
 // interference graph
 
 #[derive(Debug, Clone)]
-pub struct IGraph1(
+pub struct IGraph(
     pub HashMap<String, petgraph::prelude::NodeIndex>,
     pub StableGraph<String, (), petgraph::Undirected>,
 );
 
-impl IGraph1 {
+impl IGraph {
     pub fn node_index(&self, n: &str) -> Option<petgraph::prelude::NodeIndex> {
         self.0.get(n).map(|x| *x)
     }
 }
 
-pub fn interference_graph_cfg(cfg: &Cfg) -> IGraph1 {
+pub fn interference_graph_cfg(cfg: &Cfg) -> IGraph {
     let Cfg(_, cfg) = cfg;
     let mut g = StableGraph::default();
     let mut var2node = HashMap::new();
@@ -1106,13 +969,13 @@ pub fn interference_graph_cfg(cfg: &Cfg) -> IGraph1 {
             }
         }
     }
-    IGraph1(var2node, g)
+    IGraph(var2node, g)
 }
 
 // ---------------------------------------------------------------------------
 // move bias graph
 
-pub fn move_bias_cfg(cfg: &Cfg) -> IGraph1 {
+pub fn move_bias_cfg(cfg: &Cfg) -> IGraph {
     let Cfg(_, cfg) = cfg;
     let mut g = StableGraph::default();
     let mut var2node = HashMap::new();
@@ -1130,13 +993,13 @@ pub fn move_bias_cfg(cfg: &Cfg) -> IGraph1 {
             }
         }
     }
-    IGraph1(var2node, g)
+    IGraph(var2node, g)
 }
 
 // ---------------------------------------------------------------------------
 // graph coloring
 
-pub fn reg_alloc_g(ig: &IGraph1, bg: &IGraph1) -> BTreeMap<String, Reg> {
+pub fn reg_alloc_g(ig: &IGraph, bg: &IGraph) -> BTreeMap<String, Reg> {
     type Color = usize;
     type WorkSet = BTreeMap<String, BTreeSet<Color>>;
     type ColorMap = BTreeMap<String, Color>;
@@ -1160,7 +1023,7 @@ pub fn reg_alloc_g(ig: &IGraph1, bg: &IGraph1) -> BTreeMap<String, Reg> {
         candidates
     }
 
-    fn find_adjacent(g: &IGraph1, v: &String) -> BTreeSet<String> {
+    fn find_adjacent(g: &IGraph, v: &String) -> BTreeSet<String> {
         let mut adjacent = BTreeSet::new();
         if let Some(idx) = g.node_index(v) {
             for ngb in g.1.neighbors(idx) {
@@ -1201,7 +1064,7 @@ pub fn reg_alloc_g(ig: &IGraph1, bg: &IGraph1) -> BTreeMap<String, Reg> {
     fn pick_vertex(
         candidates: &BTreeSet<String>,
         colormap: &ColorMap,
-        bg: &IGraph1,
+        bg: &IGraph,
     ) -> (String, Option<Color>) {
         for edge_idx in bg.1.edge_indices() {
             let (src, tgt) = bg.1.edge_endpoints(edge_idx).unwrap();

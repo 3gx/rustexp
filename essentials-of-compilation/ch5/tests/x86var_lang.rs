@@ -4,65 +4,10 @@ mod x86var_lang {
     use CVar::{RVar, RVarAnf};
     use X86Var::cvar_lang as CVar;
 
-    fn print_vec<T: std::fmt::Debug>(list: &Vec<T>) {
-        for el in list {
-            println!("\t{:?}", el);
-        }
-    }
-
     fn print_cfg(cfg: &X86Var::CfgGraph) {
         for idx in cfg.node_indices() {
             println!("\t{:?}", cfg[idx]);
         }
-    }
-
-    #[test]
-    fn t0() {
-        let (p1, v1) = {
-            use RVar::*;
-            let p1 = r#let!([x add!(12, add!(neg!(20), neg!(add!(10,neg!(15)))))]
-                    add!(add!(30, neg!(15)), x));
-            let v1 = interp_exp(&vec![], &p1);
-            (p1, v1)
-        };
-        println!("p1= {:?} ", p1);
-
-        use RVarAnf::{interp_exp, rco_exp};
-        let p1anf = rco_exp(&p1);
-        println!("p1= {:?} ", p1anf);
-
-        let v1anf = interp_exp(&vec![], &p1anf);
-
-        println!("v1anf= {:?}", v1anf);
-        assert_eq!(v1, v1anf);
-
-        RVar::gensym_reset();
-        let cprog = CVar::explicate_expr(p1anf);
-        println!("prog= {:?}", cprog);
-
-        let v1clang = CVar::interp_prog(&cprog);
-        println!("v1clang= {:?}", v1clang);
-        assert_eq!(v1anf, v1clang);
-
-        let x86prog = X86Var::select_inst_prog(cprog);
-        print_vec(&x86prog.1);
-        let x86val = X86Var::interp_prog(&x86prog);
-        assert_eq!(X86Var::Value::from(v1), x86val);
-
-        let x86homes = X86Var::assign_homes_prog(x86prog);
-        println!("assgned_homes= {:?}", x86homes);
-        print_vec(&x86homes.1);
-        let x86val = X86Var::interp_prog(&x86homes);
-        assert_eq!(X86Var::Value::from(v1), x86val);
-
-        let x86patched = X86Var::patch_x86prog(x86homes);
-        println!("x86patched= {:?}", x86patched);
-        let x86val = X86Var::interp_prog(&x86patched);
-        assert_eq!(X86Var::Value::from(v1), x86val);
-
-        let asmstr = X86Var::print_x86prog(&x86patched);
-        println!("\n{}", asmstr);
-        println!("result={:?}", v1);
     }
 
     #[test]
@@ -94,14 +39,11 @@ mod x86var_lang {
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
 
-        let x86prog = X86Var::select_inst_prog(cprog);
-        print_vec(&x86prog.1);
-        let x86val = X86Var::interp_prog(&x86prog);
-        assert_eq!(X86Var::Value::from(v1), x86val);
-
         use X86Var::*;
-        let x86cfg = prog2cfg(x86prog);
-        println!("x86cfg= {:?}", x86cfg);
+        let x86cfg = select_inst_prog(cprog);
+        print_cfg(&x86cfg.1);
+        let x86val = interp_cfg(&x86cfg);
+        assert_eq!(X86Var::Value::from(v1), x86val);
 
         let x86cfg = liveness_analysis_cfg(x86cfg);
         println!("x86cfg= {:?}", x86cfg);
@@ -124,7 +66,7 @@ mod x86var_lang {
         let x86val = X86Var::interp_cfg(&x86patched);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
-        let asmstr = X86Var::printasm_cfg(&x86patched);
+        let asmstr = X86Var::print_x86prog(&x86patched);
         println!("\n{}", asmstr);
         println!("result={:?}", v1);
     }
@@ -232,13 +174,12 @@ mod x86var_lang {
         let v1clang = CVar::interp_prog(&cprog);
         assert_eq!(v1anf, v1clang);
 
-        let x86prog = X86Var::select_inst_prog(cprog);
-        print_vec(&x86prog.1);
-        let x86val = X86Var::interp_prog(&x86prog);
+        let x86cfg = X86Var::select_inst_prog(cprog);
+        print_cfg(&x86cfg.1);
+        let x86val = X86Var::interp_cfg(&x86cfg);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
         use X86Var::*;
-        let x86cfg = prog2cfg(x86prog);
         let x86cfg = liveness_analysis_cfg(x86cfg);
         let ginterfere = interference_graph_cfg(&x86cfg);
         let gbias = move_bias_cfg(&x86cfg);
@@ -250,7 +191,7 @@ mod x86var_lang {
         let x86patched = X86Var::patch_cfg(x86homes);
         let x86val = X86Var::interp_cfg(&x86patched);
         assert_eq!(X86Var::Value::from(v1), x86val);
-        let asmstr = X86Var::printasm_cfg(&x86patched);
+        let asmstr = X86Var::print_x86prog(&x86patched);
         println!("\n{}", asmstr);
         println!("result={:?}", v1);
     }
@@ -288,14 +229,13 @@ mod x86var_lang {
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
 
-        let x86prog = X86Var::select_inst_prog(cprog);
-        print_vec(&x86prog.1);
+        let x86cfg = X86Var::select_inst_prog(cprog);
+        print_cfg(&x86cfg.1);
 
-        let x86val = X86Var::interp_prog(&x86prog);
+        let x86val = X86Var::interp_cfg(&x86cfg);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
         use X86Var::*;
-        let x86cfg = prog2cfg(x86prog);
         let x86cfg = liveness_analysis_cfg(x86cfg);
         let ginterfere = interference_graph_cfg(&x86cfg);
         let gbias = move_bias_cfg(&x86cfg);
@@ -309,7 +249,7 @@ mod x86var_lang {
         let x86patched = X86Var::patch_cfg(x86homes);
         let x86val = X86Var::interp_cfg(&x86patched);
         assert_eq!(X86Var::Value::from(v1), x86val);
-        let asmstr = X86Var::printasm_cfg(&x86patched);
+        let asmstr = X86Var::print_x86prog(&x86patched);
         println!("\n{}", asmstr);
         println!("result={:?}", v1);
     }
@@ -347,14 +287,10 @@ mod x86var_lang {
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
 
-        let x86prog = X86Var::select_inst_prog(cprog);
-        print_vec(&x86prog.1);
-
-        let x86val = X86Var::interp_prog(&x86prog);
-        assert_eq!(X86Var::Value::from(v1), x86val);
-
         use X86Var::*;
-        let x86cfg = prog2cfg(x86prog);
+        let x86cfg = select_inst_prog(cprog);
+        print_cfg(&x86cfg.1);
+
         let x86cfg = liveness_analysis_cfg(x86cfg);
         let ginterfere = interference_graph_cfg(&x86cfg);
         let gbias = move_bias_cfg(&x86cfg);
@@ -369,7 +305,7 @@ mod x86var_lang {
         let x86patched = X86Var::patch_cfg(x86homes);
         let x86val = X86Var::interp_cfg(&x86patched);
         assert_eq!(X86Var::Value::from(v1), x86val);
-        let asmstr = X86Var::printasm_cfg(&x86patched);
+        let asmstr = X86Var::print_x86prog(&x86patched);
         println!("\n{}", asmstr);
         println!("result={:?}", v1);
     }
