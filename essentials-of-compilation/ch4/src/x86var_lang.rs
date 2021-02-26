@@ -1236,10 +1236,15 @@ pub fn interference_graph(liveness: &Vec<LiveSet>) -> IGraph {
     g
 }
 
-pub type IGraph1 = StableGraph<String, (), petgraph::Undirected>;
+#[derive(Debug, Clone)]
+pub struct IGraph1(
+    pub HashMap<String, petgraph::prelude::NodeIndex>,
+    pub StableGraph<String, (), petgraph::Undirected>,
+);
+
 pub fn interference_graph_cfg(cfg: &Cfg) -> IGraph1 {
     let Cfg(_, cfg) = cfg;
-    let mut g: IGraph1 = IGraph1::default();
+    let mut g = StableGraph::default();
     let mut var2node = HashMap::new();
     for node_idx in cfg.node_indices() {
         let BasicBlock(bbopts, _) = &cfg[node_idx];
@@ -1247,14 +1252,18 @@ pub fn interference_graph_cfg(cfg: &Cfg) -> IGraph1 {
         for LiveSet(_, set) in liveness {
             for a in set {
                 for b in set {
-                    let v1 = *var2node.entry(a).or_insert_with(|| g.add_node(a.clone()));
-                    let v2 = *var2node.entry(a).or_insert_with(|| g.add_node(b.clone()));
+                    let v1 = *var2node
+                        .entry(a.clone())
+                        .or_insert_with(|| g.add_node(a.clone()));
+                    let v2 = *var2node
+                        .entry(b.clone())
+                        .or_insert_with(|| g.add_node(b.clone()));
                     g.add_edge(v1, v2, ());
                 }
             }
         }
     }
-    g
+    IGraph1(var2node, g)
 }
 
 // ---------------------------------------------------------------------------
@@ -1415,17 +1424,21 @@ pub fn move_bias(b: &BlockVar) -> IGraph {
 
 pub fn move_bias_cfg(cfg: &Cfg) -> IGraph1 {
     let Cfg(_, cfg) = cfg;
-    let mut g: IGraph1 = IGraph1::default();
+    let mut g = StableGraph::default();
     let mut var2node = HashMap::new();
     for node_idx in cfg.node_indices() {
         let BasicBlock(_, inst_list) = &cfg[node_idx];
         for inst in inst_list {
             if let Inst::Binary(BinaryKind::Movq, Arg::Var(x), Arg::Var(y)) = inst {
-                let v1 = *var2node.entry(x).or_insert_with(|| g.add_node(x.clone()));
-                let v2 = *var2node.entry(y).or_insert_with(|| g.add_node(y.clone()));
+                let v1 = *var2node
+                    .entry(x.clone())
+                    .or_insert_with(|| g.add_node(x.clone()));
+                let v2 = *var2node
+                    .entry(y.clone())
+                    .or_insert_with(|| g.add_node(y.clone()));
                 g.add_edge(v1, v2, ());
             }
         }
     }
-    g
+    IGraph1(var2node, g)
 }
