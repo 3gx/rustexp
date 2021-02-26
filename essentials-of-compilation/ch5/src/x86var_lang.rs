@@ -128,17 +128,20 @@ pub struct BlockVarOpts {
 pub struct BlockVar(pub BlockVarOpts, pub Vec<Inst>);
 
 #[derive(Debug, Clone)]
-pub struct BBOpts {
+pub struct BasicBlock {
     name: String,
     vars: BTreeSet<String>,
     liveset: Vec<LiveSet>,
+    insts: Vec<Inst>,
 }
-impl BBOpts {
+
+impl BasicBlock {
     pub fn new(name: String) -> Self {
-        BBOpts {
+        BasicBlock {
             name,
             vars: BTreeSet::new(),
-            liveset: Vec::new(),
+            liveset: vec![],
+            insts: vec![],
         }
     }
     pub fn vars(mut self, vars: BTreeSet<String>) -> Self {
@@ -149,13 +152,15 @@ impl BBOpts {
         self.liveset = liveset;
         self
     }
+    pub fn insts(mut self, insts: Vec<Inst>) -> Self {
+        self.insts = insts;
+        self
+    }
 }
-#[derive(Debug, Clone)]
-pub struct BasicBlock(pub BBOpts, pub Vec<Inst>);
 
 impl std::default::Default for BasicBlock {
     fn default() -> Self {
-        BasicBlock(BBOpts::new("".to_string()), vec![])
+        BasicBlock::new("".to_string())
     }
 }
 
@@ -393,7 +398,7 @@ pub fn select_inst_prog(cprog: CVar::CProgram) -> Cfg {
         for var in &vars {
             all_vars.insert(var.clone());
         }
-        x86bbs.push(BasicBlock(BBOpts::new(name).vars(vars), insts))
+        x86bbs.push(BasicBlock::new(name).vars(vars).insts(insts))
     }
     let opts = Options {
         stack: 0,
@@ -405,13 +410,13 @@ pub fn select_inst_prog(cprog: CVar::CProgram) -> Cfg {
     let name2node: HashMap<_, _> = bbs
         .into_iter()
         .map(|bb| {
-            let name = bb.0.name.clone();
+            let name = bb.name.clone();
             let idx = cfg.add_node(bb);
             (name, idx)
         })
         .collect();
     for (_, src_idx) in &name2node {
-        let BasicBlock(_, insts) = &cfg[*src_idx];
+        let insts = &cfg[*src_idx].insts;
         let nodes: BTreeSet<_> = insts
             .iter()
             .filter_map(|inst| match inst {
@@ -585,8 +590,8 @@ pub fn interp_cfg(prog: &Cfg) -> Value {
         cfg,
     ) = prog;
     let mut prog = BTreeMap::new();
-    for BasicBlock(bbopts, insts) in cfg.node_indices().map(|idx| &cfg[idx]).cloned() {
-        prog.insert(bbopts.name, insts);
+    for bb in cfg.node_indices().map(|idx| &cfg[idx]).cloned() {
+        prog.insert(bb.name, bb.insts);
     }
     let insts = prog.get(&"start".to_string()).unwrap();
     let mut env: Env = vec![];
@@ -632,9 +637,9 @@ pub fn assign_homes_cfg(prog: Cfg) -> Cfg {
     };
     let cfg = {
         let mut cfg = cfg;
-        for BasicBlock(_, insts) in cfg.node_weights_mut() {
+        for bb in cfg.node_weights_mut() {
             let mut new_insts = vec![];
-            for inst in insts.iter_mut() {
+            for inst in bb.insts.iter_mut() {
                 use Inst::*;
                 let new_inst = match inst {
                     Binary(op, arg1, arg2) => Binary(*op, home(&arg1), home(&arg2)),
@@ -643,7 +648,7 @@ pub fn assign_homes_cfg(prog: Cfg) -> Cfg {
                 };
                 new_insts.push(new_inst);
             }
-            *insts = new_insts;
+            bb.insts = new_insts;
         }
         cfg
     };
@@ -655,8 +660,8 @@ pub fn assign_homes_cfg(prog: Cfg) -> Cfg {
 
 pub fn patch_cfg(prog: Cfg) -> Cfg {
     let Cfg(Options { stack, vars, regs }, mut cfg) = prog;
-    cfg.node_weights_mut().for_each(|BasicBlock(_, insts)| {
-        *insts = std::mem::take(insts)
+    cfg.node_weights_mut().for_each(|bb| {
+        bb.insts = std::mem::take(&mut bb.insts)
             .into_iter()
             .map(|inst| {
                 use Inst::*;
@@ -754,13 +759,14 @@ pub fn print_x86prog(prog: &Cfg) -> String {
                 cfg.neighbors_directed(idx, petgraph::Outgoing).next(),
             )
         })
-        .map(|(BasicBlock(bbopts, insts), ngb)| {
+        .map(|(bb, ngb)| {
             let mut prog = String::new();
             // label
-            prog.push_str(format!("{}:\n", bbopts.name).as_str());
+            prog.push_str(format!("{}:\n", bb.name).as_str());
 
             // instruction sequences
-            let insts_str = insts
+            let insts_str = bb
+                .insts
                 .iter()
                 .map(|inst| {
                     let inst_str = print_x86inst(inst);
@@ -858,9 +864,8 @@ fn liveness_analysis_bb(block: &BasicBlock, liveset: LiveSet) -> Vec<LiveSet> {
         LiveSet(wr, live_set)
     };
 
-    let BasicBlock(_, list) = block;
     let mut live_set_vec: Vec<LiveSet> = vec![liveset];
-    for inst in list.iter().rev() {
+    for inst in block.insts.iter().rev() {
         let live_set = update_live_set(inst, &live_set_vec.last().unwrap().1);
         live_set_vec.push(live_set);
     }
@@ -907,10 +912,10 @@ pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
             .flatten()
             .collect::<HashSet<String>>();
 
-        let BasicBlock(_, insts) = &cfg[node_idx];
+        let bb = &cfg[node_idx];
         // run liveness analysis of current bb
         let lives = liveness_analysis_bb(
-            &BasicBlock(BBOpts::new("".to_string()), insts.clone()),
+            &BasicBlock::new("".to_string()).insts(bb.insts.clone()),
             LiveSet::new().liveset(liveset),
         );
 
@@ -924,11 +929,8 @@ pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
             });
 
         // update bbopts
-        let BasicBlock(bbopts, insts) = std::mem::take(&mut cfg[node_idx]);
-        std::mem::swap(
-            &mut cfg[node_idx],
-            &mut BasicBlock(bbopts.liveset(lives), insts),
-        );
+        let bb = std::mem::take(&mut cfg[node_idx]);
+        std::mem::swap(&mut cfg[node_idx], &mut bb.liveset(lives));
     });
     Cfg(Options { stack, vars, regs }, cfg)
 }
@@ -953,8 +955,8 @@ pub fn interference_graph_cfg(cfg: &Cfg) -> IGraph {
     let mut g = StableGraph::default();
     let mut var2node = HashMap::new();
     for node_idx in cfg.node_indices() {
-        let BasicBlock(bbopts, _) = &cfg[node_idx];
-        let liveness = &bbopts.liveset;
+        let bb = &cfg[node_idx];
+        let liveness = &bb.liveset;
         for LiveSet(_, set) in liveness {
             for a in set {
                 for b in set {
@@ -980,8 +982,8 @@ pub fn move_bias_cfg(cfg: &Cfg) -> IGraph {
     let mut g = StableGraph::default();
     let mut var2node = HashMap::new();
     for node_idx in cfg.node_indices() {
-        let BasicBlock(_, inst_list) = &cfg[node_idx];
-        for inst in inst_list {
+        let bb = &cfg[node_idx];
+        for inst in &bb.insts {
             if let Inst::Binary(BinaryKind::Movq, Arg::Var(x), Arg::Var(y)) = inst {
                 let v1 = *var2node
                     .entry(x.clone())
