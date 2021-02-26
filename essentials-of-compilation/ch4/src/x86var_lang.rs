@@ -993,7 +993,7 @@ pub fn printasm_cfg(prog: &Cfg) -> String {
         })
         .collect();
     prog.push_str("\n");
-    prog.push_str("\t.globl _main\n");
+    prog.push_str("\t.globl main\n");
     prog.push_str("main:\n");
     prog.push_str("\tpush %rbp\n");
     prog.push_str("\tmovq\t%rsp,%rbp\n");
