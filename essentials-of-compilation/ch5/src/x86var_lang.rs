@@ -372,6 +372,7 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BasicBlock) -> BasicBlock {
                     Inst::JmpIf(CndCode::Eq, els.clone()),
                     Inst::Jmp(thn.clone()),
                 ];
+
                 let mut block = block;
                 for inst in insts {
                     for v in get_vars(&inst) {
@@ -398,9 +399,8 @@ pub fn select_inst_prog(cprog: CVar::CProgram) -> Program {
         }
         x86bbs.push(block)
     }
-    let prog = Program::new().vars(all_vars);
     let bbs = x86bbs;
-    let mut cfg = CfgGraph::new();
+    let mut cfg = CfgGraph::default();
     let name2node: HashMap<_, _> = bbs
         .into_iter()
         .map(|bb| {
@@ -430,7 +430,7 @@ pub fn select_inst_prog(cprog: CVar::CProgram) -> Program {
         }
     }
 
-    prog.cfg(cfg)
+    Program::new().vars(all_vars).cfg(cfg)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -649,8 +649,13 @@ pub fn assign_homes_cfg(prg: Program) -> Program {
 // patch instructions
 
 pub fn patch_cfg(prog: Program) -> Program {
-    let mut prog = prog;
-    prog.cfg.node_weights_mut().for_each(|bb| {
+    let Program {
+        stack,
+        vars,
+        regs,
+        mut cfg,
+    } = prog;
+    cfg.node_weights_mut().for_each(|bb| {
         bb.insts = std::mem::take(&mut bb.insts)
             .into_iter()
             .map(|inst| {
@@ -672,7 +677,12 @@ pub fn patch_cfg(prog: Program) -> Program {
             .flatten()
             .collect()
     });
-    prog
+    Program {
+        stack,
+        vars,
+        regs,
+        cfg,
+    }
 }
 
 // ---------------------------------------------------------------------------
