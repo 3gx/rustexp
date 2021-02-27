@@ -129,7 +129,7 @@ mod rvar_lang {
         let (e, v) = {
             use ch5::rvar_lang::*;
             let e = prog! {
-                (let [v (tuple (tuple 44))]
+                (let [v (tuple (tuple 44 45))]
                      (let [x (let [w (tuple 42)]
                                    (let [_ (tupleset v 0 w)] 0))]
                           (add x (tupleref (tupleref v 0) 0))))

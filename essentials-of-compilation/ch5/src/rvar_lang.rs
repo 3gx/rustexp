@@ -245,12 +245,14 @@ pub macro prog {
     ((tuple $($tt:tt)*)) => {
         __mcall!(__tuple_expr, prog!{$($tt)*})
     },
-    ((tupleset $($tt:tt)*)) => {
-        __mcall!(__tupleset_expr, prog!{$($tt)*})
-   },
+//    ((tupleset $($tt:tt)*)) => {
+ //       __mcall!(__tupleset_expr, prog!{$($tt)*})
+  //  },
+//    ($id:ident  $($tt:tt)*) =>
+//    (
 //    ($ident:ident) => {strinify!($ident).into_term()},
 //    ($expr:expr) => {$expr.into_term()},
-    ($($tt:tt)*) => {42},
+    ($($tt:tt)*) => {424242},
 }
 
 impl IntoTerm for Int {
