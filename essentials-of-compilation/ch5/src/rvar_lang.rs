@@ -234,24 +234,58 @@ pub macro __tuple_expr($($val:expr),*) {Expr::Tuple(vec![$($val.into_term()),*])
 pub macro __tupleset_expr($tu:expr, $idx:expr, $val:expr) {
     Expr::TupleSet(Box::new($tu.into_term()), $idx, Box::new($val.into_term()))
 }
+pub macro __tupleref_expr($tu:expr, $idx:expr) {
+    Expr::TupleRef(Box::new($tu.into_term()), $idx)
+}
+
+pub macro __arg {
+    ($macro:ident ( $($e:tt)* ) ) => { prog!{$($e)*} } ,
+    ($id:ident) => { strinify!($id) },
+    ($e:expr) => { $e },
+}
+
+pub macro __mcall1 {
+    ((@macro $macro:ident) (@in) (@out $($out:tt)*)) => { $macro!{$($out)*} },
+    ((@macro $macro:ident) (@in $ident:ident, $($tail:tt)*) (@out $($out:tt)*)) => {
+             __mcall1!((@macro $macro)
+                      (@in $($tail)*)
+                      (@out $($out)* stringify!($ident),))
+    },
+    ((@macro $macro:ident) (@in $expr:expr) (@out $($out:tt)*)) => {
+             __mcall1!((@macro $macro)
+                      (@in)
+                      (@out $($out)* $expr))
+    },
+    ((@macro $macro:ident) (@in $expr:expr, $($tail:tt)*) (@out $($out:tt)*)) => {
+             __mcall1!((@macro $macro)
+                      (@in $($tail)*)
+                      (@out $($out)* $expr,))
+    },
+    ($macro:ident, $($tt:tt)*) => {__mcall1!((@macro $macro) (@in $($tt)*) (@out))},
+}
 
 pub macro prog {
-    ((let [$id:ident $($body:tt)*] $($tail:tt)*)) => {
-        __mcall!(__let_expr, $id, prog!{$($body)*}, prog!{$($tail)*})
+    ((let [$id:ident $body:tt] $tail:tt)) => {
+        __mcall!(__let_expr, $id, prog!{$body}, prog!{$tail})
     },
-    ((let [_ $($body:tt)*] $($tail:tt)*)) => {
-        __mcall!(__let_expr, "_", prog!{$($body)*}, prog!{$($tail)*})
+    ((let [_ $body:tt] $tail:tt)) => {
+        __mcall!(__let_expr, "_", prog!{$body}, prog!{$tail})
     },
     ((tuple $($tt:tt)*)) => {
-        __mcall!(__tuple_expr, prog!{$($tt)*})
+        __mcall!(__tuple_expr, $(prog!{$tt}),*)
     },
-//    ((tupleset $($tt:tt)*)) => {
- //       __mcall!(__tupleset_expr, prog!{$($tt)*})
-  //  },
+    ((tupleset $($tt:tt)*)) => {
+        __mcall!(__tupleset_expr, $(prog!{$tt}),*)
+    },
+    ((tupleref $($tt:tt)*)) => {
+        __mcall!(__tupleref_expr, $(prog!{$tt}),*)
+    },
 //    ($id:ident  $($tt:tt)*) =>
 //    (
 //    ($ident:ident) => {strinify!($ident).into_term()},
 //    ($expr:expr) => {$expr.into_term()},
+//    ($id:ident) => { strinify!($id) },
+//    ($e:expr) => { $e },
     ($($tt:tt)*) => {424242},
 }
 
