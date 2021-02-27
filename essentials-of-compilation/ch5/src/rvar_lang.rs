@@ -399,7 +399,7 @@ pub fn uniquify(p: Program) -> Program {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
     Bool,
     Int,
@@ -410,7 +410,7 @@ pub fn type_expr(ctx: &Ctx, expr: &Expr) -> Type {
     match expr {
         Expr::Int(_) => Type::Int,
         Expr::Bool(_) => Type::Bool,
-        Expr::Var(x) => *sym_get(ctx, x).unwrap(),
+        Expr::Var(x) => sym_get(ctx, x).unwrap().clone(),
         Expr::Let(x, expr, body) => {
             let ty = type_expr(ctx, expr);
             let ctx = sym_set(ctx, x, &ty);
