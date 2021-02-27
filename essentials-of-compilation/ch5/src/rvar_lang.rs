@@ -186,8 +186,35 @@ pub macro tupleset {
                        $idx,
                        Box::new(stringify!($val).into_term()))},
 }
-pub macro tuple {
+pub macro __mcall {
+    ((@macro $macro:ident) (@in) (@out $($out:tt)*)) => { $macro!{$($out)*} },
+    ((@macro $macro:ident) (@in $ident:ident) (@out $($out:tt)*)) => {
+             __mcall!((@macro $macro)
+                      (@in)
+                      (@out $($out)* stringify!($ident)))
+    },
+    ((@macro $macro:ident) (@in $ident:ident, $($tail:tt)*) (@out $($out:tt)*)) => {
+             __mcall!((@macro $macro)
+                      (@in $($tail)*)
+                      (@out $($out)* stringify!($ident),))
+    },
+    ((@macro $macro:ident) (@in $expr:expr) (@out $($out:tt)*)) => {
+             __mcall!((@macro $macro)
+                      (@in)
+                      (@out $($out)* $expr))
+    },
+    ((@macro $macro:ident) (@in $expr:expr, $($tail:tt)*) (@out $($out:tt)*)) => {
+             __mcall!((@macro $macro)
+                      (@in $($tail)*)
+                      (@out $($out)* $expr,))
+    },
+    ($macro:ident, $($tt:tt)*) => {__mcall!((@macro $macro) (@in $($tt)*) (@out))},
+}
+pub macro tuple_impl {
     ($($val:expr),*) => {Expr::Tuple(vec![$($val.into_term()),*])},
+}
+pub macro tuple {
+    ($($tt:tt)*) => {__mcall!(tuple_impl, $($tt)*)},
 }
 
 #[derive(Debug, Clone)]
