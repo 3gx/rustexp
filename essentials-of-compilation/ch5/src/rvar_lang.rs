@@ -171,21 +171,6 @@ pub macro or {
                                      BinaryOpKind::Or,) ) }
 }
 
-pub macro tupleref {
-    ($tu:ident, $idx:expr) => {Expr::TupleRef(Box::new(stringify!($tu).into_term()),
-                                            $idx)},
-    ($tu:expr, $idx:expr) => {Expr::TupleRef(tu.into_Term(), $idx)},
-}
-pub macro tupleset {
-    ($tu:ident, $idx:expr, $val:expr) => {
-        Expr::TupleSet(Box::new(stringify!($tu).into_term()),
-                       $idx,
-                       Box::new($val.into_term()))},
-    ($tu:ident, $idx:expr, $val:ident) => {
-        Expr::TupleSet(Box::new(stringify!($tu).into_term()),
-                       $idx,
-                       Box::new(stringify!($val).into_term()))},
-}
 pub macro __mcall {
     ((@macro $macro:ident) (@in) (@out $($out:tt)*)) => { $macro!{$($out)*} },
     ((@macro $macro:ident) (@in $ident:ident) (@out $($out:tt)*)) => {
@@ -210,12 +195,19 @@ pub macro __mcall {
     },
     ($macro:ident, $($tt:tt)*) => {__mcall!((@macro $macro) (@in $($tt)*) (@out))},
 }
-pub macro tuple_impl {
-    ($($val:expr),*) => {Expr::Tuple(vec![$($val.into_term()),*])},
+
+pub macro tuple_impl($($val:expr),*) {Expr::Tuple(vec![$($val.into_term()),*]) }
+pub macro tuple($($tt:tt)*)  {__mcall!(tuple_impl, $($tt)*)}
+
+pub macro tupleset_impl($tu:expr, $idx:expr, $val:expr) {
+    Expr::TupleSet(Box::new($tu.into_term()), $idx, Box::new($val.into_term()))
 }
-pub macro tuple {
-    ($($tt:tt)*) => {__mcall!(tuple_impl, $($tt)*)},
+pub macro tupleset($($tt:tt)*) {__mcall!(tupleset_impl, $($tt)*)}
+
+pub macro tupleref_impl($tu:expr, $idx:expr) {
+    Expr::TupleRef(Box::new($tu.into_term()), $idx)
 }
+pub macro tupleref($($tt:tt)*) {__mcall!(tupleref_impl, $($tt)*)}
 
 #[derive(Debug, Clone)]
 pub struct Program(pub Expr);
