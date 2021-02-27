@@ -15,15 +15,23 @@ mod rvar_lang {
         let v1 = interp_program(&p1);
         println!("v1= {:?} ", v1);
 
-        let p1 = program![r#let!(
+        let p = program![r#let!(
             [x read!()]
             r#let!([y read!()]  add!(x, neg!(y)))
         )];
+        let p1 = expr! {
+            (let [x (read)]
+                 (let [y (read)] (add x (neg y))))
+        };
+        let p1 = program! {p1};
         println!("p1= {:?} ", p1);
+        assert_eq!(p, p1);
         let t = true;
         let t = !t;
         if t {
             println!("inter 52<enter>, 10<enter>, should get 42");
+            use std::io::{self, Write};
+            io::stdout().flush().unwrap();
             let v1 = interp_program(&p1);
             println!("v1= {:?} ", v1);
         }

@@ -216,7 +216,7 @@ pub macro hastype_impl($e:expr, $t:expr) {
 }
 pub macro hastype($($tt:tt)*) {__mcall!(hastype_impl, $($tt)*)}
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Program(pub Expr);
 
 pub macro program($e:expr) {
@@ -308,6 +308,7 @@ pub macro expr {
                  Box::new(expr!{$then}.into_term()),
                  Box::new(expr!{$else}.into_term()))
     },
+    ((read)) => { Expr::Read },
     ($id:ident) => { stringify!($id) },
     ($e:expr) => { $e },
 }
