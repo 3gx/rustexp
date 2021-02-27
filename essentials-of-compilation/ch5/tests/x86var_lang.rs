@@ -41,7 +41,7 @@ mod x86var_lang {
 
         use X86Var::*;
         let x86cfg = select_inst_prog(cprog);
-        print_cfg(&x86cfg.1);
+        print_cfg(&x86cfg.cfg);
         let x86val = interp_cfg(&x86cfg);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
@@ -55,14 +55,14 @@ mod x86var_lang {
 
         let x86homes = X86Var::assign_homes_cfg(x86cfg);
         println!("***assgned_homes***:");
-        print_cfg(&x86homes.1);
+        print_cfg(&x86homes.cfg);
 
         let x86val = X86Var::interp_cfg(&x86homes);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
         let x86patched = X86Var::patch_cfg(x86homes);
         println!("***patched_cfg***:");
-        print_cfg(&x86patched.1);
+        print_cfg(&x86patched.cfg);
         let x86val = X86Var::interp_cfg(&x86patched);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
@@ -175,7 +175,7 @@ mod x86var_lang {
         assert_eq!(v1anf, v1clang);
 
         let x86cfg = X86Var::select_inst_prog(cprog);
-        print_cfg(&x86cfg.1);
+        print_cfg(&x86cfg.cfg);
         let x86val = X86Var::interp_cfg(&x86cfg);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
@@ -230,7 +230,7 @@ mod x86var_lang {
         assert_eq!(v1anf, v1clang);
 
         let x86cfg = X86Var::select_inst_prog(cprog);
-        print_cfg(&x86cfg.1);
+        print_cfg(&x86cfg.cfg);
 
         let x86val = X86Var::interp_cfg(&x86cfg);
         assert_eq!(X86Var::Value::from(v1), x86val);
@@ -289,7 +289,7 @@ mod x86var_lang {
 
         use X86Var::*;
         let x86cfg = select_inst_prog(cprog);
-        print_cfg(&x86cfg.1);
+        print_cfg(&x86cfg.cfg);
 
         let x86cfg = liveness_analysis_cfg(x86cfg);
         let ginterfere = interference_graph_cfg(&x86cfg);

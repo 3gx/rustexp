@@ -168,19 +168,38 @@ impl std::default::Default for BasicBlock {
 // ---------------------------------------------------------------------------
 // Program
 
+pub type CfgGraph = StableGraph<BasicBlock, HashSet<String>>;
 #[derive(Debug, Clone)]
-pub struct Options {
+pub struct Program {
     pub stack: Int,
     pub vars: BTreeSet<String>,
     pub regs: BTreeMap<String, Reg>,
+    pub cfg: CfgGraph,
 }
-pub type CfgGraph = StableGraph<BasicBlock, HashSet<String>>;
-#[derive(Debug, Clone)]
-pub struct Cfg(pub Options, pub CfgGraph);
 
-impl Cfg {
+impl Program {
+    pub fn new() -> Self {
+        Program {
+            stack: 0,
+            vars: BTreeSet::new(),
+            regs: BTreeMap::new(),
+            cfg: CfgGraph::default(),
+        }
+    }
+    pub fn stack(mut self, stack: Int) -> Self {
+        self.stack = stack;
+        self
+    }
+    pub fn vars(mut self, vars: BTreeSet<String>) -> Self {
+        self.vars = vars;
+        self
+    }
     pub fn regs(mut self, regs: BTreeMap<String, Reg>) -> Self {
-        self.0.regs = regs;
+        self.regs = regs;
+        self
+    }
+    pub fn cfg(mut self, cfg: CfgGraph) -> Self {
+        self.cfg = cfg;
         self
     }
 }
@@ -367,7 +386,7 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BasicBlock) -> BasicBlock {
     }
 }
 
-pub fn select_inst_prog(cprog: CVar::CProgram) -> Cfg {
+pub fn select_inst_prog(cprog: CVar::CProgram) -> Program {
     let CVar::CProgram(bbs) = cprog;
     let mut x86bbs = Vec::new();
     let mut all_vars = BTreeSet::new();
@@ -379,11 +398,7 @@ pub fn select_inst_prog(cprog: CVar::CProgram) -> Cfg {
         }
         x86bbs.push(block)
     }
-    let opts = Options {
-        stack: 0,
-        vars: all_vars,
-        regs: BTreeMap::new(),
-    };
+    let prog = Program::new().vars(all_vars);
     let bbs = x86bbs;
     let mut cfg = CfgGraph::new();
     let name2node: HashMap<_, _> = bbs
@@ -415,7 +430,7 @@ pub fn select_inst_prog(cprog: CVar::CProgram) -> Cfg {
         }
     }
 
-    Cfg(opts, cfg)
+    prog.cfg(cfg)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -559,41 +574,32 @@ pub fn interp_inst(
     }
 }
 
-pub fn interp_cfg(prog: &Cfg) -> Value {
-    let Cfg(
-        Options {
-            stack,
-            vars: _,
-            regs: _,
-        },
-        cfg,
-    ) = prog;
-    let mut prog = BTreeMap::new();
+pub fn interp_cfg(prog: &Program) -> Value {
+    let cfg = &prog.cfg;
+    let mut bbmap = BTreeMap::new();
     for bb in cfg.node_indices().map(|idx| &cfg[idx]).cloned() {
-        prog.insert(bb.name, bb.insts);
+        bbmap.insert(bb.name, bb.insts);
     }
-    let insts = prog.get(&"start".to_string()).unwrap();
+    let insts = bbmap.get(&"start".to_string()).unwrap();
     let mut env: Env = vec![];
     let mut frame = vec![];
-    frame.resize(*stack as usize, Value::Int(0));
+    frame.resize(prog.stack as usize, Value::Int(0));
     env = interp_inst(
         &mut frame,
         env,
         insts.iter().rev().cloned().collect(),
-        &prog,
+        &bbmap,
     );
     *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
 }
 
-pub fn assign_homes_cfg(prog: Cfg) -> Cfg {
-    let Cfg(
-        Options {
-            stack: _,
-            vars,
-            regs,
-        },
+pub fn assign_homes_cfg(prg: Program) -> Program {
+    let Program {
+        stack: _,
+        vars,
+        regs,
         cfg,
-    ) = prog;
+    } = prg;
     let mut var2idx: HashMap<String, Int> = HashMap::new();
     let mut stack = 0;
     for var in &vars {
@@ -631,15 +637,20 @@ pub fn assign_homes_cfg(prog: Cfg) -> Cfg {
         }
         cfg
     };
-    Cfg(Options { stack, vars, regs }, cfg)
+    Program {
+        stack,
+        vars,
+        regs,
+        cfg,
+    }
 }
 
 // ---------------------------------------------------------------------------
 // patch instructions
 
-pub fn patch_cfg(prog: Cfg) -> Cfg {
-    let Cfg(Options { stack, vars, regs }, mut cfg) = prog;
-    cfg.node_weights_mut().for_each(|bb| {
+pub fn patch_cfg(prog: Program) -> Program {
+    let mut prog = prog;
+    prog.cfg.node_weights_mut().for_each(|bb| {
         bb.insts = std::mem::take(&mut bb.insts)
             .into_iter()
             .map(|inst| {
@@ -661,7 +672,7 @@ pub fn patch_cfg(prog: Cfg) -> Cfg {
             .flatten()
             .collect()
     });
-    Cfg(Options { stack, vars, regs }, cfg)
+    prog
 }
 
 // ---------------------------------------------------------------------------
@@ -720,28 +731,20 @@ fn print_x86inst(inst: &Inst) -> String {
     }
 }
 
-pub fn print_x86prog(prog: &Cfg) -> String {
-    let Cfg(
-        Options {
-            stack,
-            vars: _,
-            regs: _,
-        },
-        cfg,
-    ) = prog;
-
-    let mut prog: String = cfg
+pub fn print_x86prog(prog: &Program) -> String {
+    let mut prog_str: String = prog
+        .cfg
         .node_indices()
         .map(|idx| {
             (
-                &cfg[idx],
-                cfg.neighbors_directed(idx, petgraph::Outgoing).next(),
+                &prog.cfg[idx],
+                prog.cfg.neighbors_directed(idx, petgraph::Outgoing).next(),
             )
         })
         .map(|(bb, ngb)| {
-            let mut prog = String::new();
+            let mut prog_str = String::new();
             // label
-            prog.push_str(format!("{}:\n", bb.name).as_str());
+            prog_str.push_str(format!("{}:\n", bb.name).as_str());
 
             // instruction sequences
             let insts_str = bb
@@ -752,31 +755,31 @@ pub fn print_x86prog(prog: &Cfg) -> String {
                     "\t".to_string().to_string() + &inst_str + "\n"
                 })
                 .collect::<String>();
-            prog.push_str(&insts_str);
+            prog_str.push_str(&insts_str);
 
             // if these are roots of Cfg , jump to conclusion at the end
             if ngb.is_none() {
-                prog.push_str("\tjmp\tconclusion\n");
+                prog_str.push_str("\tjmp\tconclusion\n");
             }
 
             // prettify
-            prog.push_str("\n");
-            prog
+            prog_str.push_str("\n");
+            prog_str
         })
         .collect();
-    prog.push_str("\n");
-    prog.push_str("\t.globl main\n");
-    prog.push_str("main:\n");
-    prog.push_str("\tpush %rbp\n");
-    prog.push_str("\tmovq\t%rsp,%rbp\n");
-    prog.push_str(format!("\tsubq\t${},%rsp\n", stack).as_str());
-    prog.push_str("\tjmp start\n");
-    prog.push_str("\n");
-    prog.push_str("conclusion:\n");
-    prog.push_str(format!("\taddq\t ${}, %rsp\n", stack).as_str());
-    prog.push_str("\tpopq\t%rbp\n");
-    prog.push_str("\tretq\n");
-    prog
+    prog_str.push_str("\n");
+    prog_str.push_str("\t.globl main\n");
+    prog_str.push_str("main:\n");
+    prog_str.push_str("\tpush %rbp\n");
+    prog_str.push_str("\tmovq\t%rsp,%rbp\n");
+    prog_str.push_str(format!("\tsubq\t${},%rsp\n", prog.stack).as_str());
+    prog_str.push_str("\tjmp start\n");
+    prog_str.push_str("\n");
+    prog_str.push_str("conclusion:\n");
+    prog_str.push_str(format!("\taddq\t ${}, %rsp\n", prog.stack).as_str());
+    prog_str.push_str("\tpopq\t%rbp\n");
+    prog_str.push_str("\tretq\n");
+    prog_str
 }
 
 // ---------------------------------------------------------------------------
@@ -855,8 +858,13 @@ fn liveness_analysis_bb(block: &BasicBlock, liveset: LiveSet) -> Vec<LiveSet> {
     live_set_vec
 }
 
-pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
-    let Cfg(Options { stack, vars, regs }, cfg) = prog;
+pub fn liveness_analysis_cfg(prog: Program) -> Program {
+    let Program {
+        stack,
+        vars,
+        regs,
+        cfg,
+    } = prog;
 
     let (mut cfg, rto_indices) = {
         let mut cfg = petgraph::Graph::from(cfg);
@@ -911,7 +919,12 @@ pub fn liveness_analysis_cfg(prog: Cfg) -> Cfg {
         let bb = std::mem::take(&mut cfg[node_idx]);
         std::mem::swap(&mut cfg[node_idx], &mut bb.liveset(lives));
     });
-    Cfg(Options { stack, vars, regs }, cfg)
+    Program {
+        stack,
+        vars,
+        regs,
+        cfg,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -929,8 +942,8 @@ impl IGraph {
     }
 }
 
-pub fn interference_graph_cfg(cfg: &Cfg) -> IGraph {
-    let Cfg(_, cfg) = cfg;
+pub fn interference_graph_cfg(prog: &Program) -> IGraph {
+    let cfg = &prog.cfg;
     let mut g = StableGraph::default();
     let mut var2node = HashMap::new();
     for node_idx in cfg.node_indices() {
@@ -956,8 +969,8 @@ pub fn interference_graph_cfg(cfg: &Cfg) -> IGraph {
 // ---------------------------------------------------------------------------
 // move bias graph
 
-pub fn move_bias_cfg(cfg: &Cfg) -> IGraph {
-    let Cfg(_, cfg) = cfg;
+pub fn move_bias_cfg(prog: &Program) -> IGraph {
+    let cfg = &prog.cfg;
     let mut g = StableGraph::default();
     let mut var2node = HashMap::new();
     for node_idx in cfg.node_indices() {
