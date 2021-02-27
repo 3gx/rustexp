@@ -129,7 +129,7 @@ mod rvar_lang {
                         r#let!([x
                             r#let!([w tuple!{42}]
                                 r#let!([_ tupleset!{v, 0, w}] 0))]
-                            add!(x, tupleref!(tupleref!(v,0),))));
+                            add!(x, tupleref!(tupleref!(v,0),0))));
 
             (e, 42)
         };
