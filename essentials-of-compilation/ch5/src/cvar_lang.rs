@@ -4,8 +4,49 @@ pub use rvar_anf_lang as RVarAnf;
 pub use RVarAnf::rvar_lang as RVar;
 
 use RVar::{gensym, /*gensym_reset, sym_get,*/ sym_set, Env};
-pub use RVarAnf::{int, var, Atom, BinaryOpKind, Bool, Int, UnaryOpKind};
 use RVarAnf::{interp_atom, Value};
+pub use RVarAnf::{BinaryOpKind, Bool, Int, Type, UnaryOpKind};
+
+#[derive(Debug, Clone)]
+pub enum Atom {
+    Int(Int),
+    Bool(Bool),
+    Var(String),
+}
+
+pub macro int($e:expr) {
+    Atom::Int($e)
+}
+pub macro var {
+    ($id:ident) => { Atom::Var(stringify!($id).to_string()) },
+    ($e:expr) => { $e.to_string().as_str().into_term() },
+}
+
+impl From<Atom> for RVarAnf::Atom {
+    fn from(item: Atom) -> Self {
+        match item {
+            Atom::Int(i) => RVarAnf::Atom::Int(i),
+            Atom::Bool(b) => RVarAnf::Atom::Bool(b),
+            Atom::Var(v) => RVarAnf::Atom::Var(v),
+        }
+    }
+}
+
+impl From<RVarAnf::Atom> for Atom {
+    fn from(item: RVarAnf::Atom) -> Self {
+        match item {
+            RVarAnf::Atom::Int(i) => Atom::Int(i),
+            RVarAnf::Atom::Bool(b) => Atom::Bool(b),
+            RVarAnf::Atom::Var(v) => Atom::Var(v),
+            RVarAnf::Atom::Void => panic!("Void atom cannot be handled in CVarLang"),
+        }
+    }
+}
+impl From<&Atom> for RVarAnf::Atom {
+    fn from(item: &Atom) -> Self {
+        item.clone().into()
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum Expr {
@@ -13,6 +54,11 @@ pub enum Expr {
     Read,
     UnaryOp(UnaryOpKind, Atom),
     BinaryOp(BinaryOpKind, Atom, Atom),
+    Allocate(Int, Type),
+    TupleRef(Atom, Int),
+    TupleSet(Atom, Int, Atom),
+    GlobalValue(String),
+    Void,
 }
 
 #[derive(Debug, Clone)]
@@ -54,24 +100,35 @@ impl AppendBB for Vec<BasicBlock> {
 pub fn interp_expr(env: &Env, e: &Expr) -> Value {
     use Expr::*;
     match e {
-        Atom(atom) => interp_atom(env, atom),
+        Atom(atom) => interp_atom(env, &atom.into()),
         Read => {
             let mut input = String::new();
             std::io::stdin().read_line(&mut input).unwrap();
             Value::Int(input.trim().parse().unwrap())
         }
-        UnaryOp(op, a) => match (op, interp_atom(env, a)) {
+        UnaryOp(op, a) => match (op, interp_atom(env, &a.into())) {
             (UnaryOpKind::Not, Value::Bool(b)) => Value::Bool(!b),
             (UnaryOpKind::Neg, Value::Int(i)) => Value::Int(-i),
             x @ _ => panic!("type mismatch: {:?}", x),
         },
-        BinaryOp(op, a1, a2) => match (op, interp_atom(env, a1), interp_atom(env, a2)) {
-            (BinaryOpKind::Add, Value::Int(a), Value::Int(b)) => Value::Int(a + b),
-            (BinaryOpKind::Eq, Value::Int(a), Value::Int(b)) => Value::Bool(a == b),
-            (BinaryOpKind::Eq, Value::Bool(a), Value::Bool(b)) => Value::Bool(a == b),
-            (BinaryOpKind::Lt, Value::Int(a), Value::Int(b)) => Value::Bool(a < b),
-            x @ _ => panic!("type mismatch: {:?}", x),
-        },
+        BinaryOp(op, a1, a2) => {
+            match (
+                op,
+                interp_atom(env, &a1.into()),
+                interp_atom(env, &a2.into()),
+            ) {
+                (BinaryOpKind::Add, Value::Int(a), Value::Int(b)) => Value::Int(a + b),
+                (BinaryOpKind::Eq, Value::Int(a), Value::Int(b)) => Value::Bool(a == b),
+                (BinaryOpKind::Eq, Value::Bool(a), Value::Bool(b)) => Value::Bool(a == b),
+                (BinaryOpKind::Lt, Value::Int(a), Value::Int(b)) => Value::Bool(a < b),
+                x @ _ => panic!("type mismatch: {:?}", x),
+            }
+        }
+        Allocate(..) => unimplemented!(),
+        TupleRef(..) => unimplemented!(),
+        TupleSet(..) => unimplemented!(),
+        GlobalValue(..) => unimplemented!(),
+        Void => unimplemented!(),
     }
 }
 
@@ -117,7 +174,7 @@ fn explicate_ifpred(
     match e {
         RVarAnf::Expr::UnaryOp(UnaryOpKind::Not, a) => (
             Tail::IfStmt(
-                Expr::UnaryOp(UnaryOpKind::Not, a),
+                Expr::UnaryOp(UnaryOpKind::Not, a.into()),
                 then_name.to_string(),
                 else_name.to_string(),
             ),
@@ -128,14 +185,14 @@ fn explicate_ifpred(
         {
             (
                 Tail::IfStmt(
-                    Expr::BinaryOp(cmp, a1, a2),
+                    Expr::BinaryOp(cmp, a1.into(), a2.into()),
                     then_name.to_string(),
                     else_name.to_string(),
                 ),
                 bbs,
             )
         }
-        RVarAnf::Expr::Atom(Atom::Bool(pred)) => (
+        RVarAnf::Expr::Atom(RVarAnf::Atom::Bool(pred)) => (
             Tail::Goto(if pred {
                 then_name.to_string()
             } else {
@@ -143,8 +200,12 @@ fn explicate_ifpred(
             }),
             bbs,
         ),
-        RVarAnf::Expr::Atom(a @ Atom::Var(_)) => (
-            Tail::IfStmt(Expr::Atom(a), then_name.to_string(), else_name.to_string()),
+        RVarAnf::Expr::Atom(a @ RVarAnf::Atom::Var(_)) => (
+            Tail::IfStmt(
+                Expr::Atom(a.into()),
+                then_name.to_string(),
+                else_name.to_string(),
+            ),
             bbs,
         ),
         RVarAnf::Expr::If(p_expr, t_expr, e_expr) => {
@@ -165,10 +226,10 @@ fn explicate_ifpred(
 fn explicate_tail(e: RVarAnf::Expr, bbs: Vec<BasicBlock>) -> (Tail, Vec<BasicBlock>) {
     let ret = |e, bbs| (Tail::Return(e), bbs);
     match e {
-        RVarAnf::Expr::Atom(a) => ret(Expr::Atom(a), bbs),
+        RVarAnf::Expr::Atom(a) => ret(Expr::Atom(a.into()), bbs),
         RVarAnf::Expr::Read => ret(Expr::Read, bbs),
-        RVarAnf::Expr::UnaryOp(op, a) => ret(Expr::UnaryOp(op, a), bbs),
-        RVarAnf::Expr::BinaryOp(op, a1, a2) => ret(Expr::BinaryOp(op, a1, a2), bbs),
+        RVarAnf::Expr::UnaryOp(op, a) => ret(Expr::UnaryOp(op, a.into()), bbs),
+        RVarAnf::Expr::BinaryOp(op, a1, a2) => ret(Expr::BinaryOp(op, a1.into(), a2.into()), bbs),
         RVarAnf::Expr::Let(x, expr, body) => {
             let (tail, bbs) = explicate_tail(*body, bbs);
             explicate_assign(&x, *expr, tail, bbs)
@@ -182,6 +243,9 @@ fn explicate_tail(e: RVarAnf::Expr, bbs: Vec<BasicBlock>) -> (Tail, Vec<BasicBlo
             bbs.push(BasicBlock(else_name.clone(), else_bb));
             explicate_ifpred(*cnd, then_name, else_name, bbs)
         }
+        RVarAnf::Expr::Allocate(..) => unimplemented!(),
+        RVarAnf::Expr::Collect(..) => unimplemented!(),
+        RVarAnf::Expr::GlobalValue(..) => unimplemented!(),
     }
 }
 
@@ -198,10 +262,12 @@ fn explicate_assign(
         )
     };
     match e {
-        RVarAnf::Expr::Atom(a) => assign(Expr::Atom(a), tail, bbs),
+        RVarAnf::Expr::Atom(a) => assign(Expr::Atom(a.into()), tail, bbs),
         RVarAnf::Expr::Read => assign(Expr::Read, tail, bbs),
-        RVarAnf::Expr::UnaryOp(op, a) => assign(Expr::UnaryOp(op, a), tail, bbs),
-        RVarAnf::Expr::BinaryOp(op, a1, a2) => assign(Expr::BinaryOp(op, a1, a2), tail, bbs),
+        RVarAnf::Expr::UnaryOp(op, a) => assign(Expr::UnaryOp(op, a.into()), tail, bbs),
+        RVarAnf::Expr::BinaryOp(op, a1, a2) => {
+            assign(Expr::BinaryOp(op, a1.into(), a2.into()), tail, bbs)
+        }
         RVarAnf::Expr::Let(x, expr, body) => {
             let (tail, bbs) = explicate_assign(var, *body, tail, bbs);
             explicate_assign(&x, *expr, tail, bbs)
@@ -219,6 +285,9 @@ fn explicate_assign(
             bbs.push(BasicBlock(else_name.clone(), else_bb));
             explicate_ifpred(*cnd, then_name, else_name, bbs)
         }
+        RVarAnf::Expr::Allocate(..) => unimplemented!(),
+        RVarAnf::Expr::Collect(..) => unimplemented!(),
+        RVarAnf::Expr::GlobalValue(..) => unimplemented!(),
     }
 }
 

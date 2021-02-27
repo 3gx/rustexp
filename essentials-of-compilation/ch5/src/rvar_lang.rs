@@ -55,6 +55,14 @@ pub enum BinaryOpKind {
     Or,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Type {
+    Bool,
+    Int,
+    Void,
+    Tuple(Vec<Type>),
+}
+
 type Int = i64;
 type Bool = bool;
 #[derive(Debug, Clone, PartialEq)]
@@ -74,6 +82,13 @@ pub enum Expr {
 
     UnaryOp(UnaryOpKind, Box<Expr>),
     BinaryOp(BinaryOpKind, Box<Expr>, Box<Expr>),
+
+    Tuple(Vec<Expr>),
+    TupleLen(Box<Expr>),
+    TupleRef(Box<Expr>, Int),
+    TupleSet(Box<Expr>, Int, Box<Expr>),
+    Void,
+    HasType(Box<Expr>, Type),
 }
 
 impl Expr {
@@ -281,6 +296,12 @@ pub fn interp_exp(env: &Env, e: &Expr) -> Value {
                 x @ _ => panic!("type mismatch: {:?}", x),
             }
         }
+        Expr::Tuple(..) => unimplemented!(),
+        Expr::TupleLen(..) => unimplemented!(),
+        Expr::TupleRef(..) => unimplemented!(),
+        Expr::TupleSet(..) => unimplemented!(),
+        Expr::Void => unimplemented!(),
+        Expr::HasType(..) => unimplemented!(),
     }
 }
 
@@ -390,6 +411,12 @@ pub fn uniquify_expr(umap: &UMap, expr: &Expr) -> Expr {
             bx![uniquify_expr(umap, e2)],
             bx![uniquify_expr(umap, e3)],
         ),
+        Tuple(..) => unimplemented!(),
+        TupleLen(..) => unimplemented!(),
+        TupleRef(..) => unimplemented!(),
+        TupleSet(..) => unimplemented!(),
+        Void => unimplemented!(),
+        HasType(..) => unimplemented!(),
     }
 }
 
@@ -397,12 +424,6 @@ pub fn uniquify(p: Program) -> Program {
     match p {
         Program(e) => Program(uniquify_expr(&sym![], &e)),
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Type {
-    Bool,
-    Int,
 }
 
 pub type Ctx = SymTable<Type>;
@@ -445,5 +466,11 @@ pub fn type_expr(ctx: &Ctx, expr: &Expr) -> Type {
             (BinaryOpKind::CmpOp(_), Type::Int, Type::Int) => Type::Bool,
             x @ _ => panic!("unsupported {:?}", x),
         },
+        Expr::Tuple(..) => unimplemented!(),
+        Expr::TupleLen(..) => unimplemented!(),
+        Expr::TupleRef(..) => unimplemented!(),
+        Expr::TupleSet(..) => unimplemented!(),
+        Expr::Void => unimplemented!(),
+        Expr::HasType(..) => unimplemented!(),
     }
 }

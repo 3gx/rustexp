@@ -29,7 +29,7 @@ macro __mk_op {
 
 use rvar_lang as RVar;
 use RVar::Expr as RVarExpr;
-pub use RVar::{gensym, sym_get, sym_set, Env, UnaryOpKind, Value};
+pub use RVar::{gensym, sym_get, sym_set, Env, Type, UnaryOpKind, Value};
 
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub enum BinaryOpKind {
@@ -45,6 +45,7 @@ pub enum Atom {
     Int(Int),
     Bool(Bool),
     Var(String),
+    Void,
 }
 pub macro int($e:expr) {
     Atom::Int($e)
@@ -74,6 +75,10 @@ pub enum Expr {
     Read,
     UnaryOp(UnaryOpKind, Atom),
     BinaryOp(BinaryOpKind, Atom, Atom),
+
+    Collect(Int),
+    Allocate(Int, Type),
+    GlobalValue(String),
 }
 
 fn rco_atom(e: &RVarExpr) -> (Atom, Option<Expr>) {
@@ -94,6 +99,7 @@ pub fn rco_exp(e: &RVarExpr) -> Expr {
             }
             x@(Atom::Int(_), Some(_)) => panic!("unsuppoted combo {:?}", x),
             x@(Atom::Bool(_), Some(_)) => panic!("unsuppoted combo {:?}", x),
+            (Atom::Void,_) => unimplemented!(),
         }
     };
     let simplify_and_rco_binop = |op: &RVar::BinaryOpKind, e1: &RVarExpr, e2: &RVarExpr| -> Expr {
@@ -126,6 +132,12 @@ pub fn rco_exp(e: &RVarExpr) -> Expr {
         RVarExpr::UnaryOp(op, expr) => rco_op(rco_atom(expr), &|x| Expr::UnaryOp(*op, x)),
         RVarExpr::Let(x, e, body) => Expr::Let(x.clone(), bx![rco_exp(e)], bx![rco_exp(body)]),
         RVarExpr::If(e1, e2, e3) => Expr::If(bx![rco_exp(e1)], bx![rco_exp(e2)], bx![rco_exp(e3)]),
+        RVarExpr::Tuple(..) => unimplemented!(),
+        RVarExpr::TupleLen(..) => unimplemented!(),
+        RVarExpr::TupleRef(..) => unimplemented!(),
+        RVarExpr::TupleSet(..) => unimplemented!(),
+        RVarExpr::Void => unimplemented!(),
+        RVarExpr::HasType(..) => unimplemented!(),
     }
 }
 
@@ -134,6 +146,7 @@ pub fn interp_atom(env: &Env, e: &Atom) -> Value {
         Atom::Int(n) => Value::Int(*n),
         Atom::Bool(b) => Value::Bool(*b),
         Atom::Var(x) => sym_get(env, &x).unwrap().clone(),
+        Atom::Void => unimplemented!(),
     }
 }
 pub fn interp_exp(env: &Env, e: &Expr) -> Value {
@@ -167,5 +180,8 @@ pub fn interp_exp(env: &Env, e: &Expr) -> Value {
             (BinaryOpKind::Lt, Value::Int(a), Value::Int(b)) => Value::Bool(a < b),
             x @ _ => panic!("type mismatch: {:?}", x),
         },
+        Expr::Allocate(..) => unimplemented!(),
+        Expr::Collect(..) => unimplemented!(),
+        Expr::GlobalValue(..) => unimplemented!(),
     }
 }
