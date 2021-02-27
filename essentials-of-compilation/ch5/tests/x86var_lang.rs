@@ -40,30 +40,30 @@ mod x86var_lang {
         assert_eq!(v1anf, v1clang);
 
         use X86Var::*;
-        let x86cfg = select_inst_prog(cprog);
+        let x86cfg = select_inst(cprog);
         print_cfg(&x86cfg.cfg);
-        let x86val = interp_cfg(&x86cfg);
+        let x86val = interp_prog(&x86cfg);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
-        let x86cfg = liveness_analysis_cfg(x86cfg);
+        let x86cfg = liveness_analysis(x86cfg);
         println!("x86cfg= {:?}", x86cfg);
 
-        let ginterfere = interference_graph_cfg(&x86cfg);
-        let gbias = move_bias_cfg(&x86cfg);
-        let regs = reg_alloc_g(&ginterfere, &gbias);
+        let ginterfere = interference_graph(&x86cfg);
+        let gbias = move_bias(&x86cfg);
+        let regs = reg_alloc(&ginterfere, &gbias);
         let x86cfg = x86cfg.regs(regs);
 
-        let x86homes = X86Var::assign_homes_cfg(x86cfg);
+        let x86homes = X86Var::assign_homes(x86cfg);
         println!("***assgned_homes***:");
         print_cfg(&x86homes.cfg);
 
-        let x86val = X86Var::interp_cfg(&x86homes);
+        let x86val = X86Var::interp_prog(&x86homes);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
-        let x86patched = X86Var::patch_cfg(x86homes);
+        let x86patched = X86Var::patch_prog(x86homes);
         println!("***patched_cfg***:");
         print_cfg(&x86patched.cfg);
-        let x86val = X86Var::interp_cfg(&x86patched);
+        let x86val = X86Var::interp_prog(&x86patched);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
         let asmstr = X86Var::print_x86prog(&x86patched);
@@ -174,22 +174,22 @@ mod x86var_lang {
         let v1clang = CVar::interp_prog(&cprog);
         assert_eq!(v1anf, v1clang);
 
-        let x86cfg = X86Var::select_inst_prog(cprog);
+        let x86cfg = X86Var::select_inst(cprog);
         print_cfg(&x86cfg.cfg);
-        let x86val = X86Var::interp_cfg(&x86cfg);
+        let x86val = X86Var::interp_prog(&x86cfg);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
         use X86Var::*;
-        let x86cfg = liveness_analysis_cfg(x86cfg);
-        let ginterfere = interference_graph_cfg(&x86cfg);
-        let gbias = move_bias_cfg(&x86cfg);
-        let regs = reg_alloc_g(&ginterfere, &gbias);
+        let x86cfg = liveness_analysis(x86cfg);
+        let ginterfere = interference_graph(&x86cfg);
+        let gbias = move_bias(&x86cfg);
+        let regs = reg_alloc(&ginterfere, &gbias);
         let x86cfg = x86cfg.regs(regs);
-        let x86homes = assign_homes_cfg(x86cfg);
-        let x86val = X86Var::interp_cfg(&x86homes);
+        let x86homes = assign_homes(x86cfg);
+        let x86val = X86Var::interp_prog(&x86homes);
         assert_eq!(X86Var::Value::from(v1), x86val);
-        let x86patched = X86Var::patch_cfg(x86homes);
-        let x86val = X86Var::interp_cfg(&x86patched);
+        let x86patched = X86Var::patch_prog(x86homes);
+        let x86val = X86Var::interp_prog(&x86patched);
         assert_eq!(X86Var::Value::from(v1), x86val);
         let asmstr = X86Var::print_x86prog(&x86patched);
         println!("\n{}", asmstr);
@@ -229,25 +229,25 @@ mod x86var_lang {
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
 
-        let x86cfg = X86Var::select_inst_prog(cprog);
+        let x86cfg = X86Var::select_inst(cprog);
         print_cfg(&x86cfg.cfg);
 
-        let x86val = X86Var::interp_cfg(&x86cfg);
+        let x86val = X86Var::interp_prog(&x86cfg);
         assert_eq!(X86Var::Value::from(v1), x86val);
 
         use X86Var::*;
-        let x86cfg = liveness_analysis_cfg(x86cfg);
-        let ginterfere = interference_graph_cfg(&x86cfg);
-        let gbias = move_bias_cfg(&x86cfg);
-        let regs = reg_alloc_g(&ginterfere, &gbias);
+        let x86cfg = liveness_analysis(x86cfg);
+        let ginterfere = interference_graph(&x86cfg);
+        let gbias = move_bias(&x86cfg);
+        let regs = reg_alloc(&ginterfere, &gbias);
         let x86cfg = x86cfg.regs(regs);
-        let x86val = X86Var::interp_cfg(&x86cfg);
+        let x86val = X86Var::interp_prog(&x86cfg);
         assert_eq!(X86Var::Value::from(v1), x86val);
-        let x86homes = assign_homes_cfg(x86cfg);
-        let x86val = X86Var::interp_cfg(&x86homes);
+        let x86homes = assign_homes(x86cfg);
+        let x86val = X86Var::interp_prog(&x86homes);
         assert_eq!(X86Var::Value::from(v1), x86val);
-        let x86patched = X86Var::patch_cfg(x86homes);
-        let x86val = X86Var::interp_cfg(&x86patched);
+        let x86patched = X86Var::patch_prog(x86homes);
+        let x86val = X86Var::interp_prog(&x86patched);
         assert_eq!(X86Var::Value::from(v1), x86val);
         let asmstr = X86Var::print_x86prog(&x86patched);
         println!("\n{}", asmstr);
@@ -288,22 +288,22 @@ mod x86var_lang {
         assert_eq!(v1anf, v1clang);
 
         use X86Var::*;
-        let x86cfg = select_inst_prog(cprog);
+        let x86cfg = select_inst(cprog);
         print_cfg(&x86cfg.cfg);
 
-        let x86cfg = liveness_analysis_cfg(x86cfg);
-        let ginterfere = interference_graph_cfg(&x86cfg);
-        let gbias = move_bias_cfg(&x86cfg);
-        let regs = reg_alloc_g(&ginterfere, &gbias);
+        let x86cfg = liveness_analysis(x86cfg);
+        let ginterfere = interference_graph(&x86cfg);
+        let gbias = move_bias(&x86cfg);
+        let regs = reg_alloc(&ginterfere, &gbias);
         let x86cfg = x86cfg.regs(regs);
-        let x86val = X86Var::interp_cfg(&x86cfg);
+        let x86val = X86Var::interp_prog(&x86cfg);
         assert_eq!(X86Var::Value::from(v1), x86val);
-        let x86homes = assign_homes_cfg(x86cfg);
+        let x86homes = assign_homes(x86cfg);
 
-        let x86val = X86Var::interp_cfg(&x86homes);
+        let x86val = X86Var::interp_prog(&x86homes);
         assert_eq!(X86Var::Value::from(v1), x86val);
-        let x86patched = X86Var::patch_cfg(x86homes);
-        let x86val = X86Var::interp_cfg(&x86patched);
+        let x86patched = X86Var::patch_prog(x86homes);
+        let x86val = X86Var::interp_prog(&x86patched);
         assert_eq!(X86Var::Value::from(v1), x86val);
         let asmstr = X86Var::print_x86prog(&x86patched);
         println!("\n{}", asmstr);

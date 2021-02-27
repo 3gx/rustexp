@@ -387,7 +387,7 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BasicBlock) -> BasicBlock {
     }
 }
 
-pub fn select_inst_prog(cprog: CVar::CProgram) -> Program {
+pub fn select_inst(cprog: CVar::CProgram) -> Program {
     let CVar::CProgram(bbs) = cprog;
     let mut x86bbs = Vec::new();
     let mut all_vars = BTreeSet::new();
@@ -574,7 +574,7 @@ pub fn interp_inst(
     }
 }
 
-pub fn interp_cfg(prog: &Program) -> Value {
+pub fn interp_prog(prog: &Program) -> Value {
     let cfg = &prog.cfg;
     let mut bbmap = BTreeMap::new();
     for bb in cfg.node_indices().map(|idx| &cfg[idx]).cloned() {
@@ -593,7 +593,7 @@ pub fn interp_cfg(prog: &Program) -> Value {
     *env_get(&env, &EnvKey::Reg(Reg::rax)).unwrap()
 }
 
-pub fn assign_homes_cfg(prg: Program) -> Program {
+pub fn assign_homes(prg: Program) -> Program {
     let Program {
         stack: _,
         vars,
@@ -648,7 +648,7 @@ pub fn assign_homes_cfg(prg: Program) -> Program {
 // ---------------------------------------------------------------------------
 // patch instructions
 
-pub fn patch_cfg(prog: Program) -> Program {
+pub fn patch_prog(prog: Program) -> Program {
     let Program {
         stack,
         vars,
@@ -868,7 +868,7 @@ fn liveness_analysis_bb(block: &BasicBlock, liveset: LiveSet) -> Vec<LiveSet> {
     live_set_vec
 }
 
-pub fn liveness_analysis_cfg(prog: Program) -> Program {
+pub fn liveness_analysis(prog: Program) -> Program {
     let Program {
         stack,
         vars,
@@ -952,7 +952,7 @@ impl IGraph {
     }
 }
 
-pub fn interference_graph_cfg(prog: &Program) -> IGraph {
+pub fn interference_graph(prog: &Program) -> IGraph {
     let cfg = &prog.cfg;
     let mut g = StableGraph::default();
     let mut var2node = HashMap::new();
@@ -979,7 +979,7 @@ pub fn interference_graph_cfg(prog: &Program) -> IGraph {
 // ---------------------------------------------------------------------------
 // move bias graph
 
-pub fn move_bias_cfg(prog: &Program) -> IGraph {
+pub fn move_bias(prog: &Program) -> IGraph {
     let cfg = &prog.cfg;
     let mut g = StableGraph::default();
     let mut var2node = HashMap::new();
@@ -1003,7 +1003,7 @@ pub fn move_bias_cfg(prog: &Program) -> IGraph {
 // ---------------------------------------------------------------------------
 // graph coloring
 
-pub fn reg_alloc_g(ig: &IGraph, bg: &IGraph) -> BTreeMap<String, Reg> {
+pub fn reg_alloc(ig: &IGraph, bg: &IGraph) -> BTreeMap<String, Reg> {
     type Color = usize;
     type WorkSet = BTreeMap<String, BTreeSet<Color>>;
     type ColorMap = BTreeMap<String, Color>;
