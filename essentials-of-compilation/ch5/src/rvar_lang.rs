@@ -105,6 +105,10 @@ pub macro bool($b:expr) {
 }
 
 pub macro r#let {
+    ([_ $($expr:tt)*] $($body:tt)*) => {
+       __mk_op!((@args $($expr)*, $($body)*)
+                (@expr (@ctor Expr::Let) "_".to_string(),) )
+    },
     ([$id:ident $($expr:tt)*] $($body:tt)*) => {
        __mk_op!((@args $($expr)*, $($body)*)
                 (@expr (@ctor Expr::Let) stringify!($id).to_string(),) )
@@ -165,6 +169,25 @@ pub macro or {
     ($($tt:tt)*) => {__mk_op!((@args $($tt)*)
                               (@expr (@ctor Expr::BinaryOp)
                                      BinaryOpKind::Or,) ) }
+}
+
+pub macro tupleref {
+    ($tu:ident, $idx:expr) => {Expr::TupleRef(Box::new(stringify!($tu).into_term()),
+                                            $idx)},
+    ($tu:expr, $idx:expr) => {Expr::TupleRef(tu.into_Term(), $idx)},
+}
+pub macro tupleset {
+    ($tu:ident, $idx:expr, $val:expr) => {
+        Expr::TupleSet(Box::new(stringify!($tu).into_term()),
+                       $idx,
+                       Box::new($val.into_term()))},
+    ($tu:ident, $idx:expr, $val:ident) => {
+        Expr::TupleSet(Box::new(stringify!($tu).into_term()),
+                       $idx,
+                       Box::new(stringify!($val).into_term()))},
+}
+pub macro tuple {
+    ($($val:expr),*) => {Expr::Tuple(vec![$($val.into_term()),*])},
 }
 
 #[derive(Debug, Clone)]
@@ -313,25 +336,6 @@ pub fn interp_program(p: &Program) -> Value {
 
 use std::collections::HashMap;
 
-/*
-lazy_static! {
-    static ref MAP: Mutex<HashMap<String, usize>> = Mutex::new(HashMap::new());
-}
-use lazy_static::lazy_static; // 1.4.0
-use std::sync::Mutex;
-
-pub fn gensym_reset() {
-    let mut map = MAP.lock().unwrap();
-    map.clear();
-}
-pub fn gensym(x: &str) -> String {
-    let mut map = MAP.lock().unwrap();
-    let counter = map.entry(x.to_string()).or_insert(0);
-    *counter += 1;
-
-    x.to_string() + &counter.to_string()
-}
-*/
 use std::cell::RefCell;
 thread_local! {
     static MAP: RefCell<HashMap<String, usize>> = RefCell::new(HashMap::new());
@@ -348,40 +352,6 @@ pub fn gensym(x: &str) -> String {
     });
     x.to_string() + &counter.to_string()
 }
-
-/*
-static mut MAP: Option<RefCell<HashMap<String, usize>>> = None;
-
-pub fn gensym_reset() {
-    unsafe {
-        if MAP.is_none() {
-            MAP = Some(RefCell::new(HashMap::new()));
-        }
-        let mut map = if let Some(ref mut map) = &mut MAP {
-            map.borrow_mut()
-        } else {
-            panic!()
-        };
-        map.clear();
-    }
-}
-pub fn gensym(x: &str) -> String {
-    unsafe {
-        if MAP.is_none() {
-            MAP = Some(RefCell::new(HashMap::new()));
-        }
-        let mut map = if let Some(ref mut map) = &mut MAP {
-            map.borrow_mut()
-        } else {
-            panic!()
-        };
-        let counter = map.entry(x.to_string()).or_insert(0);
-        *counter += 1;
-
-        x.to_string() + &counter.to_string()
-    }
-}
-*/
 
 type UMap = SymTable<String>;
 pub fn uniquify_expr(umap: &UMap, expr: &Expr) -> Expr {
