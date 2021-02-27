@@ -264,29 +264,52 @@ pub macro __mcall1 {
     ($macro:ident, $($tt:tt)*) => {__mcall1!((@macro $macro) (@in $($tt)*) (@out))},
 }
 
-pub macro prog {
+pub macro expr {
     ((let [$id:ident $body:tt] $tail:tt)) => {
-        __mcall!(__let_expr, $id, prog!{$body}, prog!{$tail})
+        __mcall!(__let_expr, $id, expr!{$body}, expr!{$tail})
     },
     ((let [_ $body:tt] $tail:tt)) => {
-        __mcall!(__let_expr, "_", prog!{$body}, prog!{$tail})
+        __mcall!(__let_expr, "_", expr!{$body}, expr!{$tail})
     },
     ((tuple $($tt:tt)*)) => {
-        __mcall!(__tuple_expr, $(prog!{$tt}),*)
+        __mcall!(__tuple_expr, $(expr!{$tt}),*)
     },
-    ((tupleset $($tt:tt)*)) => {
-        __mcall!(__tupleset_expr, $(prog!{$tt}),*)
+    ((tupleset! $tu:tt $idx:tt $val:tt)) => {
+        __mcall!(__tupleset_expr, expr!{$tu}, expr!{$idx}, expr!{$val})
     },
-    ((tupleref $($tt:tt)*)) => {
-        __mcall!(__tupleref_expr, $(prog!{$tt}),*)
+    ((tupleref $tu:tt $idx:tt)) => {
+        __mcall!(__tupleref_expr, expr!{$tu}, expr!{$idx})
     },
-//    ($id:ident  $($tt:tt)*) =>
-//    (
-//    ($ident:ident) => {strinify!($ident).into_term()},
-//    ($expr:expr) => {$expr.into_term()},
-//    ($id:ident) => { strinify!($id) },
-//    ($e:expr) => { $e },
-    ($($tt:tt)*) => {424242},
+    ((neg $opnd:tt)) => {
+        Expr::UnaryOp(UnaryOpKind::Neg, Box::new(expr!{$opnd}.into_term()))
+    },
+    ((add $lhs:tt $rhs:tt)) => {
+        Expr::BinaryOp(BinaryOpKind::Add,
+                       Box::new(expr!{$lhs}.into_term()),
+                       Box::new(expr!{$rhs}.into_term()))
+    },
+    ((lt $lhs:tt $rhs:tt)) => {
+        Expr::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Lt),
+                       Box::new(expr!{$lhs}.into_term()),
+                       Box::new(expr!{$rhs}.into_term()))
+    },
+    ((eq $lhs:tt $rhs:tt)) => {
+        Expr::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Eq),
+                       Box::new(expr!{$lhs}.into_term()),
+                       Box::new(expr!{$rhs}.into_term()))
+    },
+    ((le $lhs:tt $rhs:tt)) => {
+        Expr::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Le),
+                       Box::new(expr!{$lhs}.into_term()),
+                       Box::new(expr!{$rhs}.into_term()))
+    },
+    ((if $pred:tt $then:tt $else:tt)) => {
+        Expr::If(Box::new(expr!{$pred}.into_term()),
+                 Box::new(expr!{$then}.into_term()),
+                 Box::new(expr!{$else}.into_term()))
+    },
+    ($id:ident) => { stringify!($id) },
+    ($e:expr) => { $e },
 }
 
 impl IntoTerm for Int {

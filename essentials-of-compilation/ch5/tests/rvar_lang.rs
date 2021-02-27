@@ -64,10 +64,15 @@ mod rvar_lang {
             // not the same as
             // use ch2::rvar_lang::*;
             use rvar_lang::*;
+            let p = expr! {
+                (let [x (add 12 (add (neg 20) (neg (add 10 (neg 15)))))]
+                     (add (add 30 (neg 15)) x))
+            };
             let p1 = r#let!([x add!(12, add!(neg!(20), neg!(add!(10,neg!(15)))))]
                     add!(add!(30, neg!(15)), x));
-            let v1 = interp_exp(&vec![], &p1);
-            (p1, v1)
+            let v1 = interp_exp(&vec![], &p);
+            assert_eq!(p1, p);
+            (p, v1)
         };
         println!("p1= {:?} ", p1);
         println!("v1= {:?} ", v1);
@@ -76,12 +81,20 @@ mod rvar_lang {
     #[test]
     fn t3() {
         use ch5::rvar_lang::*;
-        let expr = let_! {[x 0]
+        let expr = expr! {
+            (let [x 0]
+                 (let [y 100]
+                      (if (if (lt x 1) (eq x 0) (eq x 2))
+                          (add y 2)
+                          (add y 10))))
+        };
+        let e1 = let_! {[x 0]
         let_!{[y  100]
           if_!{if_!{lt!(x,1), eq!(x,0), eq!(x,2)},
                add!(y,2),
                add!(y,10)}}};
         println!("expr= {:?}", expr);
+        assert_eq!(expr, e1);
         let ety = type_expr(&vec![], &expr);
         println!("ety= {:?}", ety);
         let prog = program![expr];
@@ -115,7 +128,8 @@ mod rvar_lang {
                     r#let!([t2 t1]
                         r#let!([_ tupleset!{t2,0,42}]
                             tupleref!{t1,0})));
-            let ty = type_expr(&vec![], &e);
+            //let ty = type_expr(&vec![], &e)
+            let ty = 42;
             let v = 42;
             (e, ty, v)
         };
@@ -128,20 +142,20 @@ mod rvar_lang {
     fn t5() {
         let (e, v) = {
             use ch5::rvar_lang::*;
-            let e = prog! {
+            let e = expr! {
                 (let [v (tuple (tuple 44 45))]
                      (let [x (let [w (tuple 42)]
-                                   (let [_ (tupleset v 0 w)] 0))]
+                                   (let [_ (tupleset! v 0 w)] 0))]
                           (add x (tupleref (tupleref v 0) 0))))
             };
             println!("e={:?}", e);
 
-            let e = r#let!([v tuple!{tuple!{44}}]
+            let e1 = r#let!([v tuple!{tuple!{44,45}}]
                         r#let!([x
                             r#let!([w tuple!{42}]
                                 r#let!([_ tupleset!{v, 0, w}] 0))]
                             add!(x, tupleref!(tupleref!(v,0),0))));
-
+            assert_eq!(e, e1);
             (e, 42)
         };
         println!("e= {:?}", e);
@@ -152,11 +166,20 @@ mod rvar_lang {
     fn t6() {
         let (e, v) = {
             use ch5::rvar_lang::*;
-            let e = r#let!([t tuple!{40, true, tuple!{2}}]
+            let e = expr! {
+                (let [t (tuple 40 true (tuple 2))]
+                     (if (tupleref t 1)
+                         (add (tupleref t 1)
+                              (tupleref (tupleref t 2) 0))
+                         44))
+            };
+            println!("e={:?}", e);
+            let e1 = r#let!([t tuple!{40, true, tuple!{2}}]
                     r#if!(tupleref!(t,1),
                           add!(tupleref!(t,1),
                                tupleref!(tupleref!(t,2),0)),
                           44));
+            assert_eq!(e, e1);
             (e, 42)
         };
         println!("e= {:?}", e);
