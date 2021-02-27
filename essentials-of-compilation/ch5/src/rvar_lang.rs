@@ -309,6 +309,8 @@ pub macro expr {
                  Box::new(expr!{$else}.into_term()))
     },
     ((read)) => { Expr::Read },
+    (true) => { Expr::Bool(true) },
+    (false) => { Expr::Bool(false) },
     ($id:ident) => { stringify!($id) },
     ($e:expr) => { $e },
 }

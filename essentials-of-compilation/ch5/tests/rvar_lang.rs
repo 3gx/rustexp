@@ -182,7 +182,7 @@ mod rvar_lang {
                          44))
             };
             println!("e={:?}", e);
-            let e1 = r#let!([t tuple!{40, true, tuple!{2}}]
+            let e1 = r#let!([t tuple!{40, Expr::Bool(true), tuple!{2}}]
                     r#if!(tupleref!(t,1),
                           add!(tupleref!(t,1),
                                tupleref!(tupleref!(t,2),0)),
