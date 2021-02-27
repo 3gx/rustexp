@@ -109,15 +109,18 @@ mod rvar_lang {
 
     #[test]
     fn t4() {
-        let (e, v) = {
+        let (e, ty, v) = {
             use ch5::rvar_lang::*;
             let e = r#let!([t1 tuple!{3,7}]
                     r#let!([t2 t1]
                         r#let!([_ tupleset!{t2,0,42}]
                             tupleref!{t1,0})));
-            (e, 42)
+            let ty = type_expr(&vec![], &e);
+            let v = 42;
+            (e, ty, v)
         };
         println!("e= {:?}", e);
+        println!("ty= {:?}", ty);
         println!("v= {:?}", v);
     }
 
