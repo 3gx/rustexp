@@ -6,6 +6,9 @@ pub trait IntoTerm {
     fn into_term(&self) -> Expr;
 }
 
+// ----------------------------------------------------------------------------
+// old macro's
+
 macro __mk_op {
     ( (@args) (@expr (@ctor $($ctor:tt)*) $($tt:tt)*) ) => { $($ctor)*($($tt)*) },
     ( (@args false)  (@expr $($tt:tt)*) ) => {
@@ -30,78 +33,6 @@ macro __mk_op {
     ( (@args $e:expr, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
         __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new($e.into_term()),))
     },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
-pub enum CmpOpKind {
-    Eq,
-    Lt,
-    Le,
-    Gt,
-    Ge,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
-pub enum UnaryOpKind {
-    Neg,
-    Not,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
-pub enum BinaryOpKind {
-    CmpOp(CmpOpKind),
-    Add,
-    And,
-    Or,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Type {
-    Bool,
-    Int,
-    Void,
-    Tuple(Vec<Type>),
-}
-
-type Int = i64;
-type Bool = bool;
-#[derive(Debug, Clone, PartialEq)]
-pub enum Expr {
-    // atoms
-    Int(Int),
-    Bool(Bool),
-    Var(String),
-
-    // let expr
-    Let(String, Box<Expr>, Box<Expr>),
-
-    //control-flow
-    If(Box<Expr>, Box<Expr>, Box<Expr>),
-
-    Read,
-
-    UnaryOp(UnaryOpKind, Box<Expr>),
-    BinaryOp(BinaryOpKind, Box<Expr>, Box<Expr>),
-
-    Tuple(Vec<Expr>),
-    TupleLen(Box<Expr>),
-    TupleRef(Box<Expr>, Int),
-    TupleSet(Box<Expr>, Int, Box<Expr>),
-    Void,
-    HasType(Box<Expr>, Type),
-}
-
-impl Expr {
-    pub fn bx(&self) -> Box<Expr> {
-        Box::new(self.clone())
-    }
-}
-
-pub macro int($e:expr) {
-    Expr::Int($e)
-}
-pub macro bool($b:expr) {
-    Expr::Bool($b)
 }
 
 pub macro r#let {
@@ -215,70 +146,116 @@ pub macro hastype_impl($e:expr, $t:expr) {
     Expr::HasType(Box::new($e.into_term()), $t)
 }
 pub macro hastype($($tt:tt)*) {__mcall!(hastype_impl, $($tt)*)}
+// ----------------------------------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
+pub enum CmpOpKind {
+    Eq,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
+pub enum UnaryOpKind {
+    Neg,
+    Not,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
+pub enum BinaryOpKind {
+    CmpOp(CmpOpKind),
+    Add,
+    And,
+    Or,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Type {
+    Bool,
+    Int,
+    Void,
+    Tuple(Vec<Type>),
+}
+
+type Int = i64;
+type Bool = bool;
+#[derive(Debug, Clone, PartialEq)]
+pub enum Expr {
+    // atoms
+    Int(Int),
+    Bool(Bool),
+    Var(String),
+
+    // let expr
+    Let(String, Box<Expr>, Box<Expr>),
+
+    //control-flow
+    If(Box<Expr>, Box<Expr>, Box<Expr>),
+
+    Read,
+
+    UnaryOp(UnaryOpKind, Box<Expr>),
+    BinaryOp(BinaryOpKind, Box<Expr>, Box<Expr>),
+
+    Tuple(Vec<Expr>),
+    TupleLen(Box<Expr>),
+    TupleRef(Box<Expr>, Int),
+    TupleSet(Box<Expr>, Int, Box<Expr>),
+    Void,
+    HasType(Box<Expr>, Type),
+}
+
+impl Expr {
+    pub fn bx(&self) -> Box<Expr> {
+        Box::new(self.clone())
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program(pub Expr);
 
+// ---------------------------------------------------------------------------
+// macro-base DSL
+
+pub macro int($e:expr) {
+    Expr::Int($e)
+}
+pub macro bool($b:expr) {
+    Expr::Bool($b)
+}
+
 pub macro program($e:expr) {
     Program($e.into_term())
 }
-
-pub macro __let_expr($id:expr, $body:expr, $tail:expr) {
-    Expr::Let(
-        $id.to_string(),
-        Box::new($body.into_term()),
-        Box::new($tail.into_term()),
-    )
-}
-pub macro __tuple_expr($($val:expr),*) {Expr::Tuple(vec![$($val.into_term()),*]) }
-pub macro __tupleset_expr($tu:expr, $idx:expr, $val:expr) {
-    Expr::TupleSet(Box::new($tu.into_term()), $idx, Box::new($val.into_term()))
-}
-pub macro __tupleref_expr($tu:expr, $idx:expr) {
-    Expr::TupleRef(Box::new($tu.into_term()), $idx)
-}
-
-pub macro __arg {
-    ($macro:ident ( $($e:tt)* ) ) => { prog!{$($e)*} } ,
-    ($id:ident) => { strinify!($id) },
-    ($e:expr) => { $e },
-}
-
-pub macro __mcall1 {
-    ((@macro $macro:ident) (@in) (@out $($out:tt)*)) => { $macro!{$($out)*} },
-    ((@macro $macro:ident) (@in $ident:ident, $($tail:tt)*) (@out $($out:tt)*)) => {
-             __mcall1!((@macro $macro)
-                      (@in $($tail)*)
-                      (@out $($out)* stringify!($ident),))
-    },
-    ((@macro $macro:ident) (@in $expr:expr) (@out $($out:tt)*)) => {
-             __mcall1!((@macro $macro)
-                      (@in)
-                      (@out $($out)* $expr))
-    },
-    ((@macro $macro:ident) (@in $expr:expr, $($tail:tt)*) (@out $($out:tt)*)) => {
-             __mcall1!((@macro $macro)
-                      (@in $($tail)*)
-                      (@out $($out)* $expr,))
-    },
-    ($macro:ident, $($tt:tt)*) => {__mcall1!((@macro $macro) (@in $($tt)*) (@out))},
-}
+//pub macro __tuple_expr($($val:expr),*) {Expr::Tuple(vec![$($val.into_term()),*]) }
 
 pub macro expr {
     ((let [$id:ident $body:tt] $tail:tt)) => {
-        __mcall!(__let_expr, $id, expr!{$body}, expr!{$tail})
+        Expr::Let(
+            stringify!($id).to_string(),
+            Box::new(expr!{$body}.into_term()),
+            Box::new(expr!{$tail}.into_term()),
+        )
     },
     ((let [_ $body:tt] $tail:tt)) => {
-        __mcall!(__let_expr, "_", expr!{$body}, expr!{$tail})
+        Expr::Let(
+            stringify!(_).to_string(),
+            Box::new(expr!{$body}.into_term()),
+            Box::new(expr!{$tail}.into_term()),
+        )
     },
-    ((tuple $($tt:tt)*)) => {
-        __mcall!(__tuple_expr, $(expr!{$tt}),*)
+    ((tuple $($expr:tt)*)) => {
+        Expr::Tuple(vec![$(expr!{$expr}.into_term()),*])
+        //__mcall!(__tuple_expr, $(expr!{$tt}),*)
     },
     ((tupleset! $tu:tt $idx:tt $val:tt)) => {
-        __mcall!(__tupleset_expr, expr!{$tu}, expr!{$idx}, expr!{$val})
+        Expr::TupleSet(Box::new(expr!{$tu}.into_term()), expr!{$idx},
+                       Box::new(expr!{$val}.into_term()))
     },
     ((tupleref $tu:tt $idx:tt)) => {
-        __mcall!(__tupleref_expr, expr!{$tu}, expr!{$idx})
+        Expr::TupleRef(Box::new(expr!{$tu}.into_term()), expr!{$idx})
     },
     ((neg $opnd:tt)) => {
         Expr::UnaryOp(UnaryOpKind::Neg, Box::new(expr!{$opnd}.into_term()))
@@ -314,6 +291,8 @@ pub macro expr {
     ($id:ident) => { stringify!($id) },
     ($e:expr) => { $e },
 }
+
+// ---------------------------------------------------------------------------
 
 impl IntoTerm for Int {
     fn into_term(&self) -> Expr {
