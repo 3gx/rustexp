@@ -120,4 +120,35 @@ mod rvar_lang {
         println!("e= {:?}", e);
         println!("v= {:?}", v);
     }
+
+    #[test]
+    fn t5() {
+        let (e, v) = {
+            use ch5::rvar_lang::*;
+            let e = r#let!([v tuple!{tuple!{44}}]
+                        r#let!([x
+                            r#let!([w tuple!{42}]
+                                r#let!([_ tupleset!{v, 0, w}] 0))]
+                            add!(x, tupleref!(tupleref!(v,0),))));
+
+            (e, 42)
+        };
+        println!("e= {:?}", e);
+        println!("v= {:?}", v);
+    }
+
+    #[test]
+    fn t6() {
+        let (e, v) = {
+            use ch5::rvar_lang::*;
+            let e = r#let!([t tuple!{40, true, tuple!{2}}]
+                    r#if!(tupleref!(t,1),
+                          add!(tupleref!(t,1),
+                               tupleref!(tupleref!(t,2),0)),
+                          44));
+            (e, 42)
+        };
+        println!("e= {:?}", e);
+        println!("v= {:?}", v);
+    }
 }
