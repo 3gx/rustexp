@@ -208,6 +208,13 @@ pub macro tupleref_impl($tu:expr, $idx:expr) {
     Expr::TupleRef(Box::new($tu.into_term()), $idx)
 }
 pub macro tupleref($($tt:tt)*) {__mcall!(tupleref_impl, $($tt)*)}
+pub macro void() {
+    Expr::Void
+}
+pub macro hastype_impl($e:expr, $t:expr) {
+    Expr::HasType(Box::new($e.into_term()), $t)
+}
+pub macro hastype($($tt:tt)*) {__mcall!(hastype_impl, $($tt)*)}
 
 #[derive(Debug, Clone)]
 pub struct Program(pub Expr);
