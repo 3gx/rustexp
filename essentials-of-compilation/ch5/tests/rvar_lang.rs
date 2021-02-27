@@ -128,6 +128,14 @@ mod rvar_lang {
     fn t5() {
         let (e, v) = {
             use ch5::rvar_lang::*;
+            let e = prog! {
+                (let [v (tuple (tuple 44))]
+                     (let [x (let [w (tuple 42)]
+                                   (let [_ (tupleset v 0 w)] 0))]
+                          (add x (tupleref (tupleref v 0) 0))))
+            };
+            println!("e={:?}", e);
+
             let e = r#let!([v tuple!{tuple!{44}}]
                         r#let!([x
                             r#let!([w tuple!{42}]

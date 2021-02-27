@@ -223,6 +223,36 @@ pub macro program($e:expr) {
     Program($e.into_term())
 }
 
+pub macro __let_expr($id:expr, $body:expr, $tail:expr) {
+    Expr::Let(
+        $id.to_string(),
+        Box::new($body.into_term()),
+        Box::new($tail.into_term()),
+    )
+}
+pub macro __tuple_expr($($val:expr),*) {Expr::Tuple(vec![$($val.into_term()),*]) }
+pub macro __tupleset_expr($tu:expr, $idx:expr, $val:expr) {
+    Expr::TupleSet(Box::new($tu.into_term()), $idx, Box::new($val.into_term()))
+}
+
+pub macro prog {
+    ((let [$id:ident $($body:tt)*] $($tail:tt)*)) => {
+        __mcall!(__let_expr, $id, prog!{$($body)*}, prog!{$($tail)*})
+    },
+    ((let [_ $($body:tt)*] $($tail:tt)*)) => {
+        __mcall!(__let_expr, "_", prog!{$($body)*}, prog!{$($tail)*})
+    },
+    ((tuple $($tt:tt)*)) => {
+        __mcall!(__tuple_expr, prog!{$($tt)*})
+    },
+//    ((tupleset $($tt:tt)*)) => {
+ //       __mcall!(__tupleset_expr, prog!{$($tt)*})
+  //  },
+//    ($ident:ident) => {strinify!($ident).into_term()},
+//    ($expr:expr) => {$expr.into_term()},
+    ($($tt:tt)*) => {42},
+}
+
 impl IntoTerm for Int {
     fn into_term(&self) -> Expr {
         int!(*self)
