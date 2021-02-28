@@ -49,15 +49,6 @@ mod rvar_anf_tests {
                                   (add y 20)
                                   (add y 30)))))
             };
-            /*
-            let e1 = let_!([x 1]
-                        let_!([y 101]
-                          r#if!( and!(eq!(add!(add!(x,neg!(1)), 1),0), eq!(y,read!())), // check short-circuit
-                                 add!(y,2),
-                                 r#if!( or!(eq!(x,1), eq!(x,2)),
-                                        add!(y,20),
-                                        add!(y,30)))));
-            */
 
             let v1 = interp_exp(&vec![], &e1);
             let e1 = typed_expr(&vec![], e1);
