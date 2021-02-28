@@ -151,14 +151,13 @@ fn simplify_and_rco_binop(op: RVar::BinaryOpKind, e1: RVarExpr, e2: RVarExpr, ty
 }
 // remove-complex-opera* {opera* = operations|operands}
 pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
-    let ty = ty.clone();
     match e {
         RVarTExpr::Int(i) => ExprK::Atom(Atom::Int(i)).expr(ty),
         RVarTExpr::Bool(b) => ExprK::Atom(Atom::Bool(b)).expr(ty),
         RVarTExpr::Var(x) => ExprK::Atom(Atom::Var(x.clone())).expr(ty),
         RVarTExpr::Read => ExprK::Read.expr(ty),
         RVarTExpr::BinaryOp(op, e1, e2) => simplify_and_rco_binop(op, *e1, *e2, ty),
-        RVarTExpr::UnaryOp(op, expr) => rco_op(rco_atom(*expr), ty.clone(), &|(x, ty)| {
+        RVarTExpr::UnaryOp(op, expr) => rco_op(rco_atom(*expr), ty, &|(x, ty)| {
             ExprK::UnaryOp(op, x).expr(ty)
         }),
         RVarTExpr::Let(x, e, body) => {
