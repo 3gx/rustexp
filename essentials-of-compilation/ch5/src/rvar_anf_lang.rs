@@ -109,7 +109,7 @@ fn rco_op(
     f: impl FnOnce((Atom, Type)) -> Expr,
 ) -> Expr {
     match (a, e) {
-        (a, None) => f(a.clone()),
+        (a, None) => f(a),
         ((Atom::Var(x), var_ty), Some(e)) => {
             let Expr(a, a_ty) = f((Atom::Var(x.clone()), var_ty));
             Expr(ExprK::Let(x, bx![e], bx![Expr(a, a_ty)]), ty)
@@ -157,7 +157,7 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
         RVarTExpr::Var(x) => ExprK::Atom(Atom::Var(x.clone())).expr(ty),
         RVarTExpr::Read => ExprK::Read.expr(ty),
         RVarTExpr::BinaryOp(op, e1, e2) => simplify_and_rco_binop(op, *e1, *e2, ty),
-        RVarTExpr::UnaryOp(op, expr) => rco_op(rco_atom(*expr), ty, &|(x, ty)| {
+        RVarTExpr::UnaryOp(op, expr) => rco_op(rco_atom(*expr), ty, |(x, ty)| {
             ExprK::UnaryOp(op, x).expr(ty)
         }),
         RVarTExpr::Let(x, e, body) => {
