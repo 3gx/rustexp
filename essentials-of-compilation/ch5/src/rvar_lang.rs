@@ -96,6 +96,15 @@ pub struct TypedExpr(pub TExpr<TypedExpr>, pub Type);
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expr(pub TExpr<Expr>);
 
+impl TExpr<Expr> {
+    pub fn expr(self) -> Expr {
+        Expr(self)
+    }
+    pub fn bx(&self) -> Box<Expr> {
+        Box::new(self.clone().expr())
+    }
+}
+
 impl Expr {
     pub fn bx(&self) -> Box<Expr> {
         Box::new(self.clone())
