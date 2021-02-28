@@ -36,34 +36,6 @@ pub enum Type {
 type Int = i64;
 type Bool = bool;
 
-/*
-#[derive(Debug, Clone, PartialEq)]
-pub enum Expr {
-    // atoms
-    Int(Int),
-    Bool(Bool),
-    Var(String),
-
-    // let expr
-    Let(String, Box<Expr>, Box<Expr>),
-
-    //control-flow
-    If(Box<Expr>, Box<Expr>, Box<Expr>),
-
-    Read,
-
-    UnaryOp(UnaryOpKind, Box<Expr>),
-    BinaryOp(BinaryOpKind, Box<Expr>, Box<Expr>),
-
-    Tuple(Vec<Expr>),
-    TupleLen(Box<Expr>),
-    TupleRef(Box<Expr>, Int),
-    TupleSet(Box<Expr>, Int, Box<Expr>),
-    Void,
-    HasType(Box<Expr>, Type),
-}
-*/
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum TExpr<Expr: Clone> {
     // atoms
@@ -441,4 +413,8 @@ pub fn type_expr(ctx: &Ctx, Expr(expr): &Expr) -> Type {
         TExpr::Void => unimplemented!(),
         TExpr::HasType(..) => unimplemented!(),
     }
+}
+
+pub fn typed_expr(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
+    unimplemented!()
 }
