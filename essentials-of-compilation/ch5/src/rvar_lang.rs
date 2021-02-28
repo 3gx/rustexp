@@ -207,6 +207,38 @@ pub enum Expr {
     HasType(Box<Expr>, Type),
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum TExpr<Expr> {
+    // atoms
+    Int(Int),
+    Bool(Bool),
+    Var(String),
+
+    // let expr
+    Let(String, Box<Expr>, Box<Expr>),
+
+    //control-flow
+    If(Box<Expr>, Box<Expr>, Box<Expr>),
+
+    Read,
+
+    UnaryOp(UnaryOpKind, Box<Expr>),
+    BinaryOp(BinaryOpKind, Box<Expr>, Box<Expr>),
+
+    Tuple(Vec<Expr>),
+    TupleLen(Box<Expr>),
+    TupleRef(Box<Expr>, Int),
+    TupleSet(Box<Expr>, Int, Box<Expr>),
+    Void,
+    HasType(Box<Expr>, Type),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedExpr(TExpr<TypedExpr>, Type);
+
+#[derive(Debug, Clone, PartialEq)]
+struct Expr1(TExpr<Expr1>);
+
 impl Expr {
     pub fn bx(&self) -> Box<Expr> {
         Box::new(self.clone())
