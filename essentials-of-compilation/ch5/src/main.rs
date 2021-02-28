@@ -187,6 +187,7 @@ fn main() {
 
     {
         struct T(String);
+        struct U(String, Box<usize>);
 
         let t1 = T("fun".to_string());
         fn f1(T(s): &T) {
@@ -194,5 +195,12 @@ fn main() {
             //     let _t = &T(*s);
         }
         f1(&t1);
+
+        let t2 = U("fun".to_string(), Box::new(42));
+        fn f2(U(s, v): &U) {
+            println!("{:?} {:?}", s, v);
+            //     let _t = &T(*s);
+        }
+        f2(&t2);
     }
 }
