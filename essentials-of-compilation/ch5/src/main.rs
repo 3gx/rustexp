@@ -184,4 +184,15 @@ fn main() {
         }
         println!("vec={:?}", vec);
     }
+
+    {
+        struct T(String);
+
+        let t1 = T("fun".to_string());
+        fn f1(T(s): &T) {
+            println!("{:?}", s);
+            //     let _t = &T(*s);
+        }
+        f1(&t1);
+    }
 }
