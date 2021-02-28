@@ -181,6 +181,8 @@ pub enum Type {
 
 type Int = i64;
 type Bool = bool;
+
+/*
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     // atoms
@@ -206,9 +208,10 @@ pub enum Expr {
     Void,
     HasType(Box<Expr>, Type),
 }
+*/
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum TExpr<Expr> {
+pub enum TExpr<Expr: Clone> {
     // atoms
     Int(Int),
     Bool(Bool),
@@ -234,10 +237,10 @@ pub enum TExpr<Expr> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TypedExpr(TExpr<TypedExpr>, Type);
+pub struct TypedExpr(pub TExpr<TypedExpr>, pub Type);
 
 #[derive(Debug, Clone, PartialEq)]
-struct Expr1(TExpr<Expr1>);
+pub struct Expr(pub TExpr<Expr>);
 
 impl Expr {
     pub fn bx(&self) -> Box<Expr> {
@@ -252,10 +255,10 @@ pub struct Program(pub Expr);
 // macro-base DSL
 
 pub macro int($e:expr) {
-    Expr::Int($e)
+    Expr(TExpr::<Expr>::Int($e))
 }
 pub macro bool($b:expr) {
-    Expr::Bool($b)
+    Expr(TExpr::<Expr>::Bool($b))
 }
 
 pub macro program($e:expr) {
@@ -343,7 +346,7 @@ impl IntoTerm for Expr {
 }
 impl IntoTerm for &str {
     fn into_term(&self) -> Expr {
-        Expr::Var(self.to_string())
+        Expr(TExpr::<Expr>::Var(self.to_string()))
     }
 }
 
@@ -394,27 +397,27 @@ pub fn sym_set<T: Clone>(sym: &SymTable<T>, key: &str, val: &T) -> SymTable<T> {
     sym
 }
 
-pub fn interp_exp(env: &Env, e: &Expr) -> Value {
+pub fn interp_exp(env: &Env, Expr(e): &Expr) -> Value {
     use self::CmpOpKind as C;
     use {BinaryOpKind::*, UnaryOpKind::*};
     match e {
-        Expr::Int(n) => Value::Int(*n),
-        Expr::Bool(b) => Value::Bool(*b),
-        Expr::Read => {
+        TExpr::Int(n) => Value::Int(*n),
+        TExpr::Bool(b) => Value::Bool(*b),
+        TExpr::Read => {
             let mut input = String::new();
             std::io::stdin().read_line(&mut input).unwrap();
             Value::Int(input.trim().parse().unwrap())
         }
-        Expr::UnaryOp(Neg, e) => Value::Int(-interp_exp(env, e).int().unwrap()),
-        Expr::BinaryOp(Add, e1, e2) => {
+        TExpr::UnaryOp(Neg, e) => Value::Int(-interp_exp(env, e).int().unwrap()),
+        TExpr::BinaryOp(Add, e1, e2) => {
             Value::Int(interp_exp(env, e1).int().unwrap() + interp_exp(env, e2).int().unwrap())
         }
-        Expr::Var(x) => sym_get(env, &x).unwrap().clone(),
-        Expr::Let(x, e, body) => {
+        TExpr::Var(x) => sym_get(env, &x).unwrap().clone(),
+        TExpr::Let(x, e, body) => {
             let new_env = sym_set(env, x, &interp_exp(env, e));
             interp_exp(&new_env, body)
         }
-        Expr::If(cond, thn, els) => interp_exp(
+        TExpr::If(cond, thn, els) => interp_exp(
             env,
             if *interp_exp(env, cond).bool().unwrap() {
                 thn
@@ -422,22 +425,22 @@ pub fn interp_exp(env: &Env, e: &Expr) -> Value {
                 els
             },
         ),
-        Expr::BinaryOp(And, e1, e2) => {
+        TExpr::BinaryOp(And, e1, e2) => {
             if *interp_exp(env, e1).bool().unwrap() {
                 Value::Bool(*interp_exp(env, e2).bool().unwrap())
             } else {
                 Value::Bool(false)
             }
         }
-        Expr::BinaryOp(Or, e1, e2) => {
+        TExpr::BinaryOp(Or, e1, e2) => {
             if *interp_exp(env, e1).bool().unwrap() {
                 Value::Bool(true)
             } else {
                 Value::Bool(*interp_exp(env, e2).bool().unwrap())
             }
         }
-        Expr::UnaryOp(Not, expr) => Value::Bool(!interp_exp(env, expr).bool().unwrap()),
-        Expr::BinaryOp(BinaryOpKind::CmpOp(op), e1, e2) => {
+        TExpr::UnaryOp(Not, expr) => Value::Bool(!interp_exp(env, expr).bool().unwrap()),
+        TExpr::BinaryOp(BinaryOpKind::CmpOp(op), e1, e2) => {
             match (op, interp_exp(env, e1), interp_exp(env, e2)) {
                 (C::Eq, Value::Int(a), Value::Int(b)) => Value::Bool(a == b),
                 (C::Eq, Value::Bool(a), Value::Bool(b)) => Value::Bool(a == b),
@@ -448,12 +451,12 @@ pub fn interp_exp(env: &Env, e: &Expr) -> Value {
                 x @ _ => panic!("type mismatch: {:?}", x),
             }
         }
-        Expr::Tuple(..) => unimplemented!(),
-        Expr::TupleLen(..) => unimplemented!(),
-        Expr::TupleRef(..) => unimplemented!(),
-        Expr::TupleSet(..) => unimplemented!(),
-        Expr::Void => unimplemented!(),
-        Expr::HasType(..) => unimplemented!(),
+        TExpr::Tuple(..) => unimplemented!(),
+        TExpr::TupleLen(..) => unimplemented!(),
+        TExpr::TupleRef(..) => unimplemented!(),
+        TExpr::TupleSet(..) => unimplemented!(),
+        TExpr::Void => unimplemented!(),
+        TExpr::HasType(..) => unimplemented!(),
     }
 }
 
@@ -483,9 +486,9 @@ pub fn gensym(x: &str) -> String {
 }
 
 type UMap = SymTable<String>;
-pub fn uniquify_expr(umap: &UMap, expr: &Expr) -> Expr {
-    use Expr::*;
-    match expr {
+pub fn uniquify_expr(umap: &UMap, Expr(expr): &Expr) -> Expr {
+    use TExpr::*;
+    let e = match expr {
         Var(x) => Var(sym_get(umap, x).unwrap().clone()),
         Int(n) => Int(*n),
         Bool(b) => Bool(*b),
@@ -516,7 +519,8 @@ pub fn uniquify_expr(umap: &UMap, expr: &Expr) -> Expr {
         TupleSet(..) => unimplemented!(),
         Void => unimplemented!(),
         HasType(..) => unimplemented!(),
-    }
+    };
+    Expr(e)
 }
 
 pub fn uniquify(p: Program) -> Program {
@@ -526,17 +530,17 @@ pub fn uniquify(p: Program) -> Program {
 }
 
 pub type Ctx = SymTable<Type>;
-pub fn type_expr(ctx: &Ctx, expr: &Expr) -> Type {
+pub fn type_expr(ctx: &Ctx, Expr(expr): &Expr) -> Type {
     match expr {
-        Expr::Int(_) => Type::Int,
-        Expr::Bool(_) => Type::Bool,
-        Expr::Var(x) => sym_get(ctx, x).unwrap().clone(),
-        Expr::Let(x, expr, body) => {
+        TExpr::Int(_) => Type::Int,
+        TExpr::Bool(_) => Type::Bool,
+        TExpr::Var(x) => sym_get(ctx, x).unwrap().clone(),
+        TExpr::Let(x, expr, body) => {
             let ty = type_expr(ctx, expr);
             let ctx = sym_set(ctx, x, &ty);
             type_expr(&ctx, body)
         }
-        Expr::If(pred, then_, else_) => {
+        TExpr::If(pred, then_, else_) => {
             match type_expr(ctx, pred) {
                 Type::Bool => (),
                 x @ _ => panic!("type({:?}) must be Bool, got {:?}", pred, x),
@@ -551,13 +555,13 @@ pub fn type_expr(ctx: &Ctx, expr: &Expr) -> Type {
             }
             then_ty
         }
-        Expr::Read => Type::Int,
-        Expr::UnaryOp(op, expr) => match (op, type_expr(ctx, expr)) {
+        TExpr::Read => Type::Int,
+        TExpr::UnaryOp(op, expr) => match (op, type_expr(ctx, expr)) {
             (UnaryOpKind::Not, Type::Bool) => Type::Bool,
             (UnaryOpKind::Neg, Type::Int) => Type::Int,
             x @ _ => panic!("unsupported {:?}", x),
         },
-        Expr::BinaryOp(op, e1, e2) => match (op, type_expr(ctx, e1), type_expr(ctx, e2)) {
+        TExpr::BinaryOp(op, e1, e2) => match (op, type_expr(ctx, e1), type_expr(ctx, e2)) {
             (BinaryOpKind::Add, Type::Int, Type::Int) => Type::Int,
             (BinaryOpKind::And, Type::Bool, Type::Bool) => Type::Bool,
             (BinaryOpKind::Or, Type::Bool, Type::Bool) => Type::Bool,
@@ -565,11 +569,11 @@ pub fn type_expr(ctx: &Ctx, expr: &Expr) -> Type {
             (BinaryOpKind::CmpOp(_), Type::Int, Type::Int) => Type::Bool,
             x @ _ => panic!("unsupported {:?}", x),
         },
-        Expr::Tuple(..) => unimplemented!(),
-        Expr::TupleLen(..) => unimplemented!(),
-        Expr::TupleRef(..) => unimplemented!(),
-        Expr::TupleSet(..) => unimplemented!(),
-        Expr::Void => unimplemented!(),
-        Expr::HasType(..) => unimplemented!(),
+        TExpr::Tuple(..) => unimplemented!(),
+        TExpr::TupleLen(..) => unimplemented!(),
+        TExpr::TupleRef(..) => unimplemented!(),
+        TExpr::TupleSet(..) => unimplemented!(),
+        TExpr::Void => unimplemented!(),
+        TExpr::HasType(..) => unimplemented!(),
     }
 }
