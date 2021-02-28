@@ -122,7 +122,7 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
         use RVar::BinaryOpKind as RVarOpKind;
         use RVar::CmpOpKind as RVarCmpKind;
         let rco_op_apply = |op, e1: RVarExpr, e2: RVarExpr| {
-            rco_op(rco_atom(e1.clone()), &|(x, _xty)| {
+            rco_op(rco_atom(e1), &|(x, _xty)| {
                 rco_op(rco_atom(e2.clone()), &|(y, _yty)| {
                     Expr(ExprK::BinaryOp(op, x.clone(), y.clone()), ty.clone())
                 })
