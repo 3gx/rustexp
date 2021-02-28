@@ -33,13 +33,12 @@ mod rvar_lang {
         }
     }
 
-    /*
     #[test]
     fn t1() {
         use ch5::rvar_lang::sym;
         use ch5::rvar_lang::*;
-        let e1 = r#let!([x 32]  add!(r#let!([x 10] x), x));
-        let e2 = r#let!([x1 32]  add!(r#let!([x2 10] x2), x1));
+        let e1 = expr! { (let [x 32] (add (let [x 10] x) x)) };
+        let e2 = expr! { (let [x1 32] (add (let [x2 10] x2) x1)) };
         println!("e1= {:?}", e1);
         println!("e2= {:?}", e2);
         let e1ty = type_expr(&vec![], &e1);
@@ -53,8 +52,8 @@ mod rvar_lang {
         assert_eq!(e1ty, e1u_ty);
 
         gensym_reset();
-        let e1 = r#let!([x 32]  add!(r#let!([y 10] y), x));
-        let e2 = r#let!([x1 32]  add!(r#let!([y1 10] y1), x1));
+        let e1 = expr! { (let [x 32] (add (let [y 10] y) x)) };
+        let e2 = expr! { (let [x1 32] (add (let [y1 10] y1) x1)) };
         println!("e1= {:?}", e1);
         println!("e2= {:?}", e2);
         let e1u = uniquify_expr(&sym![], &e1);
@@ -73,10 +72,7 @@ mod rvar_lang {
                 (let [x (add 12 (add (neg 20) (neg (add 10 (neg 15)))))]
                      (add (add 30 (neg 15)) x))
             };
-            let p1 = r#let!([x add!(12, add!(neg!(20), neg!(add!(10,neg!(15)))))]
-                    add!(add!(30, neg!(15)), x));
             let v1 = interp_exp(&vec![], &p);
-            assert_eq!(p1, p);
             (p, v1)
         };
         println!("p1= {:?} ", p1);
@@ -93,13 +89,7 @@ mod rvar_lang {
                           (add y 2)
                           (add y 10))))
         };
-        let e1 = let_! {[x 0]
-        let_!{[y  100]
-          if_!{if_!{lt!(x,1), eq!(x,0), eq!(x,2)},
-               add!(y,2),
-               add!(y,10)}}};
         println!("expr= {:?}", expr);
-        assert_eq!(expr, e1);
         let ety = type_expr(&vec![], &expr);
         println!("ety= {:?}", ety);
         let prog = program![expr];
@@ -108,11 +98,12 @@ mod rvar_lang {
         assert_eq!(val, Value::Int(102));
 
         gensym_reset();
-        let expr = let_! {[x 1]
-        let_!{[y  100]
-          r#if!{if_!{lt!(x,1), eq!(x,0), eq!(x,2)},
-               add!(y,2),
-               add!(y,10)}}};
+        let expr = expr! {
+        (let [x 1]
+             (let [y 100]
+                  (if (if (lt x 1) (eq x 0) (eq x 2))
+                      (add y 2)
+                      (add y 10)))) };
         let ety = type_expr(&vec![], &expr);
         println!("ety= {:?}", ety);
         let uexpr = uniquify_expr(&sym![], &expr);
@@ -121,7 +112,7 @@ mod rvar_lang {
         let uval = interp_program(&prog);
         assert_eq!(uval, Value::Int(110));
 
-        let a = add!(3, false);
+        let a = expr! { (add 3 false) };
         println!("a= {:?}", a);
     }
 
@@ -129,10 +120,11 @@ mod rvar_lang {
     fn t4() {
         let (e, ty, v) = {
             use ch5::rvar_lang::*;
-            let e = r#let!([t1 tuple!{3,7}]
-                    r#let!([t2 t1]
-                        r#let!([_ tupleset!{t2,0,42}]
-                            tupleref!{t1,0})));
+            let e = expr! {
+            (let [t1 (tuple 3 7)]
+                 (let [t2 t1]
+                      (let [_ (tupleset! t2 0 42)]
+                           (tupleref t1 0))))};
             //let ty = type_expr(&vec![], &e)
             let ty = 42;
             let v = 42;
@@ -155,12 +147,6 @@ mod rvar_lang {
             };
             println!("e={:?}", e);
 
-            let e1 = r#let!([v tuple!{tuple!{44,45}}]
-                        r#let!([x
-                            r#let!([w tuple!{42}]
-                                r#let!([_ tupleset!{v, 0, w}] 0))]
-                            add!(x, tupleref!(tupleref!(v,0),0))));
-            assert_eq!(e, e1);
             (e, 42)
         };
         println!("e= {:?}", e);
@@ -179,16 +165,9 @@ mod rvar_lang {
                          44))
             };
             println!("e={:?}", e);
-            let e1 = r#let!([t tuple!{40, Expr::Bool(true), tuple!{2}}]
-                    r#if!(tupleref!(t,1),
-                          add!(tupleref!(t,1),
-                               tupleref!(tupleref!(t,2),0)),
-                          44));
-            assert_eq!(e, e1);
             (e, 42)
         };
         println!("e= {:?}", e);
         println!("v= {:?}", v);
     }
-    */
 }
