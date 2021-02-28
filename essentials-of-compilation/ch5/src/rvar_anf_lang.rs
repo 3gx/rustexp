@@ -118,44 +118,42 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
         }
     };
 
-    let simplify_and_rco_binop =
-        |op: &RVar::BinaryOpKind, e1: &RVarExpr, e2: &RVarExpr, ty: Type| -> Expr {
-            use RVar::BinaryOpKind as RVarOpKind;
-            use RVar::CmpOpKind as RVarCmpKind;
-            let rco_op_apply = |op, e1: &RVarExpr, e2: &RVarExpr| {
-                rco_op(rco_atom(e1.clone()), &|(x, _xty)| {
-                    rco_op(rco_atom(e2.clone()), &|(y, _yty)| {
-                        Expr(ExprK::BinaryOp(op, x.clone(), y.clone()), ty.clone())
-                    })
+    let simplify_and_rco_binop = |op: &RVar::BinaryOpKind, e1: &RVarExpr, e2: &RVarExpr| -> Expr {
+        use RVar::BinaryOpKind as RVarOpKind;
+        use RVar::CmpOpKind as RVarCmpKind;
+        let rco_op_apply = |op, e1: &RVarExpr, e2: &RVarExpr| {
+            rco_op(rco_atom(e1.clone()), &|(x, _xty)| {
+                rco_op(rco_atom(e2.clone()), &|(y, _yty)| {
+                    Expr(ExprK::BinaryOp(op, x.clone(), y.clone()), ty.clone())
                 })
-            };
-            match op {
-                RVarOpKind::And => rco_exp(
-                    RVarTExpr::If(e1.bx(), e2.bx(), RVarTExpr::Bool(false).tbx(Type::Bool))
-                        .texpr(Type::Bool),
-                ),
-                RVarOpKind::Or => rco_exp(
-                    RVarTExpr::If(e1.bx(), RVarTExpr::Bool(true).tbx(Type::Bool), e2.bx())
-                        .texpr(Type::Bool),
-                ),
-                RVarOpKind::CmpOp(op) => match op {
-                    RVarCmpKind::Eq => rco_op_apply(BinaryOpKind::Eq, e1, e2),
-                    RVarCmpKind::Lt => rco_op_apply(BinaryOpKind::Lt, e1, e2),
-                    RVarCmpKind::Le => unimplemented!(),
-                    RVarCmpKind::Gt => unimplemented!(),
-                    RVarCmpKind::Ge => unimplemented!(),
-                },
-                RVarOpKind::Add => rco_op_apply(BinaryOpKind::Add, e1, e2),
-            }
+            })
         };
+        match op {
+            RVarOpKind::And => rco_exp(
+                RVarTExpr::If(e1.bx(), e2.bx(), RVarTExpr::Bool(false).tbx(Type::Bool))
+                    .texpr(Type::Bool),
+            ),
+            RVarOpKind::Or => rco_exp(
+                RVarTExpr::If(e1.bx(), RVarTExpr::Bool(true).tbx(Type::Bool), e2.bx())
+                    .texpr(Type::Bool),
+            ),
+            RVarOpKind::CmpOp(op) => match op {
+                RVarCmpKind::Eq => rco_op_apply(BinaryOpKind::Eq, e1, e2),
+                RVarCmpKind::Lt => rco_op_apply(BinaryOpKind::Lt, e1, e2),
+                RVarCmpKind::Le => unimplemented!(),
+                RVarCmpKind::Gt => unimplemented!(),
+                RVarCmpKind::Ge => unimplemented!(),
+            },
+            RVarOpKind::Add => rco_op_apply(BinaryOpKind::Add, e1, e2),
+        }
+    };
 
-    let ty = ty.clone();
     match e {
         RVarTExpr::Int(i) => ExprK::Atom(Atom::Int(i)).expr(ty),
         RVarTExpr::Bool(b) => ExprK::Atom(Atom::Bool(b)).expr(ty),
         RVarTExpr::Var(x) => ExprK::Atom(Atom::Var(x.clone())).expr(ty),
         RVarTExpr::Read => ExprK::Read.expr(ty),
-        RVarTExpr::BinaryOp(op, e1, e2) => simplify_and_rco_binop(&op, &e1, &e2, ty),
+        RVarTExpr::BinaryOp(op, e1, e2) => simplify_and_rco_binop(&op, &e1, &e2),
         RVarTExpr::UnaryOp(op, expr) => {
             rco_op(rco_atom(*expr), &|(x, ty)| ExprK::UnaryOp(op, x).expr(ty))
         }
