@@ -148,7 +148,7 @@ pub macro expr {
         Expr(TExpr::<Expr>::UnaryOp(UnaryOpKind::Neg, Box::new(expr!{$opnd}.into_term())))
     },
     ((add $lhs:tt $rhs:tt)) => {
-        Expr(TExpr::<Expr>::Expr::BinaryOp(BinaryOpKind::Add,
+        Expr(TExpr::<Expr>::BinaryOp(BinaryOpKind::Add,
                        Box::new(expr!{$lhs}.into_term()),
                        Box::new(expr!{$rhs}.into_term())))
     },

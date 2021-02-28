@@ -4,7 +4,6 @@ mod rvar_lang {
     fn t0() {
         use ch5::rvar_lang::*;
         let p1 = expr! {(let [x (add 12 20)] (add 10 x))};
-        println!("p0= {:?} ", p1);
         let p1 = program! {p1};
         let p1ty = type_expr(&vec![], &p1.0);
         println!("type= {:?}", p1ty);
@@ -13,7 +12,7 @@ mod rvar_lang {
 
         let p1 = expr! {(let [x 2] (add (let [x 10] x) x))};
         println!("p1= {:?} ", p1);
-        let p0 = program! {p1};
+        let p1 = program! {p1};
         let v1 = interp_program(&p1);
         println!("v1= {:?} ", v1);
 
