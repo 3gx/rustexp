@@ -2,152 +2,6 @@
 mod macros;
 use macros::bx;
 
-pub trait IntoTerm {
-    fn into_term(&self) -> Expr;
-}
-
-// ----------------------------------------------------------------------------
-// old macro's
-
-macro __mk_op {
-    ( (@args) (@expr (@ctor $($ctor:tt)*) $($tt:tt)*) ) => { $($ctor)*($($tt)*) },
-    ( (@args false)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args)
-                 (@expr $($tt)* Box::new(Expr::Bool(false))))
-    },
-    ( (@args true)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args)
-                 (@expr $($tt)* Box::new(Expr::Bool(true))))
-    },
-    ( (@args $i:ident)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args)
-                 (@expr $($tt)* Box::new(stringify!($i).into_term())))
-    },
-    ( (@args $e:expr)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args) (@expr $($tt)* Box::new($e.into_term())))
-    },
-    ( (@args $i:ident, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args $($tail)*)
-                 (@expr $($tt)* Box::new(stringify!($i).into_term()),))
-    },
-    ( (@args $e:expr, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new($e.into_term()),))
-    },
-}
-
-pub macro r#let {
-    ([_ $($expr:tt)*] $($body:tt)*) => {
-       __mk_op!((@args $($expr)*, $($body)*)
-                (@expr (@ctor Expr::Let) "_".to_string(),) )
-    },
-    ([$id:ident $($expr:tt)*] $($body:tt)*) => {
-       __mk_op!((@args $($expr)*, $($body)*)
-                (@expr (@ctor Expr::Let) stringify!($id).to_string(),) )
-    },
-}
-pub use r#let as let_;
-
-pub macro r#if {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::If))) }
-}
-pub use r#if as if_;
-
-pub macro read() {
-    Expr::Read
-}
-pub macro neg {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::UnaryOp) UnaryOpKind::Neg,) ) }
-}
-pub macro not {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*) (@expr (@ctor Expr::UnaryOp) UnaryOpKind::Not,) ) }
-}
-pub macro add {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*)
-                              (@expr (@ctor Expr::BinaryOp)
-                                     BinaryOpKind::Add,)) }
-}
-pub macro eq {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*)
-                              (@expr (@ctor Expr::BinaryOp)
-                                     BinaryOpKind::CmpOp(CmpOpKind::Eq),) ) }
-}
-pub macro le {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*)
-                              (@expr (@ctor Expr::BinaryOp)
-                                     BinaryOpKind::CmpOp(CmpOpKind::Le),) ) }
-}
-pub macro lt {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*)
-                              (@expr (@ctor Expr::BinaryOp)
-                                     BinaryOpKind::CmpOp(CmpOpKind::Lt),) ) }
-}
-pub macro ge {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*)
-                              (@expr (@ctor Expr::BinaryOp)
-                                     BinaryOpKind::CmpOp(CmpOpKind::Ge),) ) }
-}
-pub macro gt {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*)
-                              (@expr (@ctor Expr::BinaryOp)
-                                     BinaryOpKind::CmpOp(CmpOpKind::Gt),) ) }
-}
-pub macro and {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*)
-                              (@expr (@ctor Expr::BinaryOp)
-                                     BinaryOpKind::And,) ) }
-}
-pub macro or {
-    ($($tt:tt)*) => {__mk_op!((@args $($tt)*)
-                              (@expr (@ctor Expr::BinaryOp)
-                                     BinaryOpKind::Or,) ) }
-}
-
-pub macro __mcall {
-    ((@macro $macro:ident) (@in) (@out $($out:tt)*)) => { $macro!{$($out)*} },
-    ((@macro $macro:ident) (@in $ident:ident) (@out $($out:tt)*)) => {
-             __mcall!((@macro $macro)
-                      (@in)
-                      (@out $($out)* stringify!($ident)))
-    },
-    ((@macro $macro:ident) (@in $ident:ident, $($tail:tt)*) (@out $($out:tt)*)) => {
-             __mcall!((@macro $macro)
-                      (@in $($tail)*)
-                      (@out $($out)* stringify!($ident),))
-    },
-    ((@macro $macro:ident) (@in $expr:expr) (@out $($out:tt)*)) => {
-             __mcall!((@macro $macro)
-                      (@in)
-                      (@out $($out)* $expr))
-    },
-    ((@macro $macro:ident) (@in $expr:expr, $($tail:tt)*) (@out $($out:tt)*)) => {
-             __mcall!((@macro $macro)
-                      (@in $($tail)*)
-                      (@out $($out)* $expr,))
-    },
-    ($macro:ident, $($tt:tt)*) => {__mcall!((@macro $macro) (@in $($tt)*) (@out))},
-}
-
-pub macro tuple_impl($($val:expr),*) {Expr::Tuple(vec![$($val.into_term()),*]) }
-pub macro tuple($($tt:tt)*)  {__mcall!(tuple_impl, $($tt)*)}
-
-pub macro tupleset_impl($tu:expr, $idx:expr, $val:expr) {
-    Expr::TupleSet(Box::new($tu.into_term()), $idx, Box::new($val.into_term()))
-}
-pub macro tupleset($($tt:tt)*) {__mcall!(tupleset_impl, $($tt)*)}
-
-pub macro tupleref_impl($tu:expr, $idx:expr) {
-    Expr::TupleRef(Box::new($tu.into_term()), $idx)
-}
-pub macro tupleref($($tt:tt)*) {__mcall!(tupleref_impl, $($tt)*)}
-pub macro void() {
-    Expr::Void
-}
-pub macro hastype_impl($e:expr, $t:expr) {
-    Expr::HasType(Box::new($e.into_term()), $t)
-}
-pub macro hastype($($tt:tt)*) {__mcall!(hastype_impl, $($tt)*)}
-// ----------------------------------------------------------------------------
-
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
 pub enum CmpOpKind {
     Eq,
@@ -264,70 +118,72 @@ pub macro bool($b:expr) {
 pub macro program($e:expr) {
     Program($e.into_term())
 }
-//pub macro __tuple_expr($($val:expr),*) {Expr::Tuple(vec![$($val.into_term()),*]) }
 
 pub macro expr {
     ((let [$id:ident $body:tt] $tail:tt)) => {
-        Expr::Let(
+        Expr(TExpr::<Expr>::Let(
             stringify!($id).to_string(),
             Box::new(expr!{$body}.into_term()),
             Box::new(expr!{$tail}.into_term()),
-        )
+        ))
     },
     ((let [_ $body:tt] $tail:tt)) => {
-        Expr::Let(
+        Expr(TExpr::<Expr>::Let(
             stringify!(_).to_string(),
             Box::new(expr!{$body}.into_term()),
             Box::new(expr!{$tail}.into_term()),
-        )
+        ))
     },
     ((tuple $($expr:tt)*)) => {
-        Expr::Tuple(vec![$(expr!{$expr}.into_term()),*])
-        //__mcall!(__tuple_expr, $(expr!{$tt}),*)
+        Expr(TExpr::<Expr>::Tuple(vec![$(expr!{$expr}.into_term()),*]))
     },
     ((tupleset! $tu:tt $idx:tt $val:tt)) => {
-        Expr::TupleSet(Box::new(expr!{$tu}.into_term()), expr!{$idx},
-                       Box::new(expr!{$val}.into_term()))
+        Expr(TExpr::<Expr>::TupleSet(Box::new(expr!{$tu}.into_term()), expr!{$idx},
+                       Box::new(expr!{$val}.into_term())))
     },
     ((tupleref $tu:tt $idx:tt)) => {
-        Expr::TupleRef(Box::new(expr!{$tu}.into_term()), expr!{$idx})
+        Expr(TExpr::<Expr>::TupleRef(Box::new(expr!{$tu}.into_term()), expr!{$idx}))
     },
     ((neg $opnd:tt)) => {
-        Expr::UnaryOp(UnaryOpKind::Neg, Box::new(expr!{$opnd}.into_term()))
+        Expr(TExpr::<Expr>::UnaryOp(UnaryOpKind::Neg, Box::new(expr!{$opnd}.into_term())))
     },
     ((add $lhs:tt $rhs:tt)) => {
-        Expr::BinaryOp(BinaryOpKind::Add,
+        Expr(TExpr::<Expr>::Expr::BinaryOp(BinaryOpKind::Add,
                        Box::new(expr!{$lhs}.into_term()),
-                       Box::new(expr!{$rhs}.into_term()))
+                       Box::new(expr!{$rhs}.into_term())))
     },
     ((lt $lhs:tt $rhs:tt)) => {
-        Expr::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Lt),
+        Expr(TExpr::<Expr>::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Lt),
                        Box::new(expr!{$lhs}.into_term()),
-                       Box::new(expr!{$rhs}.into_term()))
+                       Box::new(expr!{$rhs}.into_term())))
     },
     ((eq $lhs:tt $rhs:tt)) => {
-        Expr::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Eq),
+        Expr(TExpr::<Expr>::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Eq),
                        Box::new(expr!{$lhs}.into_term()),
-                       Box::new(expr!{$rhs}.into_term()))
+                       Box::new(expr!{$rhs}.into_term())))
     },
     ((le $lhs:tt $rhs:tt)) => {
-        Expr::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Le),
+        Expr(TExpr::<Expr>::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Le),
                        Box::new(expr!{$lhs}.into_term()),
-                       Box::new(expr!{$rhs}.into_term()))
+                       Box::new(expr!{$rhs}.into_term())))
     },
     ((if $pred:tt $then:tt $else:tt)) => {
-        Expr::If(Box::new(expr!{$pred}.into_term()),
+        Expr(TExpr::<Expr>::If(Box::new(expr!{$pred}.into_term()),
                  Box::new(expr!{$then}.into_term()),
-                 Box::new(expr!{$else}.into_term()))
+                 Box::new(expr!{$else}.into_term())))
     },
-    ((read)) => { Expr::Read },
-    (true) => { Expr::Bool(true) },
-    (false) => { Expr::Bool(false) },
+    ((read)) => { Expr(TExpr::<Expr>::Read) },
+    (true) => { Expr(TExpr::<Expr>::Bool(true)) },
+    (false) => { Expr(TExpr::<Expr>::Bool(false)) },
     ($id:ident) => { stringify!($id) },
     ($e:expr) => { $e },
 }
 
 // ---------------------------------------------------------------------------
+
+pub trait IntoTerm {
+    fn into_term(&self) -> Expr;
+}
 
 impl IntoTerm for Int {
     fn into_term(&self) -> Expr {
