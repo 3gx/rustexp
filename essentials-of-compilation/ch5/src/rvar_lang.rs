@@ -346,32 +346,32 @@ pub fn gensym(x: &str) -> String {
 }
 
 type UMap = SymTable<String>;
-pub fn uniquify_expr(umap: &UMap, Expr(expr): &Expr) -> Expr {
+pub fn uniquify_expr(umap: &UMap, Expr(expr): Expr) -> Expr {
     use TExpr::*;
     let e = match expr {
-        Var(x) => Var(sym_get(umap, x).unwrap().clone()),
-        Int(n) => Int(*n),
-        Bool(b) => Bool(*b),
+        Var(x) => Var(sym_get(umap, &x).unwrap().clone()),
+        Int(n) => Int(n),
+        Bool(b) => Bool(b),
         Let(x, e, body) => {
-            let newvar = gensym(x);
-            let umap = sym_set(umap, x, &newvar);
+            let newvar = gensym(&x);
+            let umap = sym_set(umap, &x, &newvar);
             Let(
                 newvar,
-                bx![uniquify_expr(&umap, e)],
-                bx![uniquify_expr(&umap, body)],
+                bx![uniquify_expr(&umap, *e)],
+                bx![uniquify_expr(&umap, *body)],
             )
         }
-        UnaryOp(op, expr) => UnaryOp(*op, bx![uniquify_expr(umap, expr)]),
+        UnaryOp(op, expr) => UnaryOp(op, bx![uniquify_expr(umap, *expr)]),
         BinaryOp(op, e1, e2) => BinaryOp(
-            *op,
-            bx![uniquify_expr(umap, e1)],
-            bx![uniquify_expr(umap, e2)],
+            op,
+            bx![uniquify_expr(umap, *e1)],
+            bx![uniquify_expr(umap, *e2)],
         ),
         Read => Read,
         If(e1, e2, e3) => If(
-            bx![uniquify_expr(umap, e1)],
-            bx![uniquify_expr(umap, e2)],
-            bx![uniquify_expr(umap, e3)],
+            bx![uniquify_expr(umap, *e1)],
+            bx![uniquify_expr(umap, *e2)],
+            bx![uniquify_expr(umap, *e3)],
         ),
         Tuple(..) => unimplemented!(),
         TupleLen(..) => unimplemented!(),
@@ -385,7 +385,7 @@ pub fn uniquify_expr(umap: &UMap, Expr(expr): &Expr) -> Expr {
 
 pub fn uniquify(p: Program) -> Program {
     match p {
-        Program(e) => Program(uniquify_expr(&sym![], &e)),
+        Program(e) => Program(uniquify_expr(&sym![], e)),
     }
 }
 

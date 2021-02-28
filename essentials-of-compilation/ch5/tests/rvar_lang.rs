@@ -48,7 +48,7 @@ mod rvar_lang {
         let e2ty = type_expr(&vec![], &e2);
         println!("e1ty= {:?}", e1ty);
         println!("e2ty= {:?}", e2ty);
-        let e1u = uniquify_expr(&sym![], &e1);
+        let e1u = uniquify_expr(&sym![], e1);
         println!("e1u= {:?}", e1u);
         assert_eq!(e2, e1u);
         let e1u_ty = type_expr(&vec![], &e1u);
@@ -59,7 +59,7 @@ mod rvar_lang {
         let e2 = expr! { (let [x1 32] (add (let [y1 10] y1) x1)) };
         println!("e1= {:?}", e1);
         println!("e2= {:?}", e2);
-        let e1u = uniquify_expr(&sym![], &e1);
+        let e1u = uniquify_expr(&sym![], e1);
         println!("e1u= {:?}", e1u);
         assert_eq!(e2, e1u);
     }
@@ -109,7 +109,7 @@ mod rvar_lang {
                       (add y 10)))) };
         let ety = type_expr(&vec![], &expr);
         println!("ety= {:?}", ety);
-        let uexpr = uniquify_expr(&sym![], &expr);
+        let uexpr = uniquify_expr(&sym![], expr);
         println!("uexpr= {:?}", uexpr);
         let prog = program![uexpr];
         let uval = interp_program(&prog);
