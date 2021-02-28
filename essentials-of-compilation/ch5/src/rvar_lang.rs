@@ -146,6 +146,16 @@ pub macro expr {
                        Box::new(expr!{$lhs}.into_term()),
                        Box::new(expr!{$rhs}.into_term())))
     },
+    ((or $lhs:tt $rhs:tt)) => {
+        Expr(TExpr::BinaryOp(BinaryOpKind::Or,
+                       Box::new(expr!{$lhs}.into_term()),
+                       Box::new(expr!{$rhs}.into_term())))
+    },
+    ((and $lhs:tt $rhs:tt)) => {
+        Expr(TExpr::BinaryOp(BinaryOpKind::And,
+                       Box::new(expr!{$lhs}.into_term()),
+                       Box::new(expr!{$rhs}.into_term())))
+    },
     ((lt $lhs:tt $rhs:tt)) => {
         Expr(TExpr::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Lt),
                        Box::new(expr!{$lhs}.into_term()),
