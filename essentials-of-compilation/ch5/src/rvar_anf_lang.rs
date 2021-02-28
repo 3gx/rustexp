@@ -108,9 +108,9 @@ pub fn rco_exp(RVarExpr(e, ty): &RVarExpr) -> Expr {
     let rco_op = |(a, e): ((Atom, Type), Option<Expr>), f: &dyn Fn((Atom, Type)) -> Expr| -> Expr {
         match (a, e) {
             (a, None) => f(a.clone()),
-            ((Atom::Var(x), ty), Some(e)) => {
-                let Expr(a, a_ty) = f((Atom::Var(x.clone()), ty));
-                Expr(ExprK::Let(x, bx![e], bx![Expr(a, a_ty)]), ty)
+            ((Atom::Var(x), var_ty), Some(e)) => {
+                let Expr(a, a_ty) = f((Atom::Var(x.clone()), var_ty));
+                Expr(ExprK::Let(x, bx![e], bx![Expr(a, a_ty)]), ty.clone())
             }
             x @ ((Atom::Int(_), _), Some(_)) => panic!("unsuppoted combo {:?}", x),
             x @ ((Atom::Bool(_), _), Some(_)) => panic!("unsuppoted combo {:?}", x),
@@ -122,9 +122,9 @@ pub fn rco_exp(RVarExpr(e, ty): &RVarExpr) -> Expr {
             use RVar::BinaryOpKind as RVarOpKind;
             use RVar::CmpOpKind as RVarCmpKind;
             let rco_op_apply = |op, e1, e2| {
-                rco_op(rco_atom(e1), &|(x, xty)| {
-                    rco_op(rco_atom(e2), &|(y, yty)| {
-                        Expr(ExprK::BinaryOp(op, x.clone(), y.clone()), ty)
+                rco_op(rco_atom(e1), &|(x, _xty)| {
+                    rco_op(rco_atom(e2), &|(y, _yty)| {
+                        Expr(ExprK::BinaryOp(op, x.clone(), y.clone()), ty.clone())
                     })
                 })
             };
