@@ -476,8 +476,12 @@ pub fn typed_expr(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
         }
         TExpr::Read => TExpr::Read.texpr(Type::Int),
         TExpr::UnaryOp(op, expr) => match (op, typed_expr(ctx, *expr)) {
-            (UnaryOpKind::Not, TypedExpr(e, Type::Bool)) => e.texpr(Type::Bool),
-            (UnaryOpKind::Neg, TypedExpr(e, Type::Int)) => e.texpr(Type::Int),
+            (UnaryOpKind::Not, TypedExpr(e, Type::Bool)) => {
+                TExpr::UnaryOp(op, e.tbx(Type::Bool)).texpr(Type::Bool)
+            }
+            (UnaryOpKind::Neg, TypedExpr(e, Type::Int)) => {
+                TExpr::UnaryOp(op, e.tbx(Type::Int)).texpr(Type::Int)
+            }
             x @ _ => panic!("unsupported {:?}", x),
         },
         TExpr::BinaryOp(op, e1, e2) => match (op, typed_expr(ctx, *e1), typed_expr(ctx, *e2)) {

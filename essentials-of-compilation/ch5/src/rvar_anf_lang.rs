@@ -117,6 +117,7 @@ pub fn rco_exp(RVarExpr(e, ty): &RVarExpr) -> Expr {
             ((Atom::Void, _), _) => unimplemented!(),
         }
     };
+
     let simplify_and_rco_binop =
         |op: &RVar::BinaryOpKind, e1: &RVarExpr, e2: &RVarExpr, ty: Type| -> Expr {
             use RVar::BinaryOpKind as RVarOpKind;
@@ -147,6 +148,7 @@ pub fn rco_exp(RVarExpr(e, ty): &RVarExpr) -> Expr {
                 RVarOpKind::Add => rco_op_apply(BinaryOpKind::Add, e1, e2),
             }
         };
+
     let ty = ty.clone();
     match e {
         RVarTExpr::Int(i) => ExprK::Atom(Atom::Int(*i)).expr(ty),
