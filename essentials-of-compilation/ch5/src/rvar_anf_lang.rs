@@ -114,15 +114,14 @@ pub fn rco_exp(expr: &RVarExpr) -> Expr {
             })
         };
         match op {
-            RVarOpKind::And => rco_exp(&RVarExpr(RVarTExpr::<RVarExpr>::If(
+            RVarOpKind::And => rco_exp(&RVarExpr(RVarTExpr::If(
                 e1.bx(),
                 e2.bx(),
-                RVarExpr(RVarTExpr::<RVarExpr>::Bool(false)).bx(),
-                //RVarTExpr::<RVarExpr>::Bool(false).bx(),
+                RVarExpr(RVarTExpr::Bool(false)).bx(),
             ))),
-            RVarOpKind::Or => rco_exp(&RVarExpr(RVarTExpr::<RVarExpr>::If(
+            RVarOpKind::Or => rco_exp(&RVarExpr(RVarTExpr::If(
                 e1.bx(),
-                RVarExpr(RVarTExpr::<RVarExpr>::Bool(true)).bx(),
+                RVarExpr(RVarTExpr::Bool(true)).bx(),
                 e2.bx(),
             ))),
             RVarOpKind::CmpOp(op) => match op {
