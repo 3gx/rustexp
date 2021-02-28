@@ -1,4 +1,5 @@
 #![feature(decl_macro)]
+#![feature(or_patterns)]
 
 pub mod cvar_lang;
 pub mod rvar_anf_lang;
