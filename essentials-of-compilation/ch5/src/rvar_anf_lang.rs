@@ -104,16 +104,12 @@ fn rco_atom(RVarExpr(e, ty): RVarExpr) -> (Atom, Type, Option<Expr>) {
     }
 }
 
-fn rco_op(
-    (a, aty, e): (Atom, Type, Option<Expr>),
-    ty: Type,
-    f: impl FnOnce(Atom, Type) -> Expr,
-) -> Expr {
+fn rco_op((a, aty, e): (Atom, Type, Option<Expr>), f: impl FnOnce(Atom, Type) -> Expr) -> Expr {
     match (a, aty, e) {
         (a, atype, None) => f(a, atype),
         (Atom::Var(x), var_ty, Some(e)) => {
             let Expr(a, a_ty) = f(Atom::Var(x.clone()), var_ty);
-            Expr(ExprK::Let(x, bx![e], bx![Expr(a, a_ty)]), ty)
+            ExprK::Let(x, bx![e], bx![a.expr(a_ty.clone())]).expr(a_ty)
         }
         x @ (Atom::Int(_), _, Some(_)) => panic!("unsuppoted combo {:?}", x),
         x @ (Atom::Bool(_), _, Some(_)) => panic!("unsuppoted combo {:?}", x),
@@ -124,30 +120,28 @@ fn rco_op(
 fn simplify_and_rco_binop(op: RVar::BinaryOpKind, e1: RVarExpr, e2: RVarExpr, ty: Type) -> Expr {
     use RVar::BinaryOpKind as RVarOpKind;
     use RVar::CmpOpKind as RVarCmpKind;
-    let rco_op_apply = |op, e1: RVarExpr, e2: RVarExpr| {
-        rco_op(rco_atom(e1), ty.clone(), |x, _xty| {
-            rco_op(rco_atom(e2), ty.clone(), |y, _yty| {
-                Expr(ExprK::BinaryOp(op, x.clone(), y.clone()), ty.clone())
-            })
+
+    fn rco_op_apply(op: BinaryOpKind, e1: RVarExpr, e2: RVarExpr, ty: Type) -> Expr {
+        rco_op(rco_atom(e1), |x, _xty| {
+            rco_op(rco_atom(e2), |y, _yty| Expr(ExprK::BinaryOp(op, x, y), ty))
         })
-    };
+    }
+
     match op {
         RVarOpKind::And => rco_exp(
-            RVarTExpr::If(e1.bx(), e2.bx(), RVarTExpr::Bool(false).tbx(Type::Bool))
-                .texpr(Type::Bool),
+            RVarTExpr::If(e1.bx(), e2.bx(), RVarTExpr::Bool(false).tbx(Type::Bool)).texpr(ty),
         ),
         RVarOpKind::Or => rco_exp(
-            RVarTExpr::If(e1.bx(), RVarTExpr::Bool(true).tbx(Type::Bool), e2.bx())
-                .texpr(Type::Bool),
+            RVarTExpr::If(e1.bx(), RVarTExpr::Bool(true).tbx(Type::Bool), e2.bx()).texpr(ty),
         ),
         RVarOpKind::CmpOp(op) => match op {
-            RVarCmpKind::Eq => rco_op_apply(BinaryOpKind::Eq, e1, e2),
-            RVarCmpKind::Lt => rco_op_apply(BinaryOpKind::Lt, e1, e2),
+            RVarCmpKind::Eq => rco_op_apply(BinaryOpKind::Eq, e1, e2, ty),
+            RVarCmpKind::Lt => rco_op_apply(BinaryOpKind::Lt, e1, e2, ty),
             RVarCmpKind::Le => unimplemented!(),
             RVarCmpKind::Gt => unimplemented!(),
             RVarCmpKind::Ge => unimplemented!(),
         },
-        RVarOpKind::Add => rco_op_apply(BinaryOpKind::Add, e1, e2),
+        RVarOpKind::Add => rco_op_apply(BinaryOpKind::Add, e1, e2, ty),
     }
 }
 // remove-complex-opera* {opera* = operations|operands}
@@ -155,15 +149,13 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
     match e {
         RVarTExpr::Int(i) => ExprK::Atom(Atom::Int(i)).expr(ty),
         RVarTExpr::Bool(b) => ExprK::Atom(Atom::Bool(b)).expr(ty),
-        RVarTExpr::Var(x) => ExprK::Atom(Atom::Var(x.clone())).expr(ty),
+        RVarTExpr::Var(x) => ExprK::Atom(Atom::Var(x)).expr(ty),
         RVarTExpr::Read => ExprK::Read.expr(ty),
         RVarTExpr::BinaryOp(op, e1, e2) => simplify_and_rco_binop(op, *e1, *e2, ty),
         RVarTExpr::UnaryOp(op, expr) => {
-            rco_op(rco_atom(*expr), ty, |x, ty| ExprK::UnaryOp(op, x).expr(ty))
+            rco_op(rco_atom(*expr), |x, ty| ExprK::UnaryOp(op, x).expr(ty))
         }
-        RVarTExpr::Let(x, e, body) => {
-            ExprK::Let(x.clone(), bx![rco_exp(*e)], bx![rco_exp(*body)]).expr(ty)
-        }
+        RVarTExpr::Let(x, e, body) => ExprK::Let(x, bx![rco_exp(*e)], bx![rco_exp(*body)]).expr(ty),
         RVarTExpr::If(e1, e2, e3) => {
             ExprK::If(bx![rco_exp(*e1)], bx![rco_exp(*e2)], bx![rco_exp(*e3)]).expr(ty)
         }
