@@ -91,8 +91,7 @@ fn rco_atom(expr: &RVarExpr) -> (Atom, Option<Expr>) {
     }
 }
 // remove-complex-opera* {opera* = operations|operands}
-pub fn rco_exp(expr: &RVarExpr) -> Expr {
-    let RVarExpr(e) = expr;
+pub fn rco_exp(RVarExpr(e): &RVarExpr) -> Expr {
     let rco_op = |(a, e): (Atom, Option<Expr>), f: &dyn Fn(Atom) -> Expr| -> Expr {
         r#match! { (a, e),
             (a, None) => f(a.clone()),
