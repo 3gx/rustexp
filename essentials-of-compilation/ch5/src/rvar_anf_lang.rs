@@ -1,6 +1,6 @@
 #[path = "./macros.rs"]
 mod macros;
-use macros::bx;
+//use macros::bx;
 //use macros::r#match;
 
 #[path = "rvar_lang.rs"]
@@ -51,6 +51,12 @@ impl ExprK {
 #[derive(Debug, Clone)]
 pub struct Expr(pub ExprK, pub Type);
 
+impl Expr {
+    pub fn bx(&self) -> Box<Expr> {
+        Box::new(self.clone())
+    }
+}
+
 // convert to atom
 fn rco_atom(RVarExpr(e, ty): RVarExpr) -> (Atom, Option<Expr>) {
     match e {
@@ -74,7 +80,7 @@ fn rco_op((a, e): (Atom, Option<Expr>), f: impl FnOnce(Atom) -> Expr) -> Expr {
         // otherwise, use let expression to define new variable
         (Atom::Var(x), Some(e)) => {
             let Expr(a, a_ty) = f(Atom::Var(x.clone()));
-            ExprK::Let(x, bx![e], bx![a.expr(a_ty.clone())]).expr(a_ty)
+            ExprK::Let(x, e.bx(), a.expr(a_ty.clone()).bx()).expr(a_ty)
         }
 
         // atom can't have expression associated with them
@@ -96,10 +102,20 @@ fn simplify_and_rco_binop(op: RVar::BinaryOpKind, e1: RVarExpr, e2: RVarExpr, ty
     match op {
         // since and & or are shortcicuiting ops, convert to 'if'-expr
         RVarOpKind::And => rco_exp(
-            RVarTExpr::If(e1.bx(), e2.bx(), RVarTExpr::Bool(false).tbx(Type::Bool)).texpr(ty),
+            RVarTExpr::If(
+                e1.bx(),
+                e2.bx(),
+                RVarTExpr::Bool(false).texpr(Type::Bool).bx(),
+            )
+            .texpr(ty),
         ),
         RVarOpKind::Or => rco_exp(
-            RVarTExpr::If(e1.bx(), RVarTExpr::Bool(true).tbx(Type::Bool), e2.bx()).texpr(ty),
+            RVarTExpr::If(
+                e1.bx(),
+                RVarTExpr::Bool(true).texpr(Type::Bool).bx(),
+                e2.bx(),
+            )
+            .texpr(ty),
         ),
         RVarOpKind::CmpOp(op) => match op {
             RVarCmpKind::Eq => rco_op_apply(BinaryOpKind::Eq, e1, e2, ty),
@@ -121,9 +137,9 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
         RVarTExpr::Read => ExprK::Read.expr(ty),
         RVarTExpr::BinaryOp(op, e1, e2) => simplify_and_rco_binop(op, *e1, *e2, ty),
         RVarTExpr::UnaryOp(op, expr) => rco_op(rco_atom(*expr), |x| ExprK::UnaryOp(op, x).expr(ty)),
-        RVarTExpr::Let(x, e, body) => ExprK::Let(x, bx![rco_exp(*e)], bx![rco_exp(*body)]).expr(ty),
+        RVarTExpr::Let(x, e, body) => ExprK::Let(x, rco_exp(*e).bx(), rco_exp(*body).bx()).expr(ty),
         RVarTExpr::If(e1, e2, e3) => {
-            ExprK::If(bx![rco_exp(*e1)], bx![rco_exp(*e2)], bx![rco_exp(*e3)]).expr(ty)
+            ExprK::If(rco_exp(*e1).bx(), rco_exp(*e2).bx(), rco_exp(*e3).bx()).expr(ty)
         }
         RVarTExpr::Tuple(..) => unimplemented!(),
         RVarTExpr::TupleLen(..) => unimplemented!(),
