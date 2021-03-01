@@ -271,6 +271,7 @@ pub fn interp_impl<T: Clone>(env: &Env, e: &TExpr<T>, f: &impl Fn(&T) -> &TExpr<
     match e {
         TExpr::Int(n) => Value::Int(*n),
         TExpr::Bool(b) => Value::Bool(*b),
+        TExpr::Void => Value::Void,
         TExpr::Read => {
             let mut input = String::new();
             std::io::stdin().read_line(&mut input).unwrap();
@@ -323,7 +324,6 @@ pub fn interp_impl<T: Clone>(env: &Env, e: &TExpr<T>, f: &impl Fn(&T) -> &TExpr<
         TExpr::TupleLen(..) => unimplemented!(),
         TExpr::TupleRef(..) => unimplemented!(),
         TExpr::TupleSet(..) => unimplemented!(),
-        TExpr::Void => unimplemented!(),
     }
 }
 
