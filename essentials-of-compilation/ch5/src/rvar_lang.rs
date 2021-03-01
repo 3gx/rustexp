@@ -214,18 +214,28 @@ impl IntoTerm for &str {
 pub enum Value {
     Int(Int),
     Bool(Bool),
+    Void,
 }
 impl Value {
     pub fn int(&self) -> Option<&Int> {
         match self {
             Value::Int(n) => Some(n),
             Value::Bool(_) => None,
+            Value::Void => None,
         }
     }
     pub fn bool(&self) -> Option<&Bool> {
         match self {
             Value::Int(_) => None,
             Value::Bool(b) => Some(b),
+            Value::Void => None,
+        }
+    }
+    pub fn isvoid(&self) -> Bool {
+        if let &Value::Void = self {
+            true
+        } else {
+            false
         }
     }
 }

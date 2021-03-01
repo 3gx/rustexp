@@ -139,7 +139,7 @@ pub fn interp_atom(env: &Env, e: &Atom) -> Value {
         Atom::Int(n) => Value::Int(*n),
         Atom::Bool(b) => Value::Bool(*b),
         Atom::Var(x) => sym_get(env, &x).unwrap().clone(),
-        Atom::Void => unimplemented!(),
+        Atom::Void => Value::Void,
     }
 }
 pub fn interp_exp(env: &Env, Expr(e, _): &Expr) -> Value {
