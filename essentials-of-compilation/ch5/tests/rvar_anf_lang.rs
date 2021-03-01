@@ -14,7 +14,7 @@ mod rvar_anf_tests {
             println!("type= {:?}", p1ty);
             let v1 = interp_exp(&vec![], &p1);
             println!("v1= {:?} ", v1);
-            let p1 = typed_expr(&vec![], p1);
+            let p1 = typed_expr(p1);
             println!("p1= {:?}", p1);
             (p1, v1)
         };
@@ -51,7 +51,7 @@ mod rvar_anf_tests {
             };
 
             let v1 = interp_exp(&vec![], &e1);
-            let e1 = typed_expr(&vec![], e1);
+            let e1 = typed_expr(e1);
             (e1, v1)
         };
         println!("e1= {:?} ", e1);

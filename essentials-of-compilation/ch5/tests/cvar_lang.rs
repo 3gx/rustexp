@@ -24,16 +24,19 @@ mod cvar_lang {
         use cvar_lang::{RVar, RVarAnf};
         let (p1, v1) = {
             use RVar::*;
-            let p1 = r#let!([x add!(12, add!(neg!(20), neg!(add!(10,neg!(15)))))]
-                    add!(add!(30, neg!(15)), x));
+            let p1 = expr! {
+                (let [x (add 12 (add (neg 20) (neg (add 18 (neg 15)))))]
+                     (add (add 30 (neg 15)) x))
+            };
             let v1 = interp_exp(&vec![], &p1);
+            let p1 = typed_expr(p1);
             (p1, v1)
         };
         println!("p1= {:?} ", p1);
         println!("v1= {:?} ", v1);
 
         use RVarAnf::{interp_exp, rco_exp};
-        let p1anf = rco_exp(&p1);
+        let p1anf = rco_exp(p1);
         println!("p1= {:?} ", p1anf);
 
         let v1anf = interp_exp(&vec![], &p1anf);
@@ -56,25 +59,28 @@ mod cvar_lang {
         use cvar_lang::{RVar, RVarAnf};
         let (e1, v1) = {
             use RVar::*;
-            let e1 = let_!([x 1]
-                        let_!([y 101]
-                          r#if!( and!(eq!(x,0), eq!(y,read!())), // check short-circuit
-                                 add!(y,2),
-                                 r#if!( or!(eq!(x,1), eq!(x,2)),
-                                        add!(y,20),
-                                        add!(y,30)))));
-            let ety = type_expr(&vec![], &e1);
-            println!("ety= {:?}", ety);
+            let e1 = expr! {
+                (let [x 1]
+                     (let [y 101]
+                          (if (and (eq x 0) (eq y (read)))
+                              (add y 2)
+                              (if (or (eq x 1) (eq x 2))
+                                  (add y 20)
+                                  (add y 30)))))
+            };
 
             println!("interp_exp");
             let v1 = interp_exp(&vec![], &e1);
+
+            let e1 = typed_expr(e1);
+            println!("ety= {:?}", e1);
             (e1, v1)
         };
         println!("e1= {:?} ", e1);
         println!("v1= {:?} ", v1);
 
         use RVarAnf::{interp_exp, rco_exp};
-        let e1anf = rco_exp(&e1);
+        let e1anf = rco_exp(e1);
         println!("e1anf= {:?} ", e1anf);
 
         let v1anf = interp_exp(&vec![], &e1anf);
@@ -97,22 +103,24 @@ mod cvar_lang {
         use cvar_lang::{RVar, RVarAnf};
         let (e1, v1) = {
             use RVar::*;
-            let e1 = let_!([x 1]
-                        let_!([y 101]
-                          r#if!( and!(eq!(add!(add!(x,neg!(1)), 1),0), eq!(y,read!())), // check short-circuit
-                                 add!(y,2),
-                                 r#if!( or!(eq!(x,1), eq!(x,2)),
-                                        add!(y,20),
-                                        add!(y,30)))));
-
+            let e1 = expr! {
+                (let [x 1]
+                     (let [y 101]
+                          (if (and (eq (add (add x (neg 1)) 1) 0) (eq y (read)))
+                              (add y 2)
+                              (if (or (eq x 1) (eq x 2))
+                                  (add y 20)
+                                  (add y 30)))))
+            };
             let v1 = interp_exp(&vec![], &e1);
+            let e1 = typed_expr(e1);
             (e1, v1)
         };
         println!("e1= {:?} ", e1);
         println!("v1= {:?} ", v1);
 
         use RVarAnf::{interp_exp, rco_exp};
-        let e1anf = rco_exp(&e1);
+        let e1anf = rco_exp(e1);
         println!("e1anf= {:?} ", e1anf);
 
         let v1anf = interp_exp(&vec![], &e1anf);
@@ -140,21 +148,24 @@ mod cvar_lang {
         use cvar_lang::{RVar, RVarAnf};
         let (e1, v1) = {
             use RVar::*;
-            let e1 = let_!([x 1]
-                        let_!([y 101]
-                          r#if!( r#if!(or!(eq!(x,1), lt!(read!(),5)),
-                                       eq!(y,101), eq!(y,102)) ,
-                                        add!(y,20),
-                                        add!(y,30))));
-
+            let e1 = expr! {
+                (let [x 1]
+                     (let [y 101]
+                          (if (if (or (eq x 1) (lt (read) 5))
+                                  (eq y 101)
+                                  (eq y 102))
+                              (add y 20)
+                              (add y 30))))
+            };
             let v1 = interp_exp(&vec![], &e1);
+            let e1 = typed_expr(e1);
             (e1, v1)
         };
         println!("e1= {:?} ", e1);
         println!("v1= {:?} ", v1);
 
         use RVarAnf::{interp_exp, rco_exp};
-        let e1anf = rco_exp(&e1);
+        let e1anf = rco_exp(e1);
         println!("e1anf= {:?} ", e1anf);
 
         let v1anf = interp_exp(&vec![], &e1anf);
@@ -176,23 +187,28 @@ mod cvar_lang {
         use cvar_lang::{RVar, RVarAnf};
         let (e1, v1) = {
             use RVar::*;
-            let e1 = let_!([x 1]
-                        let_!([y 101]
-                          r#if!( let_!([x r#if!(or!(eq!(x,1), lt!(read!(),5)),
-                                       eq!(y,101), eq!(y,102))] not!(x)),
-                                        add!(y,20),
-                                        add!(y,30))));
+            let e1 = expr! {
+                (let [x 1]
+                     (let [y 101]
+                          (if (let [x (if (or (eq x 1) (lt (read) 5))
+                                          (eq y 101)
+                                          (eq y 102))]
+                                   (not x))
+                              (add y 20)
+                              (add y 30))))
+            };
             let ety = type_expr(&vec![], &e1);
             println!("ety= {:?}", ety);
 
             let v1 = interp_exp(&vec![], &e1);
+            let e1 = typed_expr(e1);
             (e1, v1)
         };
         println!("e1= {:?} ", e1);
         println!("v1= {:?} ", v1);
 
         use RVarAnf::{interp_exp, rco_exp};
-        let e1anf = rco_exp(&e1);
+        let e1anf = rco_exp(e1);
         println!("e1anf= {:?} ", e1anf);
 
         let v1anf = interp_exp(&vec![], &e1anf);

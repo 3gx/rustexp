@@ -141,6 +141,9 @@ pub macro expr {
     ((neg $opnd:tt)) => {
         Expr(TExpr::UnaryOp(UnaryOpKind::Neg, Box::new(expr!{$opnd}.into_term())))
     },
+    ((not $opnd:tt)) => {
+        Expr(TExpr::UnaryOp(UnaryOpKind::Not, Box::new(expr!{$opnd}.into_term())))
+    },
     ((add $lhs:tt $rhs:tt)) => {
         Expr(TExpr::BinaryOp(BinaryOpKind::Add,
                        Box::new(expr!{$lhs}.into_term()),
@@ -448,7 +451,7 @@ pub fn type_expr(ctx: &Ctx, Expr(expr): &Expr) -> Type {
     }
 }
 
-pub fn typed_expr(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
+fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
     match expr {
         TExpr::Int(i) => TExpr::Int(i).texpr(Type::Int),
         TExpr::Bool(b) => TExpr::Bool(b).texpr(Type::Int),
@@ -457,9 +460,9 @@ pub fn typed_expr(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
             TExpr::Var(x).texpr(ty)
         }
         TExpr::Let(x, expr, body) => {
-            let TypedExpr(expr, expr_ty) = typed_expr(ctx, *expr);
+            let TypedExpr(expr, expr_ty) = typed_expr_impl(ctx, *expr);
             let ctx = sym_set(ctx, &x, &expr_ty);
-            let TypedExpr(body, body_ty) = typed_expr(&ctx, *body);
+            let TypedExpr(body, body_ty) = typed_expr_impl(&ctx, *body);
             TExpr::Let(
                 x,
                 TypedExpr(expr, expr_ty).bx(),
@@ -468,13 +471,13 @@ pub fn typed_expr(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
             .texpr(body_ty)
         }
         TExpr::If(pred, then_, else_) => {
-            let TypedExpr(pred, pred_ty) = typed_expr(ctx, *pred);
+            let TypedExpr(pred, pred_ty) = typed_expr_impl(ctx, *pred);
             match &pred_ty {
                 Type::Bool => (),
                 x @ _ => panic!("type({:?}) must be Bool, got {:?}", pred, x),
             };
-            let TypedExpr(then_, then_ty) = typed_expr(ctx, *then_);
-            let TypedExpr(else_, else_ty) = typed_expr(ctx, *else_);
+            let TypedExpr(then_, then_ty) = typed_expr_impl(ctx, *then_);
+            let TypedExpr(else_, else_ty) = typed_expr_impl(ctx, *else_);
             if then_ty != else_ty {
                 panic!(
                     "type({:?}) = {:?} != {:?} = type({:?})",
@@ -485,7 +488,7 @@ pub fn typed_expr(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
             TExpr::If(pred.tbx(pred_ty), then_.tbx(then_ty), else_.tbx(else_ty)).texpr(if_ty)
         }
         TExpr::Read => TExpr::Read.texpr(Type::Int),
-        TExpr::UnaryOp(op, expr) => match (op, typed_expr(ctx, *expr)) {
+        TExpr::UnaryOp(op, expr) => match (op, typed_expr_impl(ctx, *expr)) {
             (UnaryOpKind::Not, TypedExpr(e, Type::Bool)) => {
                 TExpr::UnaryOp(op, e.tbx(Type::Bool)).texpr(Type::Bool)
             }
@@ -494,25 +497,27 @@ pub fn typed_expr(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
             }
             x @ _ => panic!("unsupported {:?}", x),
         },
-        TExpr::BinaryOp(op, e1, e2) => match (op, typed_expr(ctx, *e1), typed_expr(ctx, *e2)) {
-            (BinaryOpKind::Add, TypedExpr(e1, Type::Int), TypedExpr(e2, Type::Int)) => {
-                TExpr::BinaryOp(op, e1.tbx(Type::Int), e2.tbx(Type::Int)).texpr(Type::Int)
+        TExpr::BinaryOp(op, e1, e2) => {
+            match (op, typed_expr_impl(ctx, *e1), typed_expr_impl(ctx, *e2)) {
+                (BinaryOpKind::Add, TypedExpr(e1, Type::Int), TypedExpr(e2, Type::Int)) => {
+                    TExpr::BinaryOp(op, e1.tbx(Type::Int), e2.tbx(Type::Int)).texpr(Type::Int)
+                }
+                (
+                    BinaryOpKind::And | BinaryOpKind::Or,
+                    TypedExpr(e1, Type::Bool),
+                    TypedExpr(e2, Type::Bool),
+                ) => TExpr::BinaryOp(op, e1.tbx(Type::Bool), e2.tbx(Type::Bool)).texpr(Type::Bool),
+                (
+                    BinaryOpKind::CmpOp(CmpOpKind::Eq),
+                    TypedExpr(e1, Type::Bool),
+                    TypedExpr(e2, Type::Bool),
+                ) => TExpr::BinaryOp(op, e1.tbx(Type::Bool), e2.tbx(Type::Bool)).texpr(Type::Bool),
+                (BinaryOpKind::CmpOp(_), TypedExpr(e1, Type::Int), TypedExpr(e2, Type::Int)) => {
+                    TExpr::BinaryOp(op, e1.tbx(Type::Int), e2.tbx(Type::Int)).texpr(Type::Bool)
+                }
+                x @ _ => panic!("unsupported {:?}", x),
             }
-            (
-                BinaryOpKind::And | BinaryOpKind::Or,
-                TypedExpr(e1, Type::Bool),
-                TypedExpr(e2, Type::Bool),
-            ) => TExpr::BinaryOp(op, e1.tbx(Type::Bool), e2.tbx(Type::Bool)).texpr(Type::Bool),
-            (
-                BinaryOpKind::CmpOp(CmpOpKind::Eq),
-                TypedExpr(e1, Type::Bool),
-                TypedExpr(e2, Type::Bool),
-            ) => TExpr::BinaryOp(op, e1.tbx(Type::Bool), e2.tbx(Type::Bool)).texpr(Type::Bool),
-            (BinaryOpKind::CmpOp(_), TypedExpr(e1, Type::Int), TypedExpr(e2, Type::Int)) => {
-                TExpr::BinaryOp(op, e1.tbx(Type::Int), e2.tbx(Type::Int)).texpr(Type::Bool)
-            }
-            x @ _ => panic!("unsupported {:?}", x),
-        },
+        }
         TExpr::Tuple(..) => unimplemented!(),
         TExpr::TupleLen(..) => unimplemented!(),
         TExpr::TupleRef(..) => unimplemented!(),
@@ -520,4 +525,8 @@ pub fn typed_expr(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
         TExpr::Void => unimplemented!(),
         TExpr::HasType(..) => unimplemented!(),
     }
+}
+
+pub fn typed_expr(e: Expr) -> TypedExpr {
+    typed_expr_impl(&vec![], e)
 }
