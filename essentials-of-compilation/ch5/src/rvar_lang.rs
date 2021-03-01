@@ -455,7 +455,7 @@ fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
     //    r#match! { [expr]
     match expr {
         TExpr::Int(i) => TExpr::Int(i).texpr(Type::Int),
-        TExpr::Bool(b) => TExpr::Bool(b).texpr(Type::Int),
+        TExpr::Bool(b) => TExpr::Bool(b).texpr(Type::Bool),
         TExpr::Void => TExpr::Void.texpr(Type::Void),
         TExpr::Var(x) => {
             let ty = sym_get(ctx, &x).unwrap().clone();
