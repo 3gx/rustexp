@@ -75,7 +75,7 @@ mod rvar_lang {
                 (let [x (add 12 (add (neg 20) (neg (add 10 (neg 15)))))]
                      (add (add 30 (neg 15)) x))
             };
-            let v1 = interp_exp(&vec![], &p);
+            let v1 = interp_expr(&p);
             (p, v1)
         };
         println!("p1= {:?} ", p1);

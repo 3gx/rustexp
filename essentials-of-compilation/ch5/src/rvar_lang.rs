@@ -264,7 +264,8 @@ pub fn sym_set<T: Clone>(sym: &SymTable<T>, key: &str, val: &T) -> SymTable<T> {
     sym
 }
 
-pub fn interp_exp(env: &Env, Expr(e): &Expr) -> Value {
+pub fn interp_impl<T: Clone>(env: &Env, e: &TExpr<T>, f: &impl Fn(&T) -> &TExpr<T>) -> Value {
+    let rec = |env, e| interp_impl(env, f(e), f);
     use self::CmpOpKind as C;
     use {BinaryOpKind::*, UnaryOpKind::*};
     match e {
@@ -275,40 +276,40 @@ pub fn interp_exp(env: &Env, Expr(e): &Expr) -> Value {
             std::io::stdin().read_line(&mut input).unwrap();
             Value::Int(input.trim().parse().unwrap())
         }
-        TExpr::UnaryOp(Neg, e) => Value::Int(-interp_exp(env, e).int().unwrap()),
+        TExpr::UnaryOp(Neg, e) => Value::Int(-rec(env, e).int().unwrap()),
         TExpr::BinaryOp(Add, e1, e2) => {
-            Value::Int(interp_exp(env, e1).int().unwrap() + interp_exp(env, e2).int().unwrap())
+            Value::Int(rec(env, e1).int().unwrap() + rec(env, e2).int().unwrap())
         }
         TExpr::Var(x) => sym_get(env, &x).unwrap().clone(),
         TExpr::Let(x, e, body) => {
-            let new_env = sym_set(env, x, &interp_exp(env, e));
-            interp_exp(&new_env, body)
+            let new_env = sym_set(env, x, &rec(env, e));
+            rec(&new_env, body)
         }
-        TExpr::If(cond, thn, els) => interp_exp(
+        TExpr::If(cond, thn, els) => rec(
             env,
-            if *interp_exp(env, cond).bool().unwrap() {
+            if *rec(env, cond).bool().unwrap() {
                 thn
             } else {
                 els
             },
         ),
         TExpr::BinaryOp(And, e1, e2) => {
-            if *interp_exp(env, e1).bool().unwrap() {
-                Value::Bool(*interp_exp(env, e2).bool().unwrap())
+            if *rec(env, e1).bool().unwrap() {
+                Value::Bool(*rec(env, e2).bool().unwrap())
             } else {
                 Value::Bool(false)
             }
         }
         TExpr::BinaryOp(Or, e1, e2) => {
-            if *interp_exp(env, e1).bool().unwrap() {
+            if *rec(env, e1).bool().unwrap() {
                 Value::Bool(true)
             } else {
-                Value::Bool(*interp_exp(env, e2).bool().unwrap())
+                Value::Bool(*rec(env, e2).bool().unwrap())
             }
         }
-        TExpr::UnaryOp(Not, expr) => Value::Bool(!interp_exp(env, expr).bool().unwrap()),
+        TExpr::UnaryOp(Not, expr) => Value::Bool(!rec(env, expr).bool().unwrap()),
         TExpr::BinaryOp(BinaryOpKind::CmpOp(op), e1, e2) => {
-            match (op, interp_exp(env, e1), interp_exp(env, e2)) {
+            match (op, rec(env, e1), rec(env, e2)) {
                 (C::Eq, Value::Int(a), Value::Int(b)) => Value::Bool(a == b),
                 (C::Eq, Value::Bool(a), Value::Bool(b)) => Value::Bool(a == b),
                 (C::Le, Value::Int(a), Value::Int(b)) => Value::Bool(a <= b),
@@ -327,9 +328,17 @@ pub fn interp_exp(env: &Env, Expr(e): &Expr) -> Value {
     }
 }
 
+pub fn interp_expr(Expr(e): &Expr) -> Value {
+    interp_impl(&vec![], e, &|Expr(e)| e)
+}
+
+pub fn interp_texpr(TypedExpr(e, _): &TypedExpr) -> Value {
+    interp_impl(&vec![], e, &|TypedExpr(e, _)| e)
+}
+
 pub fn interp_program(p: &Program) -> Value {
     match p {
-        Program(e) => interp_exp(&vec![], e),
+        Program(e) => interp_expr(e),
     }
 }
 

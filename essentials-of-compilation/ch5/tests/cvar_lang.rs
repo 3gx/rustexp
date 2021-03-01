@@ -28,7 +28,7 @@ mod cvar_lang {
                 (let [x (add 12 (add (neg 20) (neg (add 18 (neg 15)))))]
                      (add (add 30 (neg 15)) x))
             };
-            let v1 = interp_exp(&vec![], &p1);
+            let v1 = interp_expr(&p1);
             let p1 = typed_expr(p1);
             (p1, v1)
         };
@@ -70,10 +70,12 @@ mod cvar_lang {
             };
 
             println!("interp_exp");
-            let v1 = interp_exp(&vec![], &e1);
+            let v1 = interp_expr(&e1);
 
             let e1 = typed_expr(e1);
             println!("ety= {:?}", e1);
+            let v1a = interp_texpr(&e1);
+            assert_eq!(v1, v1a);
             (e1, v1)
         };
         println!("e1= {:?} ", e1);
@@ -112,8 +114,10 @@ mod cvar_lang {
                                   (add y 20)
                                   (add y 30)))))
             };
-            let v1 = interp_exp(&vec![], &e1);
+            let v1 = interp_expr(&e1);
             let e1 = typed_expr(e1);
+            let v1a = interp_texpr(&e1);
+            assert_eq!(v1, v1a);
             (e1, v1)
         };
         println!("e1= {:?} ", e1);
@@ -157,8 +161,10 @@ mod cvar_lang {
                               (add y 20)
                               (add y 30))))
             };
-            let v1 = interp_exp(&vec![], &e1);
+            let v1 = interp_expr(&e1);
             let e1 = typed_expr(e1);
+            let v1a = interp_texpr(&e1);
+            assert_eq!(v1, v1a);
             (e1, v1)
         };
         println!("e1= {:?} ", e1);
@@ -200,8 +206,10 @@ mod cvar_lang {
             let ety = type_expr(&vec![], &e1);
             println!("ety= {:?}", ety);
 
-            let v1 = interp_exp(&vec![], &e1);
+            let v1 = interp_expr(&e1);
             let e1 = typed_expr(e1);
+            let v1a = interp_texpr(&e1);
+            assert_eq!(v1, v1a);
             (e1, v1)
         };
         println!("e1= {:?} ", e1);

@@ -18,8 +18,10 @@ mod x86var_lang {
                 (let [x (add (add (neg 20) (neg (add 10 (neg 15)))) 12)]
                      (add (add 30 (neg 15)) x))
             };
-            let v1 = interp_exp(&vec![], &p1);
+            let v1 = interp_expr(&p1);
             let p1 = typed_expr(p1);
+            let v1a = interp_texpr(&p1);
+            assert_eq!(v1, v1a);
             (p1, v1)
         };
         //println!("p1= {:?} ", p1);
@@ -161,8 +163,10 @@ mod x86var_lang {
                                     (let [z (add x w)]
                                          (add z (neg y)))))))
             };
-            let v1 = interp_exp(&vec![], &p1);
+            let v1 = interp_expr(&p1);
             let p1 = typed_expr(p1);
+            let v1a = interp_texpr(&p1);
+            assert_eq!(v1, v1a);
             (p1, v1)
         };
         //println!("p1= {:?} ", p1);
@@ -215,8 +219,10 @@ mod x86var_lang {
                               (add y 20)
                               (add y 30))))
             };
-            let v1 = interp_exp(&vec![], &e1);
+            let v1 = interp_expr(&e1);
             let e1 = typed_expr(e1);
+            let v1a = interp_texpr(&e1);
+            assert_eq!(v1, v1a);
             (e1, v1)
         };
         println!("e1= {:?} ", e1);
@@ -278,8 +284,10 @@ mod x86var_lang {
                               (add y 30))))
             };
 
-            let v1 = interp_exp(&vec![], &e1);
+            let v1 = interp_expr(&e1);
             let e1 = typed_expr(e1);
+            let v1a = interp_texpr(&e1);
+            assert_eq!(v1, v1a);
             (e1, v1)
         };
         println!("e1= {:?} ", e1);
