@@ -51,28 +51,35 @@ impl ExprK {
 #[derive(Debug, Clone)]
 pub struct Expr(pub ExprK, pub Type);
 
-fn rco_atom(RVarExpr(e, ty): RVarExpr) -> (Atom, Type, Option<Expr>) {
+// convert to atom
+fn rco_atom(RVarExpr(e, ty): RVarExpr) -> (Atom, Option<Expr>) {
     match e {
-        RVarTExpr::Int(i) => (Atom::Int(i), ty, None),
-        RVarTExpr::Var(x) => (Atom::Var(x), ty, None),
-        _ => (
-            Atom::Var(gensym("tmp")),
-            ty.clone(),
-            Some(rco_exp(RVarExpr(e, ty))),
-        ),
+        // atom's stay atoms
+        RVarTExpr::Int(i) => (Atom::Int(i), None),
+        RVarTExpr::Bool(b) => (Atom::Bool(b), None),
+        RVarTExpr::Var(x) => (Atom::Var(x), None),
+        // if e is a complex expression, assing result to an atom var
+        _ => (Atom::Var(gensym("tmp")), Some(rco_exp(RVarExpr(e, ty)))),
     }
 }
 
-fn rco_op((a, aty, e): (Atom, Type, Option<Expr>), f: impl FnOnce(Atom) -> Expr) -> Expr {
-    match (a, aty, e) {
-        (a, _, None) => f(a),
-        (Atom::Var(x), _var_ty, Some(e)) => {
+fn rco_op((a, e): (Atom, Option<Expr>), f: impl FnOnce(Atom) -> Expr) -> Expr {
+    match (a, e) {
+        // void can't be passed to anything
+        (Atom::Void, _) => panic!("can't use void as argument"),
+
+        // if 'a' is an atom, just pass it through to f
+        (a, None) => f(a),
+
+        // otherwise, use let expression to define new variable
+        (Atom::Var(x), Some(e)) => {
             let Expr(a, a_ty) = f(Atom::Var(x.clone()));
             ExprK::Let(x, bx![e], bx![a.expr(a_ty.clone())]).expr(a_ty)
         }
-        x @ (Atom::Int(_), _, Some(_)) => panic!("unsuppoted combo {:?}", x),
-        x @ (Atom::Bool(_), _, Some(_)) => panic!("unsuppoted combo {:?}", x),
-        (Atom::Void, _, _) => unimplemented!(),
+
+        // atom can't have expression associated with them
+        x @ (Atom::Int(_), Some(_)) => panic!("unsuppoted combo {:?}", x),
+        x @ (Atom::Bool(_), Some(_)) => panic!("unsuppoted combo {:?}", x),
     }
 }
 
@@ -87,6 +94,7 @@ fn simplify_and_rco_binop(op: RVar::BinaryOpKind, e1: RVarExpr, e2: RVarExpr, ty
     }
 
     match op {
+        // since and & or are shortcicuiting ops, convert to 'if'-expr
         RVarOpKind::And => rco_exp(
             RVarTExpr::If(e1.bx(), e2.bx(), RVarTExpr::Bool(false).tbx(Type::Bool)).texpr(ty),
         ),
