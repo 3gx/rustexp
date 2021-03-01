@@ -14,6 +14,6 @@ fn common_s(S(e) : &S) {
   // .. use e
 }
 fn fun_s1(S(e) : &S) {
-    let p_s: &S = unsafe { &*(e as *const E<_> as *const S) };
+    let p_s: &S = unsafe { &(e as *const E<_> as *const S).read() };
     common_s(p_s);
 }
