@@ -129,7 +129,7 @@ mod rvar_lang {
                       (let [_ (tupleset! t2 0 42)]
                            (tupleref t1 0))))};
             let v = 42;
-            let e = typed_expr(e);
+            //            let e = typed_expr(e);
             (e, v)
         };
         println!("e= {:?}", e);

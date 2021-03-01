@@ -59,7 +59,6 @@ pub enum TExpr<Expr: Clone> {
     TupleRef(Box<Expr>, Int),
     TupleSet(Box<Expr>, Int, Box<Expr>),
     Void,
-    HasType(Box<Expr>, Type),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -324,7 +323,6 @@ pub fn interp_impl<T: Clone>(env: &Env, e: &TExpr<T>, f: &impl Fn(&T) -> &TExpr<
         TExpr::TupleRef(..) => unimplemented!(),
         TExpr::TupleSet(..) => unimplemented!(),
         TExpr::Void => unimplemented!(),
-        TExpr::HasType(..) => unimplemented!(),
     }
 }
 
@@ -394,7 +392,6 @@ pub fn uniquify_expr(umap: &UMap, Expr(expr): Expr) -> Expr {
         TupleRef(..) => unimplemented!(),
         TupleSet(..) => unimplemented!(),
         Void => unimplemented!(),
-        HasType(..) => unimplemented!(),
     };
     Expr(e)
 }
@@ -450,7 +447,6 @@ pub fn type_expr(ctx: &Ctx, Expr(expr): &Expr) -> Type {
         TExpr::TupleRef(..) => unimplemented!(),
         TExpr::TupleSet(..) => unimplemented!(),
         TExpr::Void => unimplemented!(),
-        TExpr::HasType(..) => unimplemented!(),
     }
 }
 
@@ -544,7 +540,6 @@ fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
         TExpr::TupleLen(..) => unimplemented!(),
         TExpr::TupleRef(..) => unimplemented!(),
         TExpr::TupleSet(..) => unimplemented!(),
-        TExpr::HasType(..) => unimplemented!(),
     }
 }
 

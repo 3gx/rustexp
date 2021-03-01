@@ -146,7 +146,6 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
         RVarTExpr::TupleRef(..) => unimplemented!(),
         RVarTExpr::TupleSet(..) => unimplemented!(),
         RVarTExpr::Void => unimplemented!(),
-        RVarTExpr::HasType(..) => unimplemented!(),
     }
 }
 
