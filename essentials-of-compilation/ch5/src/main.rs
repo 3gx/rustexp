@@ -203,4 +203,40 @@ fn main() {
         }
         f2(&t2);
     }
+    {
+        use ref_cast::RefCast;
+
+        #[derive(RefCast)]
+        #[repr(transparent)]
+        struct U(String);
+
+        // Safely cast from `&String` to `&U`.
+
+        fn f1(U(s): &U) {
+            println!("U(s) = U({})", s);
+        }
+        fn f2(U(s): &U) {
+            let u = U::ref_cast(s);
+            f1(u);
+        }
+        f2(&U("test1".to_string()));
+    }
+    {
+        use ref_cast::RefCast;
+
+        #[derive(RefCast)]
+        #[repr(transparent)]
+        struct U((String, String));
+
+        // Safely cast from `&String` to `&U`.
+
+        fn f1(U(s): &U) {
+            println!("U(s) = U({})", s);
+        }
+        fn f2(U(s): &U) {
+            let u = U::ref_cast(s);
+            f1(u);
+        }
+        f2(&U("test1".to_string()));
+    }
 }
