@@ -6,28 +6,6 @@ use macros::bx;
 #[path = "rvar_lang.rs"]
 pub mod rvar_lang;
 
-pub trait IntoTerm {
-    fn into_term(&self) -> Atom;
-}
-
-macro __mk_op {
-    ( (@args) (@expr (@ctor $($ctor:tt)*) $($tt:tt)*) ) => { $($ctor)*($($tt)*) },
-    ( (@args $i:ident)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args)
-                 (@expr $($tt)* Box::new(stringify!($i).into_term())))
-    },
-    ( (@args $e:expr)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args) (@expr $($tt)* Box::new($e.into_term())))
-    },
-    ( (@args $i:ident, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args $($tail)*)
-                 (@expr $($tt)* Box::new(stringify!($i).into_term()),))
-    },
-    ( (@args $e:expr, $($tail:tt)*)  (@expr $($tt:tt)*) ) => {
-        __mk_op!((@args $($tail)*) (@expr $($tt)* Box::new($e.into_term()),))
-    },
-}
-
 use rvar_lang as RVar;
 use RVar::TExpr as RVarTExpr;
 use RVar::TypedExpr as RVarExpr;
@@ -49,25 +27,6 @@ pub enum Atom {
     Var(String),
     Void,
 }
-/*
-pub macro int($e:expr) {
-    Atom::Int($e)
-}
-pub macro var {
-    ($id:ident) => { Atom::Var(stringify!($id).to_string()) },
-    ($e:expr) => { $e.to_string().as_str().into_term() },
-}
-impl IntoTerm for Int {
-    fn into_term(&self) -> Atom {
-        int!(*self)
-    }
-}
-impl IntoTerm for &str {
-    fn into_term(&self) -> Atom {
-        Atom::Var(self.to_string())
-    }
-}
-*/
 
 #[derive(Debug, Clone)]
 pub enum ExprK {
@@ -144,6 +103,7 @@ fn simplify_and_rco_binop(op: RVar::BinaryOpKind, e1: RVarExpr, e2: RVarExpr, ty
         RVarOpKind::Add => rco_op_apply(BinaryOpKind::Add, e1, e2, ty),
     }
 }
+
 // remove-complex-opera* {opera* = operations|operands}
 pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
     match e {
