@@ -458,6 +458,7 @@ fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
     match expr {
         TExpr::Int(i) => TExpr::Int(i).texpr(Type::Int),
         TExpr::Bool(b) => TExpr::Bool(b).texpr(Type::Int),
+        TExpr::Void => TExpr::Void.texpr(Type::Void),
         TExpr::Var(x) => {
             let ty = sym_get(ctx, &x).unwrap().clone();
             TExpr::Var(x).texpr(ty)
@@ -530,11 +531,19 @@ fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
                 x @ _ => panic!("type mismatch {:?}", x),
             }
         }
-        TExpr::Tuple(..) => unimplemented!(),
+        TExpr::Tuple(es) => {
+            let (es, ty) = es
+                .into_iter()
+                .map(|e| {
+                    let TypedExpr(e, ty) = typed_expr_impl(ctx, e);
+                    (TypedExpr(e, ty.clone()), ty)
+                })
+                .unzip();
+            TExpr::Tuple(es).texpr(Type::Tuple(ty))
+        }
         TExpr::TupleLen(..) => unimplemented!(),
         TExpr::TupleRef(..) => unimplemented!(),
         TExpr::TupleSet(..) => unimplemented!(),
-        TExpr::Void => unimplemented!(),
         TExpr::HasType(..) => unimplemented!(),
     }
 }
