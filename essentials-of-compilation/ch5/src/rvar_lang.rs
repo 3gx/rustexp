@@ -515,7 +515,7 @@ fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
                 (BinaryOpKind::CmpOp(_), TypedExpr(e1, Type::Int), TypedExpr(e2, Type::Int)) => {
                     TExpr::BinaryOp(op, e1.tbx(Type::Int), e2.tbx(Type::Int)).texpr(Type::Bool)
                 }
-                x @ _ => panic!("unsupported {:?}", x),
+                x @ _ => panic!("type mismatch {:?}", x),
             }
         }
         TExpr::Tuple(..) => unimplemented!(),
