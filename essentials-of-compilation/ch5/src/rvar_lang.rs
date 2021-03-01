@@ -1,6 +1,7 @@
 #[path = "./macros.rs"]
 mod macros;
 use macros::bx;
+//use macros::r#match;
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
 pub enum CmpOpKind {
@@ -451,6 +452,7 @@ pub fn type_expr(ctx: &Ctx, Expr(expr): &Expr) -> Type {
 }
 
 fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
+    //    r#match! { [expr]
     match expr {
         TExpr::Int(i) => TExpr::Int(i).texpr(Type::Int),
         TExpr::Bool(b) => TExpr::Bool(b).texpr(Type::Int),
@@ -537,9 +539,41 @@ fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
                 .unzip();
             TExpr::Tuple(es).texpr(Type::Tuple(ty))
         }
+        TExpr::TupleRef(tu, idx) => {
+            assert!(idx >= 0, format!("idx must be non-negative, got {}", idx));
+            let TypedExpr(tu, tuty) = typed_expr_impl(ctx, *tu);
+            let elty = match &tuty {
+                Type::Tuple(tys) => {
+                    let idx = idx as usize;
+                    assert!(
+                        idx < tys.len(),
+                        format!("violation: idx= {} < tuple_len= {}", idx, tys.len())
+                    );
+                    tys[idx].clone()
+                }
+                _ => panic!("type error, expecting tuple type, got {:?}", tuty),
+            };
+            TExpr::TupleRef(tu.texpr(tuty).bx(), idx).texpr(elty)
+        }
+        TExpr::TupleSet(tu, idx, val) => {
+            assert!(idx >= 0, format!("idx must be non-negative, got {}", idx));
+            let TypedExpr(tu, tuty) = typed_expr_impl(ctx, *tu);
+            let TypedExpr(val, valty) = typed_expr_impl(ctx, *val);
+            let elty = match &tuty {
+                Type::Tuple(tys) => {
+                    let idx = idx as usize;
+                    assert!(
+                        idx < tys.len(),
+                        format!("violation: idx= {} < tuple_len= {}", idx, tys.len())
+                    );
+                    &tys[idx]
+                }
+                _ => panic!("type error, expecting tuple type, got {:?}", tuty),
+            };
+            assert_eq!(elty, &valty);
+            TExpr::TupleSet(tu.texpr(tuty).bx(), idx, val.texpr(valty).bx()).texpr(Type::Void)
+        }
         TExpr::TupleLen(..) => unimplemented!(),
-        TExpr::TupleRef(..) => unimplemented!(),
-        TExpr::TupleSet(..) => unimplemented!(),
     }
 }
 

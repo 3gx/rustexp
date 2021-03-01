@@ -129,7 +129,7 @@ mod rvar_lang {
                       (let [_ (tupleset! t2 0 42)]
                            (tupleref t1 0))))};
             let v = 42;
-            //            let e = typed_expr(e);
+            let e = typed_expr(e);
             (e, v)
         };
         println!("e= {:?}", e);
@@ -141,13 +141,13 @@ mod rvar_lang {
         let (e, v) = {
             use ch5::rvar_lang::*;
             let e = expr! {
-                (let [v (tuple (tuple 44 45))]
+                (let [v (tuple (tuple 44))]
                      (let [x (let [w (tuple 42)]
                                    (let [_ (tupleset! v 0 w)] 0))]
                           (add x (tupleref (tupleref v 0) 0))))
             };
             println!("e={:?}", e);
-
+            let e = typed_expr(e);
             (e, 42)
         };
         println!("e= {:?}", e);
@@ -161,11 +161,12 @@ mod rvar_lang {
             let e = expr! {
                 (let [t (tuple 40 true (tuple 2))]
                      (if (tupleref t 1)
-                         (add (tupleref t 1)
+                         (add (tupleref t 0)
                               (tupleref (tupleref t 2) 0))
                          44))
             };
             println!("e={:?}", e);
+            let e = typed_expr(e);
             (e, 42)
         };
         println!("e= {:?}", e);
