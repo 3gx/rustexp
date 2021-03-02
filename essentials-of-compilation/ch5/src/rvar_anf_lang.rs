@@ -5,6 +5,7 @@ mod macros;
 
 #[path = "rvar_lang.rs"]
 pub mod rvar_lang;
+use rvar_lang::expr;
 
 use rvar_lang as RVar;
 use RVar::TExpr as RVarTExpr;
@@ -144,6 +145,7 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
         }
         RVarTExpr::Tuple(_es) => {
             //let bytes = compute_size(ty);
+            let _e = expr! { 42 };
             //
             unimplemented!()
         }
