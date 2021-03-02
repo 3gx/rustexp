@@ -134,6 +134,7 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
         RVarTExpr::Int(i) => ExprK::Atom(Atom::Int(i)).expr(ty),
         RVarTExpr::Bool(b) => ExprK::Atom(Atom::Bool(b)).expr(ty),
         RVarTExpr::Var(x) => ExprK::Atom(Atom::Var(x)).expr(ty),
+        RVarTExpr::Void => ExprK::Atom(Atom::Void).expr(ty),
         RVarTExpr::Read => ExprK::Read.expr(ty),
         RVarTExpr::BinaryOp(op, e1, e2) => simplify_and_rco_binop(op, *e1, *e2, ty),
         RVarTExpr::UnaryOp(op, expr) => rco_op(rco_atom(*expr), |x| ExprK::UnaryOp(op, x).expr(ty)),
@@ -141,11 +142,19 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
         RVarTExpr::If(e1, e2, e3) => {
             ExprK::If(rco_exp(*e1).bx(), rco_exp(*e2).bx(), rco_exp(*e3).bx()).expr(ty)
         }
-        RVarTExpr::Tuple(..) => unimplemented!(),
+        RVarTExpr::Tuple(_es) => {
+            //
+            unimplemented!()
+        }
+        RVarTExpr::TupleRef(_tu, _idx) => {
+            //
+            unimplemented!()
+        }
+        RVarTExpr::TupleSet(_tu, _idx, _val) => {
+            //
+            unimplemented!()
+        }
         RVarTExpr::TupleLen(..) => unimplemented!(),
-        RVarTExpr::TupleRef(..) => unimplemented!(),
-        RVarTExpr::TupleSet(..) => unimplemented!(),
-        RVarTExpr::Void => unimplemented!(),
     }
 }
 
