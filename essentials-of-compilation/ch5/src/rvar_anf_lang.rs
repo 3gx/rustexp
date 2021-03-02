@@ -5,7 +5,7 @@ mod macros;
 
 #[path = "rvar_lang.rs"]
 pub mod rvar_lang;
-use rvar_lang::expr;
+//use rvar_lang::expr;
 
 use rvar_lang as RVar;
 use RVar::TExpr as RVarTExpr;
@@ -148,12 +148,7 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
             ExprK::If(rco_exp(*e1).bx(), rco_exp(*e2).bx(), rco_exp(*e3).bx()).expr(ty)
         }
         RVarTExpr::Tuple(_es) => {
-            let bytes = type_size_in_bytes(&ty);
-            let _e = expr! { (if (lt (add (unquote bytes) (unquote bytes))
-            (unquote bytes))
-            (unquote RVarTExpr::Void.expr())
-            (unquote bytes)) };
-            //
+            let _bytes = type_size_in_bytes(&ty);
             unimplemented!()
         }
         RVarTExpr::TupleRef(_tu, _idx) => {
@@ -165,6 +160,9 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
             unimplemented!()
         }
         RVarTExpr::TupleLen(..) => unimplemented!(),
+        RVarTExpr::Collect(..) => unimplemented!(),
+        RVarTExpr::Allocate(..) => unimplemented!(),
+        RVarTExpr::GlobalVar(..) => unimplemented!(),
     }
 }
 

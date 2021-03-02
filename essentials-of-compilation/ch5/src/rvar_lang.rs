@@ -60,6 +60,10 @@ pub enum TExpr<Expr: Clone> {
     TupleRef(Box<Expr>, Int),
     TupleSet(Box<Expr>, Int, Box<Expr>),
     Void,
+
+    Collect(Int),
+    Allocate(Int, Type),
+    GlobalVar(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -367,6 +371,9 @@ pub fn interp_impl<T: Clone>(env: &Env, e: &TExpr<T>, f: &impl Fn(&T) -> &TExpr<
             }
         }
         TExpr::TupleLen(..) => unimplemented!(),
+        TExpr::Allocate(..) => unimplemented!(),
+        TExpr::Collect(..) => unimplemented!(),
+        TExpr::GlobalVar(..) => unimplemented!(),
     }
 }
 
@@ -435,6 +442,9 @@ pub fn uniquify_expr(umap: &UMap, Expr(expr): Expr) -> Expr {
         TupleRef(..) => unimplemented!(),
         TupleSet(..) => unimplemented!(),
         Void => unimplemented!(),
+        TExpr::Collect(..) => unimplemented!(),
+        TExpr::Allocate(..) => unimplemented!(),
+        TExpr::GlobalVar(..) => unimplemented!(),
     };
     Expr(e)
 }
@@ -490,6 +500,9 @@ pub fn type_expr(ctx: &Ctx, Expr(expr): &Expr) -> Type {
         TExpr::TupleRef(..) => unimplemented!(),
         TExpr::TupleSet(..) => unimplemented!(),
         TExpr::Void => unimplemented!(),
+        TExpr::Collect(..) => unimplemented!(),
+        TExpr::Allocate(..) => unimplemented!(),
+        TExpr::GlobalVar(..) => unimplemented!(),
     }
 }
 
@@ -616,6 +629,9 @@ fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
             TExpr::TupleSet(tu.texpr(tuty).bx(), idx, val.texpr(valty).bx()).texpr(Type::Void)
         }
         TExpr::TupleLen(..) => unimplemented!(),
+        TExpr::Collect(..) => unimplemented!(),
+        TExpr::Allocate(..) => unimplemented!(),
+        TExpr::GlobalVar(..) => unimplemented!(),
     }
 }
 
