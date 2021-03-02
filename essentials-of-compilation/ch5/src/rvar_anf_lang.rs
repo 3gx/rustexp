@@ -129,6 +129,10 @@ fn simplify_and_rco_binop(op: RVar::BinaryOpKind, e1: RVarExpr, e2: RVarExpr, ty
     }
 }
 
+fn type_size_in_bytes(_ty: &Type) -> Int {
+    unimplemented!()
+}
+
 // remove-complex-opera* {opera* = operations|operands}
 pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
     match e {
@@ -144,8 +148,11 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
             ExprK::If(rco_exp(*e1).bx(), rco_exp(*e2).bx(), rco_exp(*e3).bx()).expr(ty)
         }
         RVarTExpr::Tuple(_es) => {
-            //let bytes = compute_size(ty);
-            let _e = expr! { 42 };
+            let bytes = type_size_in_bytes(&ty);
+            let _e = expr! { (if (lt (add (unquote bytes) (unquote bytes))
+            (unquote bytes))
+            (unquote RVarTExpr::Void.expr())
+            (unquote bytes)) };
             //
             unimplemented!()
         }
