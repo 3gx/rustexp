@@ -68,8 +68,9 @@ mod rvar_anf_tests {
 
     #[test]
     fn t4() {
+        use ch5::rvar_anf_lang;
         let (e, v) = {
-            use ch5::rvar_lang::*;
+            use rvar_anf_lang::rvar_lang::*;
             let e = expr! {
             (let [t1 (tuple 3 7)]
                  (let [t2 t1]
@@ -86,9 +87,8 @@ mod rvar_anf_tests {
         println!("v= {:?}", v);
 
         /*
-        use ch5::rvar_anf_lang;
-        use rvar_anf_lang::{interp_exp, rco_exp};
-        let e_anf = rco_texpr(e);
+        use rvar_anf_lang::*;
+        let e_anf = rco_exp(e);
         println!("e1anf= {:?} ", e_anf);
         */
 
