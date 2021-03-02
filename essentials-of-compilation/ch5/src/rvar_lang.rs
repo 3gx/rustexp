@@ -207,7 +207,7 @@ impl IntoTerm for &str {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Value {
     Int(Int),
     Bool(Bool),

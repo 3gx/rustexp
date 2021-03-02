@@ -48,7 +48,7 @@ mod x86var_lang {
         let x86cfg = select_inst(cprog);
         print_cfg(&x86cfg.cfg);
         let x86val = interp_prog(&x86cfg);
-        assert_eq!(X86Var::Value::from(v1), x86val);
+        assert_eq!(X86Var::Value::from(v1.clone()), x86val);
 
         let x86cfg = liveness_analysis(x86cfg);
         println!("x86cfg= {:?}", x86cfg);
@@ -63,13 +63,13 @@ mod x86var_lang {
         print_cfg(&x86homes.cfg);
 
         let x86val = X86Var::interp_prog(&x86homes);
-        assert_eq!(X86Var::Value::from(v1), x86val);
+        assert_eq!(X86Var::Value::from(v1.clone()), x86val);
 
         let x86patched = X86Var::patch_prog(x86homes);
         println!("***patched_cfg***:");
         print_cfg(&x86patched.cfg);
         let x86val = X86Var::interp_prog(&x86patched);
-        assert_eq!(X86Var::Value::from(v1), x86val);
+        assert_eq!(X86Var::Value::from(v1.clone()), x86val);
 
         let asmstr = X86Var::print_x86prog(&x86patched);
         println!("\n{}", asmstr);
@@ -188,7 +188,7 @@ mod x86var_lang {
         let x86cfg = X86Var::select_inst(cprog);
         print_cfg(&x86cfg.cfg);
         let x86val = X86Var::interp_prog(&x86cfg);
-        assert_eq!(X86Var::Value::from(v1), x86val);
+        assert_eq!(X86Var::Value::from(v1.clone()), x86val);
 
         use X86Var::*;
         let x86cfg = liveness_analysis(x86cfg);
@@ -198,10 +198,10 @@ mod x86var_lang {
         let x86cfg = x86cfg.regs(regs);
         let x86homes = assign_homes(x86cfg);
         let x86val = X86Var::interp_prog(&x86homes);
-        assert_eq!(X86Var::Value::from(v1), x86val);
+        assert_eq!(X86Var::Value::from(v1.clone()), x86val);
         let x86patched = X86Var::patch_prog(x86homes);
         let x86val = X86Var::interp_prog(&x86patched);
-        assert_eq!(X86Var::Value::from(v1), x86val);
+        assert_eq!(X86Var::Value::from(v1.clone()), x86val);
         let asmstr = X86Var::print_x86prog(&x86patched);
         println!("\n{}", asmstr);
         println!("result={:?}", v1);
@@ -248,7 +248,7 @@ mod x86var_lang {
         print_cfg(&x86cfg.cfg);
 
         let x86val = X86Var::interp_prog(&x86cfg);
-        assert_eq!(X86Var::Value::from(v1), x86val);
+        assert_eq!(X86Var::Value::from(v1.clone()), x86val);
 
         use X86Var::*;
         let x86cfg = liveness_analysis(x86cfg);
@@ -257,13 +257,13 @@ mod x86var_lang {
         let regs = reg_alloc(&ginterfere, &gbias);
         let x86cfg = x86cfg.regs(regs);
         let x86val = X86Var::interp_prog(&x86cfg);
-        assert_eq!(X86Var::Value::from(v1), x86val);
+        assert_eq!(X86Var::Value::from(v1.clone()), x86val);
         let x86homes = assign_homes(x86cfg);
         let x86val = X86Var::interp_prog(&x86homes);
-        assert_eq!(X86Var::Value::from(v1), x86val);
+        assert_eq!(X86Var::Value::from(v1.clone()), x86val);
         let x86patched = X86Var::patch_prog(x86homes);
         let x86val = X86Var::interp_prog(&x86patched);
-        assert_eq!(X86Var::Value::from(v1), x86val);
+        assert_eq!(X86Var::Value::from(v1.clone()), x86val);
         let asmstr = X86Var::print_x86prog(&x86patched);
         println!("\n{}", asmstr);
         println!("result={:?}", v1);
@@ -319,14 +319,14 @@ mod x86var_lang {
         let regs = reg_alloc(&ginterfere, &gbias);
         let x86cfg = x86cfg.regs(regs);
         let x86val = X86Var::interp_prog(&x86cfg);
-        assert_eq!(X86Var::Value::from(v1), x86val);
+        assert_eq!(X86Var::Value::from(v1.clone()), x86val);
         let x86homes = assign_homes(x86cfg);
 
         let x86val = X86Var::interp_prog(&x86homes);
-        assert_eq!(X86Var::Value::from(v1), x86val);
+        assert_eq!(X86Var::Value::from(v1.clone()), x86val);
         let x86patched = X86Var::patch_prog(x86homes);
         let x86val = X86Var::interp_prog(&x86patched);
-        assert_eq!(X86Var::Value::from(v1), x86val);
+        assert_eq!(X86Var::Value::from(v1.clone()), x86val);
         let asmstr = X86Var::print_x86prog(&x86patched);
         println!("\n{}", asmstr);
         println!("result={:?}", v1);
