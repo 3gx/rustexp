@@ -1,6 +1,6 @@
 #[path = "./macros.rs"]
 mod macros;
-use macros::bx;
+//use macros::bx;
 //use macros::r#match;
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
@@ -411,21 +411,21 @@ pub fn uniquify_expr(umap: &UMap, Expr(expr): Expr) -> Expr {
             let umap = sym_set(umap, &x, &newvar);
             Let(
                 newvar,
-                bx![uniquify_expr(&umap, *e)],
-                bx![uniquify_expr(&umap, *body)],
+                uniquify_expr(&umap, *e).bx(),
+                uniquify_expr(&umap, *body).bx(),
             )
         }
-        UnaryOp(op, expr) => UnaryOp(op, bx![uniquify_expr(umap, *expr)]),
+        UnaryOp(op, expr) => UnaryOp(op, uniquify_expr(umap, *expr).bx()),
         BinaryOp(op, e1, e2) => BinaryOp(
             op,
-            bx![uniquify_expr(umap, *e1)],
-            bx![uniquify_expr(umap, *e2)],
+            uniquify_expr(umap, *e1).bx(),
+            uniquify_expr(umap, *e2).bx(),
         ),
         Read => Read,
         If(e1, e2, e3) => If(
-            bx![uniquify_expr(umap, *e1)],
-            bx![uniquify_expr(umap, *e2)],
-            bx![uniquify_expr(umap, *e3)],
+            uniquify_expr(umap, *e1).bx(),
+            uniquify_expr(umap, *e2).bx(),
+            uniquify_expr(umap, *e3).bx(),
         ),
         Tuple(..) => unimplemented!(),
         TupleLen(..) => unimplemented!(),
