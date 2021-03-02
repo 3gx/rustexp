@@ -60,6 +60,11 @@ pub enum TExpr<Expr: Clone> {
     TupleRef(Box<Expr>, Int),
     TupleSet(Box<Expr>, Int, Box<Expr>),
     Void,
+    /*
+    Collect(Int),
+    Allocate(Int, Type),
+    GlobalValue(String),
+    */
 }
 
 #[derive(Debug, Clone, PartialEq)]
