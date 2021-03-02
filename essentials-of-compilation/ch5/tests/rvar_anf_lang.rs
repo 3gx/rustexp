@@ -65,4 +65,81 @@ mod rvar_anf_tests {
         assert_eq!(v1, v1anf);
         println!("v1= {:?} ", v1);
     }
+
+    #[test]
+    fn t4() {
+        let (e, v) = {
+            use ch5::rvar_lang::*;
+            let e = expr! {
+            (let [t1 (tuple 3 7)]
+                 (let [t2 t1]
+                      (let [_ (tupleset! t2 0 42)]
+                           (tupleref t1 0))))};
+            let v = interp_expr(&e);
+            assert_eq!(v, Value::from(42));
+            let e = typed_expr(e);
+            let v1 = interp_texpr(&e);
+            assert_eq!(v, v1);
+            (e, v)
+        };
+        println!("e= {:?}", e);
+        println!("v= {:?}", v);
+
+        /*
+        use ch5::rvar_anf_lang;
+        use rvar_anf_lang::{interp_exp, rco_exp};
+        let e_anf = rco_texpr(e);
+        println!("e1anf= {:?} ", e_anf);
+        */
+
+        /*
+        let v_anf = interp_expr(&e_anf);
+        assert_eq!(v, v_anf);
+        */
+    }
+
+    #[test]
+    fn t5() {
+        let (e, v) = {
+            use ch5::rvar_lang::*;
+            let e = expr! {
+                (let [v (tuple (tuple 44))]
+                     (let [x (let [w (tuple 48)]
+                                   (let [_ (tupleset! v 0 w)] (-6)))]
+                          (add x (tupleref (tupleref v 0) 0))))
+            };
+            let v = interp_expr(&e);
+            assert_eq!(v, Value::from(42));
+            println!("e={:?}", e);
+            let e = typed_expr(e);
+            let v1 = interp_texpr(&e);
+            assert_eq!(v, v1);
+            (e, v)
+        };
+        println!("e= {:?}", e);
+        println!("v= {:?}", v);
+    }
+
+    #[test]
+    fn t6() {
+        let (e, v) = {
+            use ch5::rvar_lang::*;
+            let e = expr! {
+                (let [t (tuple 40 true (tuple 2))]
+                     (if (tupleref t 1)
+                         (add (tupleref t 0)
+                              (tupleref (tupleref t 2) 0))
+                         44))
+            };
+            let v = interp_expr(&e);
+            assert_eq!(v, Value::from(42));
+            println!("e={:?}", e);
+            let e = typed_expr(e);
+            let v1 = interp_texpr(&e);
+            assert_eq!(v, v1);
+            (e, v)
+        };
+        println!("e= {:?}", e);
+        println!("v= {:?}", v);
+    }
 }
