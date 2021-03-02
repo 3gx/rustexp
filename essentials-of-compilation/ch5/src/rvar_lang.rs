@@ -249,6 +249,11 @@ impl Value {
         }
     }
 }
+impl From<Int> for Value {
+    fn from(item: Int) -> Self {
+        Value::Int(item)
+    }
+}
 
 type SymTable<T> = Vec<(String, T)>;
 pub type Env = SymTable<Value>;
@@ -333,10 +338,32 @@ pub fn interp_impl<T: Clone>(env: &Env, e: &TExpr<T>, f: &impl Fn(&T) -> &TExpr<
                 x @ _ => panic!("type mismatch: {:?}", x),
             }
         }
-        TExpr::Tuple(..) => unimplemented!(),
+        TExpr::Tuple(es) => {
+            let val = es
+                .into_iter()
+                .map(|e| interp(env, e))
+                .collect::<Vec<Value>>();
+            Value::Tuple(Rc::new(RefCell::new(val)))
+        }
+        TExpr::TupleSet(tu, idx, val) => {
+            let tu = interp(env, tu);
+            let val = interp(env, val);
+            if let Value::Tuple(tu) = tu {
+                tu.borrow_mut()[*idx as usize] = val;
+            } else {
+                panic!("internal error, expecting tuple but got {:?}", tu);
+            }
+            Value::Void
+        }
+        TExpr::TupleRef(tu, idx) => {
+            let tu = interp(env, tu);
+            if let Value::Tuple(tu) = tu {
+                tu.borrow()[*idx as usize].clone()
+            } else {
+                panic!("internal error, expecting tuple but got {:?}", tu);
+            }
+        }
         TExpr::TupleLen(..) => unimplemented!(),
-        TExpr::TupleRef(..) => unimplemented!(),
-        TExpr::TupleSet(..) => unimplemented!(),
     }
 }
 
