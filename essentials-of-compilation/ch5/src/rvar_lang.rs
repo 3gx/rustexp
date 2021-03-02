@@ -207,12 +207,14 @@ impl IntoTerm for &str {
     }
 }
 
+use std::cell::{Ref, RefCell};
+use std::rc::Rc;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Value {
     Int(Int),
     Bool(Bool),
     Void,
-    Tuple(Vec<Value>),
+    Tuple(Rc<RefCell<Vec<Value>>>),
 }
 impl Value {
     pub fn int(&self) -> Option<&Int> {
@@ -231,12 +233,12 @@ impl Value {
             Value::Tuple(..) => None,
         }
     }
-    pub fn tuple(&self) -> Option<&Vec<Value>> {
+    pub fn tuple(&self) -> Option<Ref<'_, Vec<Value>>> {
         match self {
             Value::Int(_) => None,
             Value::Bool(_) => None,
             Value::Void => None,
-            Value::Tuple(vec) => Some(vec),
+            Value::Tuple(vec) => Some(vec.borrow()),
         }
     }
     pub fn isvoid(&self) -> Bool {
@@ -354,7 +356,6 @@ pub fn interp_program(p: &Program) -> Value {
 
 use std::collections::HashMap;
 
-use std::cell::RefCell;
 thread_local! {
     static MAP: RefCell<HashMap<String, usize>> = RefCell::new(HashMap::new());
 }
