@@ -150,12 +150,14 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
         RVarTExpr::Tuple(es) => {
             let es = es.into_iter().map(|e| e.untyped()).collect::<Vec<_>>();
             let bytes = type_size_in_bytes(&ty);
-            let collect_expr = expr! { (if (lt (add (@RVarTExpr::GlobalVar("free_ptr".to_string()).expr())
-                        (@RVarTExpr::Int(bytes).expr()))
-                    (@RVarTExpr::GlobalVar("fromspace_end".to_string()).expr()))
-                (@RVarTExpr::Void.expr())
-                (@RVarTExpr::Collect(bytes).expr()))
+            let collect_expr = expr! {
+                (if (lt (add (@RVarTExpr::GlobalVar("free_ptr".to_string()).expr())
+                             (@RVarTExpr::Int(bytes).expr()))
+                        (@RVarTExpr::GlobalVar("fromspace_end".to_string()).expr()))
+                    (@RVarTExpr::Void.expr())
+                    (@RVarTExpr::Collect(bytes).expr()))
             };
+            let _sym = es.iter().map(|_| gensym("tmp")).collect::<Vec<String>>();
             let _e1 = expr! {
                 (let [x0 (@es[0])]
                  (let [x1 (@es[1])]
