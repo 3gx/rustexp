@@ -233,7 +233,7 @@ impl Value {
             Value::Tuple(..) => None,
         }
     }
-    pub fn tuple(&self) -> Option<Ref<'_, Vec<Value>>> {
+    pub fn tuple(&self) -> Option<Ref<Vec<Value>>> {
         match self {
             Value::Int(_) => None,
             Value::Bool(_) => None,
