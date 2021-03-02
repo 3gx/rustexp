@@ -165,8 +165,9 @@ mod rvar_lang {
     fn t6() {
         let (e, v) = {
             use ch5::rvar_lang::*;
+            let x = 40;
             let e = expr! {
-                (let [t (tuple 40 true (tuple 2))]
+                (let [t (tuple (unquote x*2 - x) true (tuple 2))]
                      (if (tupleref t 1)
                          (add (tupleref t 0)
                               (tupleref (tupleref t 2) 0))

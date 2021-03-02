@@ -168,6 +168,9 @@ pub macro expr {
                        Box::new(expr!{$lhs}.into_term()),
                        Box::new(expr!{$rhs}.into_term())))
     },
+    ((unquote $($tt:tt)*)) => {
+        $($tt)*
+    },
     ((if $pred:tt $then:tt $else:tt)) => {
         Expr(TExpr::If(Box::new(expr!{$pred}.into_term()),
                  Box::new(expr!{$then}.into_term()),
