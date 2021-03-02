@@ -160,9 +160,9 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                 (let [x0 (@es[0])]
                  (let [x1 (@es[1])]
                   (let [_ (@collect_expr)]
-                        (let [v (@RVarTExpr::Allocate(1,ty).expr())]
-                             (let [_ (tupleset! v 0 x0)]
-                                  (let [_ (tupleset! v 0 x1)] v))))))
+                   (let [v (@RVarTExpr::Allocate(1,ty).expr())]
+                    (let [_ (tupleset! v 0 x0)]
+                     (let [_ (tupleset! v 0 x1)] v))))))
             };
 
             unimplemented!()
