@@ -131,6 +131,8 @@ mod rvar_lang {
             let v = interp_expr(&e);
             assert_eq!(v, Value::from(42));
             let e = typed_expr(e);
+            let v1 = interp_texpr(&e);
+            assert_eq!(v, v1);
             (e, v)
         };
         println!("e= {:?}", e);
@@ -151,6 +153,8 @@ mod rvar_lang {
             assert_eq!(v, Value::from(42));
             println!("e={:?}", e);
             let e = typed_expr(e);
+            let v1 = interp_texpr(&e);
+            assert_eq!(v, v1);
             (e, v)
         };
         println!("e= {:?}", e);
@@ -172,6 +176,8 @@ mod rvar_lang {
             assert_eq!(v, Value::from(42));
             println!("e={:?}", e);
             let e = typed_expr(e);
+            let v1 = interp_texpr(&e);
+            assert_eq!(v, v1);
             (e, v)
         };
         println!("e= {:?}", e);
