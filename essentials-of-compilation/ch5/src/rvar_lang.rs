@@ -92,6 +92,9 @@ impl TypedExpr {
     pub fn bx(&self) -> Box<TypedExpr> {
         Box::new(self.clone())
     }
+    pub fn untyped(self) -> Expr {
+        untyped_expr(self)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -640,4 +643,9 @@ fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
 
 pub fn typed_expr(e: Expr) -> TypedExpr {
     typed_expr_impl(&vec![], e)
+}
+
+fn untyped_expr(_e: TypedExpr) -> Expr {
+    //untyped_expr_impl(&veC![], e)
+    unimplemented!()
 }

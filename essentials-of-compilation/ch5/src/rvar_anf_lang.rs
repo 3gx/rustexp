@@ -147,15 +147,22 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
         RVarTExpr::If(e1, e2, e3) => {
             ExprK::If(rco_exp(*e1).bx(), rco_exp(*e2).bx(), rco_exp(*e3).bx()).expr(ty)
         }
-        RVarTExpr::Tuple(_es) => {
+        RVarTExpr::Tuple(es) => {
+            let es = es.into_iter().map(|e| e.untyped()).collect::<Vec<_>>();
             let bytes = type_size_in_bytes(&ty);
             let _e1 = expr! {
-                (if (lt (add (@ RVarTExpr::GlobalVar("free_ptr".to_string()).expr())
-                             (@ bytes))
-                        (@ RVarTExpr::GlobalVar("fromspace_end".to_string()).expr()))
-                    (@ RVarTExpr::Void.expr())
-                    (@ RVarTExpr::Collect(bytes).expr()))
+                (let [x0 (@es[0])]
+                 (let [x1 (@es[1])]
+                  (let [_ (if (lt (add (@RVarTExpr::GlobalVar("free_ptr".to_string()).expr())
+                                       (@RVarTExpr::Int(bytes).expr()))
+                                  (@RVarTExpr::GlobalVar("fromspace_end".to_string()).expr()))
+                              (@RVarTExpr::Void.expr())
+                             (@RVarTExpr::Collect(bytes).expr()))]
+                        (let [v (@RVarTExpr::Allocate(1,ty).expr())]
+                             (let [_ (tupleset! v 0 x0)]
+                                  (let [_ (tupleset! v 0 x1)] v))))))
             };
+
             unimplemented!()
         }
         RVarTExpr::TupleRef(_tu, _idx) => {
