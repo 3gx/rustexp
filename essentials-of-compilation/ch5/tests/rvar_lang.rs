@@ -128,8 +128,8 @@ mod rvar_lang {
                  (let [t2 t1]
                       (let [_ (tupleset! t2 0 42)]
                            (tupleref t1 0))))};
-            let v = 4;
-            //let v = interp_expr(&e);
+            //let v = 4;
+            let v = interp_expr(&e);
             let e = typed_expr(e);
             (e, v)
         };

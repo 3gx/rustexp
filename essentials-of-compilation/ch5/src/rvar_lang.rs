@@ -212,6 +212,7 @@ pub enum Value {
     Int(Int),
     Bool(Bool),
     Void,
+    Tuple(Vec<Value>),
 }
 impl Value {
     pub fn int(&self) -> Option<&Int> {
@@ -219,6 +220,7 @@ impl Value {
             Value::Int(n) => Some(n),
             Value::Bool(_) => None,
             Value::Void => None,
+            Value::Tuple(..) => None,
         }
     }
     pub fn bool(&self) -> Option<&Bool> {
@@ -226,6 +228,15 @@ impl Value {
             Value::Int(_) => None,
             Value::Bool(b) => Some(b),
             Value::Void => None,
+            Value::Tuple(..) => None,
+        }
+    }
+    pub fn tuple(&self) -> Option<&Vec<Value>> {
+        match self {
+            Value::Int(_) => None,
+            Value::Bool(_) => None,
+            Value::Void => None,
+            Value::Tuple(vec) => Some(vec),
         }
     }
     pub fn isvoid(&self) -> Bool {
