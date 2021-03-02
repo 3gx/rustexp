@@ -64,7 +64,6 @@ pub enum TExpr<Expr: Clone> {
     Collect(Int),
     Allocate(Int, Type),
     GlobalVar(String),
-    Void,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -174,6 +173,9 @@ pub macro expr {
                        Box::new(expr!{$rhs}.into_term())))
     },
     ((unquote $($tt:tt)*)) => {
+        $($tt)*
+    },
+    ((@ $($tt:tt)*)) => {
         $($tt)*
     },
     ((if $pred:tt $then:tt $else:tt)) => {

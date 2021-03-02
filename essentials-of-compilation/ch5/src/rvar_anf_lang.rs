@@ -150,11 +150,11 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
         RVarTExpr::Tuple(_es) => {
             let bytes = type_size_in_bytes(&ty);
             let _e1 = expr! {
-                (if (lt (add (unquote RVarTExpr::GlobalVar("free_ptr".to_string()).expr())
-                             (unquote bytes))
-                        (unquote RVarTExpr::GlobalVar("fromspace_end".to_string()).expr()))
-                    (unquote RVarTExpr::Void.expr())
-                    (unquote RVarTExpr::Collect(bytes).expr()))
+                (if (lt (add (@ RVarTExpr::GlobalVar("free_ptr".to_string()).expr())
+                             (@ bytes))
+                        (@ RVarTExpr::GlobalVar("fromspace_end".to_string()).expr()))
+                    (@ RVarTExpr::Void.expr())
+                    (@ RVarTExpr::Collect(bytes).expr()))
             };
             unimplemented!()
         }
