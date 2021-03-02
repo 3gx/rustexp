@@ -64,6 +64,7 @@ pub enum TExpr<Expr: Clone> {
     Collect(Int),
     Allocate(Int, Type),
     GlobalVar(String),
+    Void,
 }
 
 #[derive(Debug, Clone, PartialEq)]
