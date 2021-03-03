@@ -283,7 +283,10 @@ pub fn interp_exp(env: &Env, e: &Expr) -> Value {
             Value::Tuple(val).onheap()
         }
         x @ Expr::Allocate(..) => panic!("unimplemented {:?}", x),
-        Expr::Collect(_bytes) => Value::Void,
+        Expr::Collect(_bytes) => {
+            println!("\ncall to collect");
+            Value::Void
+        }
         Expr::GlobalVar(label) => interp_atom(env, &Atom::Var(label.clone())),
         Expr::TupleRef(tu, idx) => {
             r#match! { [interp_atom(env, tu)]
