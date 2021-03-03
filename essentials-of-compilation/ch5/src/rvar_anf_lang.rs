@@ -148,10 +148,10 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
             ExprK::If(rco_exp(*e1).bx(), rco_exp(*e2).bx(), rco_exp(*e3).bx()).expr(ty)
         }
         RVarTExpr::Tuple(es) => {
-            // compute size of tuple
+            // compute size of the tuple
             let bytes = type_size_in_bytes(&ty);
 
-            // generate call to garbage collector
+            // generate a call to the garbage collector
             let collect_expr = expr! {
                 (if (lt (add (@RVarTExpr::GlobalVar("free_ptr".to_string()).expr()) (@bytes))
                         (@RVarTExpr::GlobalVar("fromspace_end".to_string()).expr()))
@@ -159,30 +159,35 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                     (@RVarTExpr::Collect(bytes).expr()))
             };
 
-            // generate vars for each tuple element
+            // generate a symbol for each tuple element
             let sym = es.iter().map(|_| gensym("tmp")).collect::<Vec<String>>();
 
-            // generate tuple set to allocated storeage
+            // generate a let of tupleset expr into a tuple allocated on the heap
             let v = RVarTExpr::Var(gensym("tmp")).expr();
-            let expr = sym.iter().enumerate().rfold(v.clone(), |e, (xidx, xvar)| {
-                expr! {
-                (let [_ (tupleset! (@v.clone()) (@xidx as Int)
-                                   (@RVarTExpr::Var(xvar.clone()).expr()))] (@e))}
-            });
+            let expr = sym
+                .iter()
+                .cloned()
+                .enumerate()
+                .rfold(v.clone(), |e, (xidx, xvar)| {
+                    expr! {
+                    (let [_ (tupleset! (@v.clone()) (@xidx as Int)
+                                       (@RVarTExpr::Var(xvar).expr()))] (@e))}
+                });
 
-            // allocate tuple
+            // call to allocate tuple on the heap
             let expr = expr! {
                 (let [_ (@collect_expr)]
                      (let [v (@RVarTExpr::Allocate(bytes, ty).expr())] (@expr)))
             };
 
-            // bind tuple elements to previous defined symbols
+            // bind tuple elements to their respective symbols
             let es = es.into_iter().map(|e| e.untyped());
             let expr = sym.into_iter().zip(es).rfold(expr, |e, (x, xval)| {
                 expr! {
                     (let [(@x) (@xval)] (@e))
                 }
             });
+
             println!("expr= {:?}", expr);
 
             /*
