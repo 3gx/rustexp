@@ -159,9 +159,9 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
             // generate a call to the garbage collector
             let collect_expr = expr! {
                 (if (lt (add {RVarTExpr::GlobalVar("free_ptr".to_string()).expr()} {bytes})
-                    {RVarTExpr::GlobalVar("fromspace_end".to_string()).expr()})
-                        {RVarTExpr::Void.expr()}
-                            {RVarTExpr::Collect(bytes).expr()})
+                        {RVarTExpr::GlobalVar("fromspace_end".to_string()).expr()})
+                    {RVarTExpr::Void.expr()}
+                    {RVarTExpr::Collect(bytes).expr()})
             };
 
             // generate a symbol for each tuple element
