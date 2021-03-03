@@ -132,9 +132,9 @@ pub macro expr {
             Box::new(expr!{$tail}.into_term()),
         ))
     },
-    ((let [(, $($quote:tt)* ) $body:tt] $tail:tt)) => {
+    ((let [{ $($quote:tt)* } $body:tt] $tail:tt)) => {
         Expr(TExpr::Let(
-            expr!{(, $($quote)*)},
+            expr!{{ $($quote)* }},
             Box::new(expr!{$body}.into_term()),
             Box::new(expr!{$tail}.into_term()),
         ))
@@ -185,10 +185,7 @@ pub macro expr {
                        Box::new(expr!{$lhs}.into_term()),
                        Box::new(expr!{$rhs}.into_term())))
     },
-    ((unquote $($tt:tt)*)) => {
-        $($tt)*
-    },
-    ((, $($tt:tt)*)) => {
+    ({ $($tt:tt)* }) => {
         $($tt)*
     },
     ((if $pred:tt $then:tt $else:tt)) => {
