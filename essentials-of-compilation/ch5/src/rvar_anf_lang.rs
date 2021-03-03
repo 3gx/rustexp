@@ -1,7 +1,7 @@
 #[path = "./macros.rs"]
 mod macros;
 //use macros::bx;
-//use macros::r#match;
+use macros::r#match;
 
 #[path = "rvar_lang.rs"]
 pub mod rvar_lang;
@@ -239,7 +239,10 @@ pub fn interp_atom(env: &Env, e: &Atom) -> Value {
     match e {
         Atom::Int(n) => Value::Int(*n),
         Atom::Bool(b) => Value::Bool(*b),
-        Atom::Var(x) => sym_get(env, &x).unwrap().clone(),
+        Atom::Var(x) => match sym_get(env, &x) {
+            Some(x) => x.clone(),
+            _ => panic!("varible {:?} is not defined", x),
+        },
         Atom::Void => Value::Void,
     }
 }
@@ -277,12 +280,36 @@ pub fn interp_exp(env: &Env, e: &Expr) -> Value {
         Expr::Allocate(1, Type::Tuple(ty)) => {
             let mut val = Vec::new();
             val.resize(ty.len(), Value::default());
-            Value::Heap(std::rc::Rc::new(std::cell::RefCell::new(Value::Tuple(val))))
+            Value::Tuple(val).onheap()
         }
         x @ Expr::Allocate(..) => panic!("unimplemented {:?}", x),
-        Expr::Collect(..) => unimplemented!(),
-        Expr::GlobalVar(..) => unimplemented!(),
-        Expr::TupleRef(..) => unimplemented!(),
-        Expr::TupleSet(..) => unimplemented!(),
+        Expr::Collect(_bytes) => Value::Void,
+        Expr::GlobalVar(label) => interp_atom(env, &Atom::Var(label.clone())),
+        Expr::TupleRef(tu, idx) => {
+            r#match! { [interp_atom(env, tu)]
+                Value::Heap(el) if @{let Value::Tuple(tu) = &mut *el.borrow_mut()} =>
+                    tu[*idx as usize].clone(),
+                _ => panic!("expecting tuple, but got  {:?}", tu)
+            }
+        }
+        Expr::TupleSet(tu, idx, val) => {
+            r#match! { [(interp_atom(env, tu), interp_atom(env, val))]
+                (Value::Heap(el), val) if @{let Value::Tuple(tu) = &mut *el.borrow_mut()} =>
+                    tu[*idx as usize] = val,
+                _ => panic!("expecting tuple, but got  {:?}", tu)
+            };
+            Value::Void
+        }
     }
+}
+
+pub fn interp_expr(e: &Expr) -> Value {
+    let env: Env = [
+        ("free_ptr".to_string(), Value::Int(0)),
+        ("fromspace_end".to_string(), Value::Int(0)),
+    ]
+    .iter()
+    .cloned()
+    .collect();
+    interp_exp(&env, e)
 }

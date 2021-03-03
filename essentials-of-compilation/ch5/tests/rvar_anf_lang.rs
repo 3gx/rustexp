@@ -91,10 +91,8 @@ mod rvar_anf_tests {
         let e_anf = rco_exp(e);
         println!("\ne_anf= {:?} ", e_anf);
 
-        /*
-        let v_anf = interp_exp(&vec![], &e_anf);
+        let v_anf = interp_expr(&e_anf);
         assert_eq!(v, v_anf);
-        */
     }
 
     #[test]

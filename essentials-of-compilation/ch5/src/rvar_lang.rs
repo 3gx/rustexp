@@ -378,6 +378,9 @@ impl Value {
             false
         }
     }
+    pub fn onheap(self) -> Value {
+        Value::Heap(Rc::new(RefCell::new(self)))
+    }
 }
 impl From<Int> for Value {
     fn from(item: Int) -> Self {
