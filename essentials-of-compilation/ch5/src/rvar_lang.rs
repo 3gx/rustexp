@@ -87,6 +87,9 @@ impl Expr {
     pub fn bx(&self) -> Box<Expr> {
         Box::new(self.clone())
     }
+    pub fn typed(self) -> TypedExpr {
+        typed_expr(self)
+    }
 }
 impl TypedExpr {
     pub fn bx(&self) -> Box<TypedExpr> {
@@ -519,7 +522,7 @@ pub fn type_expr(ctx: &Ctx, Expr(expr): &Expr) -> Type {
     }
 }
 
-fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
+pub fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
     //    r#match! { [expr]
     match expr {
         TExpr::Int(i) => TExpr::Int(i).texpr(Type::Int),
@@ -641,10 +644,11 @@ fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
             assert_eq!(elty, &valty);
             TExpr::TupleSet(tu.texpr(tuty).bx(), idx, val.texpr(valty).bx()).texpr(Type::Void)
         }
+        TExpr::Collect(bytes) => TExpr::Collect(bytes).texpr(Type::Void),
+        TExpr::Allocate(1, ty) => TExpr::Allocate(1, ty.clone()).texpr(ty),
+        x @ TExpr::Allocate(..) => panic!("unimplemented {:?}", x),
+        TExpr::GlobalVar(x) => TExpr::GlobalVar(x).texpr(Type::Int),
         TExpr::TupleLen(..) => unimplemented!(),
-        TExpr::Collect(..) => unimplemented!(),
-        TExpr::Allocate(..) => unimplemented!(),
-        TExpr::GlobalVar(..) => unimplemented!(),
     }
 }
 

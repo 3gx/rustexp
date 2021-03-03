@@ -129,9 +129,13 @@ fn simplify_and_rco_binop(op: RVar::BinaryOpKind, e1: RVarExpr, e2: RVarExpr, ty
     }
 }
 
-fn type_size_in_bytes(_ty: &Type) -> Int {
-    42
-    //unimplemented!()
+fn type_size_in_bytes(ty: &Type) -> Int {
+    match ty {
+        Type::Bool => 8,
+        Type::Int => 8,
+        Type::Void => panic!("can't have type void"),
+        Type::Tuple(tys) => 8 + tys.iter().map(|ty| type_size_in_bytes(ty)).sum::<Int>(),
+    }
 }
 
 // remove-complex-opera* {opera* = operations|operands}
@@ -178,7 +182,7 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
             // call to allocate tuple on the heap
             let expr = expr! {
                 (let [_ (,collect_expr)]
-                     (let [v (,RVarTExpr::Allocate(bytes, ty).expr())] (,expr)))
+                     (let [v (,RVarTExpr::Allocate(1, ty).expr())] (,expr)))
             };
 
             // bind tuple elements to their respective symbols
@@ -188,8 +192,6 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                     (let [(,x) (,xval)] (,e))
                 }
             });
-
-            println!("expr= {:?}", expr);
 
             /*
              example of generated code for 2-elemen tuple
@@ -201,9 +203,19 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                     (let [_ (tupleset! v 0 x0)]
                      (let [_ (tupleset! v 1 x1)] v))))))
             };
-                    */
+            */
+            println!("expr= {:?}", expr);
+            let ctx: RVar::Ctx = [
+                ("free_ptr".to_string(), Type::Int),
+                ("fromspace_end".to_string(), Type::Int),
+            ]
+            .iter()
+            .cloned()
+            .collect();
+            let expr = RVar::typed_expr_impl(&ctx, expr);
+            println!("expr= {:?}", expr);
 
-            unimplemented!()
+            rco_exp(expr)
         }
         RVarTExpr::TupleRef(_tu, _idx) => {
             //
