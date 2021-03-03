@@ -196,7 +196,7 @@ pub macro expr {
     ((read)) => { Expr(TExpr::Read) },
     (true) => { Expr(TExpr::Bool(true)) },
     (false) => { Expr(TExpr::Bool(false)) },
-    ($id:ident) => { stringify!($id) },
+    ($id:ident) => { stringify!($id).into_term()},
     ($e:expr) => { $e },
 }
 
