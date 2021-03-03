@@ -96,8 +96,8 @@ fn simplify_and_rco_binop(op: RVar::BinaryOpKind, e1: RVarExpr, e2: RVarExpr, ty
 
     match op {
         // since and & or are shortcicuiting ops, convert to 'if'-expr
-        RVarOpKind::And => rco_exp(texpr! { (if {e1} {e2} false) }.texpr(ty)),
-        RVarOpKind::Or => rco_exp(texpr! { (if {e1} true {e2}) }.texpr(ty)),
+        RVarOpKind::And => rco_exp(texpr! { (if {ty} {e1} {e2} false) }),
+        RVarOpKind::Or => rco_exp(texpr! { (if {ty} {e1} true {e2}) }),
         /*
         RVarOpKind::And => rco_exp(
             RVarTExpr::If(
@@ -155,6 +155,16 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
             let bytes = type_size_in_bytes(&ty);
 
             // generate a call to the garbage collector
+            let _collect_expr = texpr! {
+                (if {Type::Void}
+                    (lt {Type::Bool}
+                        (add {Type::Int}
+                             (var {Type::Int} "free_ptr")
+                             (int {bytes}))
+                        (var {Type::Int} "fromspace_end"))
+                    void
+                    {RVarTExpr::Collect(bytes).texpr(Type::Void)})
+            };
             let collect_expr = expr! {
                 (if (lt (add {RVarTExpr::GlobalVar("free_ptr".to_string()).expr()} {bytes})
                         {RVarTExpr::GlobalVar("fromspace_end".to_string()).expr()})
@@ -164,10 +174,13 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
 
             // generate a symbol for each tuple element
             let sym = es.iter().map(|_| gensym("tmp")).collect::<Vec<String>>();
+            let _sym = es.iter().map(|_| gensym("tmp")).collect::<Vec<String>>();
 
             // generate a nested let of tupleset! for each elmt into a tuple allocated on the heap
             let tusym = gensym("tmp");
+            let _tusym = tusym.clone();
             let tuvar = RVarTExpr::Var(tusym.clone()).expr();
+            let _tuvar = RVarTExpr::Var(_tusym.clone()).texpr(ty.clone());
             let expr = sym
                 .iter()
                 .cloned()
@@ -180,10 +193,35 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                          {e})}
                 });
 
+            let _ty = ty.clone();
+            let _elty = match &_ty {
+                Type::Tuple(_elty) => _elty,
+                _ => panic!("not a tuple type {:?}", ty),
+            };
+            let _expr = _sym
+                .iter()
+                .cloned()
+                .zip(_elty.iter().cloned())
+                .enumerate()
+                .rfold(_tuvar.clone(), |RVarExpr(e, ety), (xidx, (xvar, xtype))| {
+                    texpr! {
+                    (let {ety.clone()} [_ (tupleset! {_tuvar.clone()}
+                                                     {xidx as Int}
+                                                     {RVarTExpr::Var(xvar).texpr(xtype)})]
+                         {RVarExpr(e,ety.clone())})}
+                });
+
             // call to allocate tuple on the heap
             let expr = expr! {
                 (let [_ {collect_expr}]
                      (let [{tusym} {RVarTExpr::Allocate(1, ty).expr()}] {expr}))
+            };
+            let RVarExpr(_expr, _ety) = _expr;
+            let _expr = texpr! {
+                (let {_ety.clone()} [_ {_collect_expr}]
+                     (let {_ty.clone()}
+                          [{_tusym} {RVarTExpr::Allocate(1, _ty.clone()).texpr(_ty.clone())}]
+                          {_expr.texpr(_ety.clone())}))
             };
 
             // generated a nested bind of tuple elements to their respective symbols
