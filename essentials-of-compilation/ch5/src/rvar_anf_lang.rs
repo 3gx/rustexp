@@ -168,33 +168,36 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
             // generate a symbol for each tuple element
             let sym = es.iter().map(|_| gensym("tmp")).collect::<Vec<String>>();
 
-            // generate a nested let of tupleset! for each elmt into a tuple allocated on the heap
+            // symbol for tuple expression
             let tusym = gensym("tmp");
-            let tuvar = RVarTExpr::Var(tusym.clone()).texpr(ty.clone());
-            let elty = match &ty {
-                Type::Tuple(elty) => elty,
-                _ => panic!("not a tuple type {:?}", ty),
+            let tuty = ty;
+            let tuvar = RVarTExpr::Var(tusym.clone()).texpr(tuty.clone());
+
+            // get tuple element types
+            let elty = match &tuty {
+                Type::Tuple(elty) => elty.clone(),
+                _ => panic!("not a tuple type {:?}", tuty),
             };
-            let expr = sym
-                .iter()
-                .cloned()
-                .zip(elty.iter().cloned())
-                .enumerate()
-                .rfold(tuvar.clone(), |RVarExpr(e, ety), (xidx, (xvar, xtype))| {
+
+            // generate a nested let of tupleset! for each elmt into a tuple allocated on the heap
+            let expr = sym.iter().cloned().zip(elty.into_iter()).enumerate().rfold(
+                tuvar.clone(),
+                |RVarExpr(e, ety), (xidx, (xvar, xtype))| {
                     texpr! {
                     (let {ety.clone()} [_ (tupleset! {tuvar.clone()}
                                                      {xidx as Int}
                                                      {RVarTExpr::Var(xvar).texpr(xtype)})]
                          {RVarExpr(e,ety.clone())})}
-                });
+                },
+            );
 
             // call to allocate tuple on the heap
             let RVarExpr(expr, ety) = expr;
             let expr = texpr! {
                 (let {ety.clone()} [_ {collect_expr}]
-                     (let {ty.clone()}
-                          [{tusym} {RVarTExpr::Allocate(1, ty.clone()).texpr(ty.clone())}]
-                          {expr.texpr(ety.clone())}))
+                     (let {tuty.clone()}
+                          [{tusym} {RVarTExpr::Allocate(1, tuty.clone()).texpr(tuty.clone())}]
+                          {RVarExpr(expr, ety.clone())}))
             };
 
             // generated a nested bind of tuple elements to their respective symbols
@@ -208,7 +211,7 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                     });
 
             /*
-             pseudo-code of a generated code for 2-elemen tuple
+             untyped pseudo-code of a generated code for 2-elemen tuple
             let e = expr! {
                 (let [x0 {es[0]}]
                  (let [x1 {es[1]}]
