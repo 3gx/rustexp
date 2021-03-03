@@ -31,7 +31,7 @@ pub enum Atom {
 }
 
 #[derive(Debug, Clone)]
-pub enum ExprK {
+pub enum Expr {
     Atom(Atom),
 
     Let(String, Box<Expr>, Box<Expr>),
@@ -48,13 +48,6 @@ pub enum ExprK {
     Allocate(Int, Type),
     GlobalVar(String),
 }
-impl ExprK {
-    fn expr(self, ty: Type) -> Expr {
-        Expr(self, ty)
-    }
-}
-#[derive(Debug, Clone)]
-pub struct Expr(pub ExprK, pub Type);
 
 impl Expr {
     pub fn bx(&self) -> Box<Expr> {
@@ -83,10 +76,7 @@ fn rco_op((a, e): (Atom, Option<Expr>), f: impl FnOnce(Atom) -> Expr) -> Expr {
         (a, None) => f(a),
 
         // otherwise, use let expression to define new variable
-        (Atom::Var(x), Some(e)) => {
-            let Expr(a, a_ty) = f(Atom::Var(x.clone()));
-            ExprK::Let(x, e.bx(), a.expr(a_ty.clone()).bx()).expr(a_ty)
-        }
+        (Atom::Var(x), Some(e)) => Expr::Let(x.clone(), e.bx(), f(Atom::Var(x)).bx()),
 
         // atom can't have expression associated with them
         x @ (Atom::Int(_), Some(_)) => panic!("unsuppoted combo {:?}", x),
@@ -98,9 +88,9 @@ fn simplify_and_rco_binop(op: RVar::BinaryOpKind, e1: RVarExpr, e2: RVarExpr, ty
     use RVar::BinaryOpKind as RVarOpKind;
     use RVar::CmpOpKind as RVarCmpKind;
 
-    fn rco_op_apply(op: BinaryOpKind, e1: RVarExpr, e2: RVarExpr, ty: Type) -> Expr {
+    fn rco_op_apply(op: BinaryOpKind, e1: RVarExpr, e2: RVarExpr) -> Expr {
         rco_op(rco_atom(e1), |x| {
-            rco_op(rco_atom(e2), |y| Expr(ExprK::BinaryOp(op, x, y), ty))
+            rco_op(rco_atom(e2), |y| Expr::BinaryOp(op, x, y))
         })
     }
 
@@ -127,13 +117,13 @@ fn simplify_and_rco_binop(op: RVar::BinaryOpKind, e1: RVarExpr, e2: RVarExpr, ty
         ),
             */
         RVarOpKind::CmpOp(op) => match op {
-            RVarCmpKind::Eq => rco_op_apply(BinaryOpKind::Eq, e1, e2, ty),
-            RVarCmpKind::Lt => rco_op_apply(BinaryOpKind::Lt, e1, e2, ty),
+            RVarCmpKind::Eq => rco_op_apply(BinaryOpKind::Eq, e1, e2),
+            RVarCmpKind::Lt => rco_op_apply(BinaryOpKind::Lt, e1, e2),
             RVarCmpKind::Le => unimplemented!(),
             RVarCmpKind::Gt => unimplemented!(),
             RVarCmpKind::Ge => unimplemented!(),
         },
-        RVarOpKind::Add => rco_op_apply(BinaryOpKind::Add, e1, e2, ty),
+        RVarOpKind::Add => rco_op_apply(BinaryOpKind::Add, e1, e2),
     }
 }
 
@@ -149,16 +139,16 @@ fn type_size_in_bytes(ty: &Type) -> Int {
 // remove-complex-opera* {opera* = operations|operands}
 pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
     match e {
-        RVarTExpr::Int(i) => ExprK::Atom(Atom::Int(i)).expr(ty),
-        RVarTExpr::Bool(b) => ExprK::Atom(Atom::Bool(b)).expr(ty),
-        RVarTExpr::Var(x) => ExprK::Atom(Atom::Var(x)).expr(ty),
-        RVarTExpr::Void => ExprK::Atom(Atom::Void).expr(ty),
-        RVarTExpr::Read => ExprK::Read.expr(ty),
+        RVarTExpr::Int(i) => Expr::Atom(Atom::Int(i)),
+        RVarTExpr::Bool(b) => Expr::Atom(Atom::Bool(b)),
+        RVarTExpr::Var(x) => Expr::Atom(Atom::Var(x)),
+        RVarTExpr::Void => Expr::Atom(Atom::Void),
+        RVarTExpr::Read => Expr::Read,
         RVarTExpr::BinaryOp(op, e1, e2) => simplify_and_rco_binop(op, *e1, *e2, ty),
-        RVarTExpr::UnaryOp(op, expr) => rco_op(rco_atom(*expr), |x| ExprK::UnaryOp(op, x).expr(ty)),
-        RVarTExpr::Let(x, e, body) => ExprK::Let(x, rco_exp(*e).bx(), rco_exp(*body).bx()).expr(ty),
+        RVarTExpr::UnaryOp(op, expr) => rco_op(rco_atom(*expr), |x| Expr::UnaryOp(op, x)),
+        RVarTExpr::Let(x, e, body) => Expr::Let(x, rco_exp(*e).bx(), rco_exp(*body).bx()),
         RVarTExpr::If(e1, e2, e3) => {
-            ExprK::If(rco_exp(*e1).bx(), rco_exp(*e2).bx(), rco_exp(*e3).bx()).expr(ty)
+            Expr::If(rco_exp(*e1).bx(), rco_exp(*e2).bx(), rco_exp(*e3).bx())
         }
         RVarTExpr::Tuple(es) => {
             // compute size of the tuple
@@ -228,15 +218,13 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
 
             rco_exp(expr)
         }
-        RVarTExpr::TupleRef(tu, idx) => {
-            rco_op(rco_atom(*tu), |tu| ExprK::TupleRef(tu, idx).expr(ty))
-        }
+        RVarTExpr::TupleRef(tu, idx) => rco_op(rco_atom(*tu), |tu| Expr::TupleRef(tu, idx)),
         RVarTExpr::TupleSet(tu, idx, val) => rco_op(rco_atom(*tu), |tu| {
-            rco_op(rco_atom(*val), |val| ExprK::TupleSet(tu, idx, val).expr(ty))
+            rco_op(rco_atom(*val), |val| Expr::TupleSet(tu, idx, val))
         }),
-        RVarTExpr::Collect(bytes) => ExprK::Collect(bytes).expr(ty),
-        RVarTExpr::Allocate(num, ty1) => ExprK::Allocate(num, ty1).expr(ty),
-        RVarTExpr::GlobalVar(x) => ExprK::GlobalVar(x).expr(ty),
+        RVarTExpr::Collect(bytes) => Expr::Collect(bytes),
+        RVarTExpr::Allocate(num, ty1) => Expr::Allocate(num, ty1),
+        RVarTExpr::GlobalVar(x) => Expr::GlobalVar(x),
         RVarTExpr::TupleLen(..) => unimplemented!(),
     }
 }
@@ -249,41 +237,41 @@ pub fn interp_atom(env: &Env, e: &Atom) -> Value {
         Atom::Void => Value::Void,
     }
 }
-pub fn interp_exp(env: &Env, Expr(e, _): &Expr) -> Value {
+pub fn interp_exp(env: &Env, e: &Expr) -> Value {
     match e {
-        ExprK::Atom(atom) => interp_atom(env, atom),
-        ExprK::Read => {
+        Expr::Atom(atom) => interp_atom(env, atom),
+        Expr::Read => {
             let mut input = String::new();
             std::io::stdin().read_line(&mut input).unwrap();
             Value::Int(input.trim().parse().unwrap())
         }
-        ExprK::Let(x, e, body) => {
+        Expr::Let(x, e, body) => {
             let new_env = sym_set(env, x, &interp_exp(env, e));
             interp_exp(&new_env, body)
         }
-        ExprK::If(e1, e2, e3) => {
+        Expr::If(e1, e2, e3) => {
             if *interp_exp(env, e1).bool().unwrap() {
                 interp_exp(env, e2)
             } else {
                 interp_exp(env, e3)
             }
         }
-        ExprK::UnaryOp(op, a) => match (op, interp_atom(env, a)) {
+        Expr::UnaryOp(op, a) => match (op, interp_atom(env, a)) {
             (UnaryOpKind::Not, Value::Bool(b)) => Value::Bool(!b),
             (UnaryOpKind::Neg, Value::Int(i)) => Value::Int(-i),
             x @ _ => panic!("type mismatch: {:?}", x),
         },
-        ExprK::BinaryOp(op, a1, a2) => match (op, interp_atom(env, a1), interp_atom(env, a2)) {
+        Expr::BinaryOp(op, a1, a2) => match (op, interp_atom(env, a1), interp_atom(env, a2)) {
             (BinaryOpKind::Add, Value::Int(a), Value::Int(b)) => Value::Int(a + b),
             (BinaryOpKind::Eq, Value::Int(a), Value::Int(b)) => Value::Bool(a == b),
             (BinaryOpKind::Eq, Value::Bool(a), Value::Bool(b)) => Value::Bool(a == b),
             (BinaryOpKind::Lt, Value::Int(a), Value::Int(b)) => Value::Bool(a < b),
             x @ _ => panic!("type mismatch: {:?}", x),
         },
-        ExprK::Allocate(..) => unimplemented!(),
-        ExprK::Collect(..) => unimplemented!(),
-        ExprK::GlobalVar(..) => unimplemented!(),
-        ExprK::TupleRef(..) => unimplemented!(),
-        ExprK::TupleSet(..) => unimplemented!(),
+        Expr::Allocate(..) => unimplemented!(),
+        Expr::Collect(..) => unimplemented!(),
+        Expr::GlobalVar(..) => unimplemented!(),
+        Expr::TupleRef(..) => unimplemented!(),
+        Expr::TupleSet(..) => unimplemented!(),
     }
 }
