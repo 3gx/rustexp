@@ -57,7 +57,7 @@ pub enum Expr {
     Allocate(Int, Type),
     TupleRef(Atom, Int),
     TupleSet(Atom, Int, Atom),
-    GlobalValue(String),
+    GlobalVar(String),
     Void,
 }
 
@@ -127,7 +127,7 @@ pub fn interp_expr(env: &Env, e: &Expr) -> Value {
         Allocate(..) => unimplemented!(),
         TupleRef(..) => unimplemented!(),
         TupleSet(..) => unimplemented!(),
-        GlobalValue(..) => unimplemented!(),
+        GlobalVar(..) => unimplemented!(),
         Void => unimplemented!(),
     }
 }
@@ -248,7 +248,9 @@ fn explicate_tail(
         }
         RVarAnf::ExprK::Allocate(..) => unimplemented!(),
         RVarAnf::ExprK::Collect(..) => unimplemented!(),
-        RVarAnf::ExprK::GlobalValue(..) => unimplemented!(),
+        RVarAnf::ExprK::GlobalVar(..) => unimplemented!(),
+        RVarAnf::ExprK::TupleRef(..) => unimplemented!(),
+        RVarAnf::ExprK::TupleSet(..) => unimplemented!(),
     }
 }
 
@@ -290,7 +292,9 @@ fn explicate_assign(
         }
         RVarAnf::ExprK::Allocate(..) => unimplemented!(),
         RVarAnf::ExprK::Collect(..) => unimplemented!(),
-        RVarAnf::ExprK::GlobalValue(..) => unimplemented!(),
+        RVarAnf::ExprK::GlobalVar(..) => unimplemented!(),
+        RVarAnf::ExprK::TupleRef(..) => unimplemented!(),
+        RVarAnf::ExprK::TupleSet(..) => unimplemented!(),
     }
 }
 

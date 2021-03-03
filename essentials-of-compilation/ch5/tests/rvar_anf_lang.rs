@@ -78,19 +78,18 @@ mod rvar_anf_tests {
                            (tupleref t1 0))))};
             let v = interp_expr(&e);
             assert_eq!(v, Value::from(42));
+            println!("\nuntyped= {:?}", e);
             let e = typed_expr(e);
             let v1 = interp_texpr(&e);
             assert_eq!(v, v1);
             (e, v)
         };
-        println!("e= {:?}", e);
-        println!("v= {:?}", v);
+        println!("\ntyped= {:?}", e);
+        println!("\nval= {:?}", v);
 
-        /*
         use rvar_anf_lang::*;
         let e_anf = rco_exp(e);
-        println!("e1anf= {:?} ", e_anf);
-        */
+        println!("\ne_anf= {:?} ", e_anf);
 
         /*
         let v_anf = interp_expr(&e_anf);

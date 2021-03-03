@@ -40,9 +40,12 @@ pub enum ExprK {
     UnaryOp(UnaryOpKind, Atom),
     BinaryOp(BinaryOpKind, Atom, Atom),
 
+    TupleRef(Atom, Int),
+    TupleSet(Atom, Int, Atom),
+
     Collect(Int),
     Allocate(Int, Type),
-    GlobalValue(String),
+    GlobalVar(String),
 }
 impl ExprK {
     fn expr(self, ty: Type) -> Expr {
@@ -209,7 +212,6 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                      (let [_ (tupleset! v 1 x1)] v))))))
             };
             */
-            println!("expr= {:?}", expr);
             let ctx: RVar::Ctx = [
                 ("free_ptr".to_string(), Type::Int),
                 ("fromspace_end".to_string(), Type::Int),
@@ -218,22 +220,19 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
             .cloned()
             .collect();
             let expr = RVar::typed_expr_impl(&ctx, expr);
-            println!("expr= {:?}", expr);
 
             rco_exp(expr)
         }
-        RVarTExpr::TupleRef(_tu, _idx) => {
-            //
-            unimplemented!()
+        RVarTExpr::TupleRef(tu, idx) => {
+            rco_op(rco_atom(*tu), |tu| ExprK::TupleRef(tu, idx).expr(ty))
         }
-        RVarTExpr::TupleSet(_tu, _idx, _val) => {
-            //
-            unimplemented!()
-        }
+        RVarTExpr::TupleSet(tu, idx, val) => rco_op(rco_atom(*tu), |tu| {
+            rco_op(rco_atom(*val), |val| ExprK::TupleSet(tu, idx, val).expr(ty))
+        }),
+        RVarTExpr::Collect(bytes) => ExprK::Collect(bytes).expr(ty),
+        RVarTExpr::Allocate(num, ty1) => ExprK::Allocate(num, ty1).expr(ty),
+        RVarTExpr::GlobalVar(x) => ExprK::GlobalVar(x).expr(ty),
         RVarTExpr::TupleLen(..) => unimplemented!(),
-        RVarTExpr::Collect(..) => unimplemented!(),
-        RVarTExpr::Allocate(..) => unimplemented!(),
-        RVarTExpr::GlobalVar(..) => unimplemented!(),
     }
 }
 
@@ -278,6 +277,8 @@ pub fn interp_exp(env: &Env, Expr(e, _): &Expr) -> Value {
         },
         ExprK::Allocate(..) => unimplemented!(),
         ExprK::Collect(..) => unimplemented!(),
-        ExprK::GlobalValue(..) => unimplemented!(),
+        ExprK::GlobalVar(..) => unimplemented!(),
+        ExprK::TupleRef(..) => unimplemented!(),
+        ExprK::TupleSet(..) => unimplemented!(),
     }
 }
