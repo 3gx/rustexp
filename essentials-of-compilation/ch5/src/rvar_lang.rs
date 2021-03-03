@@ -328,11 +328,17 @@ use std::cell::RefCell;
 use std::rc::Rc;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Value {
+    None,
     Int(Int),
     Bool(Bool),
     Void,
     Tuple(Vec<Value>),
     Heap(Rc<RefCell<Value>>),
+}
+impl Default for Value {
+    fn default() -> Self {
+        Value::None
+    }
 }
 impl Value {
     pub fn int(self) -> Option<Int> {
@@ -341,7 +347,8 @@ impl Value {
             Value::Bool(_) => None,
             Value::Void => None,
             Value::Tuple(..) => None,
-            Value::Heap(what) => what.borrow().clone().int(),
+            Value::Heap(what) => what.take().int(),
+            Value::None => None,
         }
     }
     pub fn bool(self) -> Option<Bool> {
@@ -350,7 +357,8 @@ impl Value {
             Value::Bool(b) => Some(b),
             Value::Void => None,
             Value::Tuple(..) => None,
-            Value::Heap(what) => what.borrow().clone().bool(),
+            Value::Heap(what) => what.take().clone().bool(),
+            Value::None => None,
         }
     }
     pub fn tuple(self) -> Option<Vec<Value>> {
@@ -359,7 +367,8 @@ impl Value {
             Value::Bool(_) => None,
             Value::Void => None,
             Value::Tuple(vec) => Some(vec),
-            Value::Heap(what) => what.borrow().clone().tuple(),
+            Value::Heap(what) => what.take().clone().tuple(),
+            Value::None => None,
         }
     }
     pub fn isvoid(&self) -> Bool {
