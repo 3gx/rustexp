@@ -760,7 +760,7 @@ pub fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
             TExpr::TupleSet(tu.texpr(tuty).bx(), idx, val.texpr(valty).bx()).texpr(Type::Void)
         }
         TExpr::Collect(bytes) => TExpr::Collect(bytes).texpr(Type::Void),
-        TExpr::Allocate(1, ty) => TExpr::Allocate(1, ty.clone()).texpr(ty),
+        TExpr::Allocate(1, ty @ Type::Tuple(..)) => TExpr::Allocate(1, ty.clone()).texpr(ty),
         x @ TExpr::Allocate(..) => panic!("unimplemented {:?}", x),
         TExpr::GlobalVar(x) => TExpr::GlobalVar(x).texpr(Type::Int),
         TExpr::TupleLen(..) => unimplemented!(),
