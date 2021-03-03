@@ -157,7 +157,28 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                     (@RVarTExpr::Void.expr())
                     (@RVarTExpr::Collect(bytes).expr()))
             };
-            let _sym = es.iter().map(|_| gensym("tmp")).collect::<Vec<String>>();
+            let sym = es.iter().map(|_| gensym("tmp")).collect::<Vec<String>>();
+            let v = RVarTExpr::Var(gensym("tmp")).expr();
+            let expr = sym.iter().enumerate().rfold(
+                v.clone(),
+                |e, (idx, x)| expr! {
+                    (let [_ (tupleset! (@v.clone()) (@idx as Int) (@RVarTExpr::Var(x.clone()).expr()))] (@e))},
+            );
+            let expr = expr! {
+                (let [_ (@collect_expr)]
+                     (let [v (@RVarTExpr::Allocate(bytes, ty).expr())] (@expr)))
+            };
+            let expr = sym
+                .into_iter()
+                .zip(es.into_iter())
+                .rfold(expr, |e, (x, xval)| {
+                    expr! {
+                        (let [(@x) (@xval)] (@e))
+                    }
+                });
+            println!("expr= {:?}", expr);
+
+            /*
             let _e1 = expr! {
                 (let [x0 (@es[0])]
                  (let [x1 (@es[1])]
@@ -166,6 +187,7 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                     (let [_ (tupleset! v 0 x0)]
                      (let [_ (tupleset! v 0 x1)] v))))))
             };
+                    */
 
             unimplemented!()
         }

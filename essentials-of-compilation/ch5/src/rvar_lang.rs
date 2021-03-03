@@ -129,6 +129,13 @@ pub macro expr {
             Box::new(expr!{$tail}.into_term()),
         ))
     },
+    ((let [(@ $($quote:tt)* ) $body:tt] $tail:tt)) => {
+        Expr(TExpr::Let(
+            expr!{(@ $($quote)*)},
+            Box::new(expr!{$body}.into_term()),
+            Box::new(expr!{$tail}.into_term()),
+        ))
+    },
     ((tuple $($expr:tt)*)) => {
         Expr(TExpr::Tuple(vec![$(expr!{$expr}.into_term()),*]))
     },
