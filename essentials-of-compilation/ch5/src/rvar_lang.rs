@@ -185,9 +185,6 @@ pub macro expr {
                        Box::new(expr!{$lhs}.into_term()),
                        Box::new(expr!{$rhs}.into_term())))
     },
-    ({ $($tt:tt)* }) => {
-        $($tt)*
-    },
     ((if $pred:tt $then:tt $else:tt)) => {
         Expr(TExpr::If(Box::new(expr!{$pred}.into_term()),
                  Box::new(expr!{$then}.into_term()),
@@ -196,8 +193,11 @@ pub macro expr {
     ((read)) => { Expr(TExpr::Read) },
     (true) => { Expr(TExpr::Bool(true)) },
     (false) => { Expr(TExpr::Bool(false)) },
-    ($id:ident) => { stringify!($id).into_term()},
+    ($id:ident) => { stringify!($id) },
     ($e:expr) => { $e },
+    ({ $($tt:tt)* }) => {
+        $($tt)*
+    },
 }
 
 // ---------------------------------------------------------------------------
