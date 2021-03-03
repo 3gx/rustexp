@@ -612,14 +612,16 @@ pub fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
             TExpr::Tuple(es).texpr(Type::Tuple(ty))
         }
         TExpr::TupleRef(tu, idx) => {
-            assert!(idx >= 0, format!("idx must be non-negative, got {}", idx));
+            assert!(idx >= 0, "idx must be non-negative, got {}", idx);
             let TypedExpr(tu, tuty) = typed_expr_impl(ctx, *tu);
             let elty = match &tuty {
                 Type::Tuple(tys) => {
                     let idx = idx as usize;
                     assert!(
                         idx < tys.len(),
-                        format!("violation: idx= {} < tuple_len= {}", idx, tys.len())
+                        "violation: idx= {} < tuple_len= {}",
+                        idx,
+                        tys.len()
                     );
                     tys[idx].clone()
                 }
@@ -628,7 +630,7 @@ pub fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
             TExpr::TupleRef(tu.texpr(tuty).bx(), idx).texpr(elty)
         }
         TExpr::TupleSet(tu, idx, val) => {
-            assert!(idx >= 0, format!("idx must be non-negative, got {}", idx));
+            assert!(idx >= 0, "idx must be non-negative, got {}", idx);
             let TypedExpr(tu, tuty) = typed_expr_impl(ctx, *tu);
             let TypedExpr(val, valty) = typed_expr_impl(ctx, *val);
             let elty = match &tuty {
@@ -636,7 +638,9 @@ pub fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
                     let idx = idx as usize;
                     assert!(
                         idx < tys.len(),
-                        format!("violation: idx= {} < tuple_len= {}", idx, tys.len())
+                        "violation: idx= {} < tuple_len= {}",
+                        idx,
+                        tys.len()
                     );
                     &tys[idx]
                 }
