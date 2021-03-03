@@ -529,7 +529,11 @@ pub fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
         TExpr::Bool(b) => TExpr::Bool(b).texpr(Type::Bool),
         TExpr::Void => TExpr::Void.texpr(Type::Void),
         TExpr::Var(x) => {
-            let ty = sym_get(ctx, &x).unwrap().clone();
+            let ty = sym_get(ctx, &x);
+            let ty = match ty {
+                Some(ty) => ty.clone(),
+                None => panic!("unknown var {}", x),
+            };
             TExpr::Var(x).texpr(ty)
         }
         TExpr::Let(x, expr, body) => {
