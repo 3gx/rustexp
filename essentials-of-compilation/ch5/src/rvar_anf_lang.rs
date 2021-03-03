@@ -153,10 +153,10 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
 
             // generate a call to the garbage collector
             let collect_expr = expr! {
-                (if (lt (add (@RVarTExpr::GlobalVar("free_ptr".to_string()).expr()) (@bytes))
-                        (@RVarTExpr::GlobalVar("fromspace_end".to_string()).expr()))
-                    (@RVarTExpr::Void.expr())
-                    (@RVarTExpr::Collect(bytes).expr()))
+                (if (lt (add (,RVarTExpr::GlobalVar("free_ptr".to_string()).expr()) (,bytes))
+                             (,RVarTExpr::GlobalVar("fromspace_end".to_string()).expr()))
+                    (,RVarTExpr::Void.expr())
+                    (,RVarTExpr::Collect(bytes).expr()))
             };
 
             // generate a symbol for each tuple element
@@ -170,21 +170,21 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                 .enumerate()
                 .rfold(v.clone(), |e, (xidx, xvar)| {
                     expr! {
-                    (let [_ (tupleset! (@v.clone()) (@xidx as Int)
-                                       (@RVarTExpr::Var(xvar).expr()))] (@e))}
+                    (let [_ (tupleset! (,v.clone()) (,xidx as Int)
+                             (,RVarTExpr::Var(xvar).expr()))] (,e))}
                 });
 
             // call to allocate tuple on the heap
             let expr = expr! {
-                (let [_ (@collect_expr)]
-                     (let [v (@RVarTExpr::Allocate(bytes, ty).expr())] (@expr)))
+                (let [_ (,collect_expr)]
+                     (let [v (,RVarTExpr::Allocate(bytes, ty).expr())] (,expr)))
             };
 
             // bind tuple elements to their respective symbols
             let es = es.into_iter().map(|e| e.untyped());
             let expr = sym.into_iter().zip(es).rfold(expr, |e, (x, xval)| {
                 expr! {
-                    (let [(@x) (@xval)] (@e))
+                    (let [(,x) (,xval)] (,e))
                 }
             });
 
@@ -193,10 +193,10 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
             /*
              example of generated code for 2-elemen tuple
             let _e1 = expr! {
-                (let [x0 (@es[0])]
-                 (let [x1 (@es[1])]
-                  (let [_ (@collect_expr)]
-                   (let [v (@RVarTExpr::Allocate(1,ty).expr())]
+                (let [x0 (,es[0])]
+                 (let [x1 (,es[1])]
+                  (let [_ (,collect_expr)]
+                   (let [v (,RVarTExpr::Allocate(1,ty).expr())]
                     (let [_ (tupleset! v 0 x0)]
                      (let [_ (tupleset! v 1 x1)] v))))))
             };
