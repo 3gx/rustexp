@@ -256,7 +256,7 @@ pub fn interp_exp(env: &Env, e: &Expr) -> Value {
             interp_exp(&new_env, body)
         }
         Expr::If(e1, e2, e3) => {
-            if *interp_exp(env, e1).bool().unwrap() {
+            if interp_exp(env, e1).bool().unwrap() {
                 interp_exp(env, e2)
             } else {
                 interp_exp(env, e3)

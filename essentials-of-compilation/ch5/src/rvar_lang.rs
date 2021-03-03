@@ -324,7 +324,7 @@ impl IntoTerm for &str {
     }
 }
 
-use std::cell::{Ref, RefCell};
+use std::cell::RefCell;
 use std::rc::Rc;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Value {
@@ -334,7 +334,7 @@ pub enum Value {
     Tuple(Rc<RefCell<Vec<Value>>>),
 }
 impl Value {
-    pub fn int(&self) -> Option<&Int> {
+    pub fn int(self) -> Option<Int> {
         match self {
             Value::Int(n) => Some(n),
             Value::Bool(_) => None,
@@ -342,7 +342,7 @@ impl Value {
             Value::Tuple(..) => None,
         }
     }
-    pub fn bool(&self) -> Option<&Bool> {
+    pub fn bool(self) -> Option<Bool> {
         match self {
             Value::Int(_) => None,
             Value::Bool(b) => Some(b),
@@ -350,12 +350,12 @@ impl Value {
             Value::Tuple(..) => None,
         }
     }
-    pub fn tuple(&self) -> Option<Ref<Vec<Value>>> {
+    pub fn tuple(self) -> Option<Vec<Value>> {
         match self {
             Value::Int(_) => None,
             Value::Bool(_) => None,
             Value::Void => None,
-            Value::Tuple(vec) => Some(vec.borrow()),
+            Value::Tuple(vec) => Some(vec.take()),
         }
     }
     pub fn isvoid(&self) -> Bool {
@@ -423,24 +423,24 @@ pub fn interp_impl<T: Clone>(env: &Env, e: &TExpr<T>, f: &impl Fn(&T) -> &TExpr<
         }
         TExpr::If(cond, thn, els) => interp(
             env,
-            if *interp(env, cond).bool().unwrap() {
+            if interp(env, cond).bool().unwrap() {
                 thn
             } else {
                 els
             },
         ),
         TExpr::BinaryOp(And, e1, e2) => {
-            if *interp(env, e1).bool().unwrap() {
-                Value::Bool(*interp(env, e2).bool().unwrap())
+            if interp(env, e1).bool().unwrap() {
+                Value::Bool(interp(env, e2).bool().unwrap())
             } else {
                 Value::Bool(false)
             }
         }
         TExpr::BinaryOp(Or, e1, e2) => {
-            if *interp(env, e1).bool().unwrap() {
+            if interp(env, e1).bool().unwrap() {
                 Value::Bool(true)
             } else {
-                Value::Bool(*interp(env, e2).bool().unwrap())
+                Value::Bool(interp(env, e2).bool().unwrap())
             }
         }
         TExpr::UnaryOp(Not, expr) => Value::Bool(!interp(env, expr).bool().unwrap()),
