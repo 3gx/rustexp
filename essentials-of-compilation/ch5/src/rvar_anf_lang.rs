@@ -159,9 +159,9 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                 (if {Type::Void}
                     (lt {Type::Bool}
                         (add {Type::Int}
-                             (var {Type::Int} "free_ptr")
+                             (gvar {Type::Int} "free_ptr")
                              (int {bytes}))
-                        (var {Type::Int} "fromspace_end"))
+                        (gvar {Type::Int} "fromspace_end"))
                     void
                     {RVarTExpr::Collect(bytes).texpr(Type::Void)})
             };
@@ -225,6 +225,7 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
             };
 
             // generated a nested bind of tuple elements to their respective symbols
+            let _es = es.clone();
             let expr = sym
                 .into_iter()
                 .zip(es.into_iter())
@@ -233,6 +234,14 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                         (let [{x} {xval.untyped()}] {e})
                     }
                 });
+            let _expr = _sym.into_iter().zip(_es.into_iter()).rfold(
+                _expr,
+                |RVarExpr(e, ety), (x, xval)| {
+                    texpr! {
+                        (let {ety.clone()} [{x} {xval}] {RVarExpr(e,ety.clone())})
+                    }
+                },
+            );
 
             /*
              pseudo-code of a generated code for 2-elemen tuple
@@ -254,7 +263,9 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
             .collect();
             let expr = RVar::typed_expr_impl(&ctx, expr);
 
-            rco_exp(expr)
+            println!("\n:expr= {:?}", expr);
+            println!("\n_expr= {:?}", _expr);
+            rco_exp(_expr)
         }
         RVarTExpr::TupleRef(tu, idx) => rco_op(rco_atom(*tu), |tu| Expr::TupleRef(tu, idx)),
         RVarTExpr::TupleSet(tu, idx, val) => rco_op(rco_atom(*tu), |tu| {

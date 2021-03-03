@@ -285,6 +285,7 @@ pub macro texpr {
     },
     ((int $val:tt)) => {TExpr::Int(texpr!{$val} as Int).texpr(Type::Int)},
     ((var $type:tt $var:tt)) => {TExpr::Var(texpr!{$var}.to_string()).texpr(texpr!{$type})},
+    ((gvar $type:tt $var:tt)) => {TExpr::GlobalVar(texpr!{$var}.to_string()).texpr(texpr!{$type})},
     ({ $($tt:tt)* }) => {
         $($tt)*
     },
