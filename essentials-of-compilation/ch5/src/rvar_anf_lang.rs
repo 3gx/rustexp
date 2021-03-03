@@ -283,11 +283,22 @@ pub fn interp_exp(env: &Env, e: &Expr) -> Value {
             Value::Tuple(val).onheap()
         }
         x @ Expr::Allocate(..) => panic!("unimplemented {:?}", x),
-        Expr::Collect(_bytes) => {
+        Expr::Collect(bytes) => {
+            r#match! { [sym_get(env, "fromspace_end")]
+                Some(x) if @{let Value::Heap(x) = x,
+                             let Value::Int(end) = &mut *x.borrow_mut()} =>
+                         {*end = ((bytes as &Int) + *end)*2;},
+                x@_ => panic!("fromspace_end is not valid, got {:?}", x)
+            }
             println!("\ncall to collect");
             Value::Void
         }
-        Expr::GlobalVar(label) => interp_atom(env, &Atom::Var(label.clone())),
+        Expr::GlobalVar(var) => {
+            r#match! { [sym_get(env, var)]
+                Some(x) if @{let Value::Heap(x) = x} => x.borrow().clone(),
+                _ => panic!("unknown globalvar {:?}", var)
+            }
+        }
         Expr::TupleRef(tu, idx) => {
             r#match! { [interp_atom(env, tu)]
                 Value::Heap(el) if @{let Value::Tuple(tu) = &mut *el.borrow_mut()} =>
@@ -308,8 +319,8 @@ pub fn interp_exp(env: &Env, e: &Expr) -> Value {
 
 pub fn interp_expr(e: &Expr) -> Value {
     let env: Env = [
-        ("free_ptr".to_string(), Value::Int(0)),
-        ("fromspace_end".to_string(), Value::Int(0)),
+        ("free_ptr".to_string(), Value::Int(0).onheap()),
+        ("fromspace_end".to_string(), Value::Int(0).onheap()),
     ]
     .iter()
     .cloned()
