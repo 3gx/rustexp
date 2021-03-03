@@ -130,7 +130,8 @@ fn simplify_and_rco_binop(op: RVar::BinaryOpKind, e1: RVarExpr, e2: RVarExpr, ty
 }
 
 fn type_size_in_bytes(_ty: &Type) -> Int {
-    unimplemented!()
+    42
+    //unimplemented!()
 }
 
 // remove-complex-opera* {opera* = operations|operands}

@@ -652,7 +652,32 @@ pub fn typed_expr(e: Expr) -> TypedExpr {
     typed_expr_impl(&vec![], e)
 }
 
-fn untyped_expr(_e: TypedExpr) -> Expr {
-    //untyped_expr_impl(&veC![], e)
-    unimplemented!()
+fn untyped_expr(TypedExpr(expr, _): TypedExpr) -> Expr {
+    match expr {
+        TExpr::Int(i) => TExpr::Int(i).expr(),
+        TExpr::Bool(b) => TExpr::Bool(b).expr(),
+        TExpr::Void => TExpr::Void.expr(),
+        TExpr::Var(x) => TExpr::Var(x).expr(),
+        TExpr::Let(x, expr, body) => TExpr::Let(x, expr.untyped().bx(), body.untyped().bx()).expr(),
+        TExpr::If(pred, then_, else_) => TExpr::If(
+            pred.untyped().bx(),
+            then_.untyped().bx(),
+            else_.untyped().bx(),
+        )
+        .expr(),
+        TExpr::Read => TExpr::Read.expr(),
+        TExpr::UnaryOp(op, expr) => TExpr::UnaryOp(op, expr.untyped().bx()).expr(),
+        TExpr::BinaryOp(op, e1, e2) => {
+            TExpr::BinaryOp(op, e1.untyped().bx(), e2.untyped().bx()).expr()
+        }
+        TExpr::Tuple(es) => TExpr::Tuple(es.into_iter().map(|e| e.untyped()).collect()).expr(),
+        TExpr::TupleRef(tu, idx) => TExpr::TupleRef(tu.untyped().bx(), idx).expr(),
+        TExpr::TupleSet(tu, idx, val) => {
+            TExpr::TupleSet(tu.untyped().bx(), idx, val.untyped().bx()).expr()
+        }
+        TExpr::TupleLen(..) => unimplemented!(),
+        TExpr::Collect(..) => unimplemented!(),
+        TExpr::Allocate(..) => unimplemented!(),
+        TExpr::GlobalVar(..) => unimplemented!(),
+    }
 }

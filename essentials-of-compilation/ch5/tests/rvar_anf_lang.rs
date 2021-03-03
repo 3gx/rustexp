@@ -86,11 +86,11 @@ mod rvar_anf_tests {
         println!("e= {:?}", e);
         println!("v= {:?}", v);
 
-        /*
+        // /*
         use rvar_anf_lang::*;
         let e_anf = rco_exp(e);
         println!("e1anf= {:?} ", e_anf);
-        */
+        //*/
 
         /*
         let v_anf = interp_expr(&e_anf);
