@@ -153,8 +153,7 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
 
             // generate call to garbage collector
             let collect_expr = expr! {
-                (if (lt (add (@RVarTExpr::GlobalVar("free_ptr".to_string()).expr())
-                             (@RVarTExpr::Int(bytes).expr()))
+                (if (lt (add (@RVarTExpr::GlobalVar("free_ptr".to_string()).expr()) (@bytes))
                         (@RVarTExpr::GlobalVar("fromspace_end".to_string()).expr()))
                     (@RVarTExpr::Void.expr())
                     (@RVarTExpr::Collect(bytes).expr()))
@@ -165,11 +164,11 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
 
             // generate tuple set to allocated storeage
             let v = RVarTExpr::Var(gensym("tmp")).expr();
-            let expr = sym.iter().enumerate().rfold(
-                v.clone(),
-                |e, (idx, x)| expr! {
-                    (let [_ (tupleset! (@v.clone()) (@idx as Int) (@RVarTExpr::Var(x.clone()).expr()))] (@e))},
-            );
+            let expr = sym.iter().enumerate().rfold(v.clone(), |e, (xidx, xvar)| {
+                expr! {
+                (let [_ (tupleset! (@v.clone()) (@xidx as Int)
+                                   (@RVarTExpr::Var(xvar.clone()).expr()))] (@e))}
+            });
 
             // allocate tuple
             let expr = expr! {
