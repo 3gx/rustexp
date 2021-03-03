@@ -1,7 +1,7 @@
 #[path = "./macros.rs"]
 mod macros;
 //use macros::bx;
-//use macros::r#match;
+use macros::r#match;
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
 pub enum CmpOpKind {
@@ -331,7 +331,8 @@ pub enum Value {
     Int(Int),
     Bool(Bool),
     Void,
-    Tuple(Rc<RefCell<Vec<Value>>>),
+    Tuple(Vec<Value>),
+    Heap(Rc<RefCell<Value>>),
 }
 impl Value {
     pub fn int(self) -> Option<Int> {
@@ -340,6 +341,7 @@ impl Value {
             Value::Bool(_) => None,
             Value::Void => None,
             Value::Tuple(..) => None,
+            Value::Heap(what) => what.borrow().clone().int(),
         }
     }
     pub fn bool(self) -> Option<Bool> {
@@ -348,6 +350,7 @@ impl Value {
             Value::Bool(b) => Some(b),
             Value::Void => None,
             Value::Tuple(..) => None,
+            Value::Heap(what) => what.borrow().clone().bool(),
         }
     }
     pub fn tuple(self) -> Option<Vec<Value>> {
@@ -355,7 +358,8 @@ impl Value {
             Value::Int(_) => None,
             Value::Bool(_) => None,
             Value::Void => None,
-            Value::Tuple(vec) => Some(vec.take()),
+            Value::Tuple(vec) => Some(vec),
+            Value::Heap(what) => what.borrow().clone().tuple(),
         }
     }
     pub fn isvoid(&self) -> Bool {
@@ -460,24 +464,24 @@ pub fn interp_impl<T: Clone>(env: &Env, e: &TExpr<T>, f: &impl Fn(&T) -> &TExpr<
                 .into_iter()
                 .map(|e| interp(env, e))
                 .collect::<Vec<Value>>();
-            Value::Tuple(Rc::new(RefCell::new(val)))
+            Value::Heap(Rc::new(RefCell::new(Value::Tuple(val))))
         }
         TExpr::TupleSet(tu, idx, val) => {
             let tu = interp(env, tu);
             let val = interp(env, val);
-            if let Value::Tuple(tu) = tu {
-                tu.borrow_mut()[*idx as usize] = val;
-            } else {
-                panic!("internal error, expecting tuple but got {:?}", tu);
+            r#match! { [tu]
+                Value::Heap(tu) if @{let Value::Tuple(tu) = &mut *tu.borrow_mut()} =>
+                    tu[*idx as usize] = val,
+                _ => panic!("internal error, expecting tuple but got {:?}", tu)
             }
             Value::Void
         }
         TExpr::TupleRef(tu, idx) => {
             let tu = interp(env, tu);
-            if let Value::Tuple(tu) = tu {
-                tu.borrow()[*idx as usize].clone()
-            } else {
-                panic!("internal error, expecting tuple but got {:?}", tu);
+            r#match! { [tu]
+                Value::Heap(tu) if @{let Value::Tuple(tu) = &*tu.borrow_mut()} =>
+                    tu[*idx as usize].clone(),
+                _ => panic!("internal error, expecting tuple but got {:?}", tu)
             }
         }
         TExpr::TupleLen(..) => unimplemented!(),
