@@ -274,7 +274,12 @@ pub fn interp_exp(env: &Env, e: &Expr) -> Value {
             (BinaryOpKind::Lt, Value::Int(a), Value::Int(b)) => Value::Bool(a < b),
             x @ _ => panic!("type mismatch: {:?}", x),
         },
-        Expr::Allocate(..) => unimplemented!(),
+        Expr::Allocate(1, Type::Tuple(ty)) => {
+            let mut val = Vec::new();
+            val.resize(ty.len(), Value::default());
+            Value::Heap(std::rc::Rc::new(std::cell::RefCell::new(Value::Tuple(val))))
+        }
+        x @ Expr::Allocate(..) => panic!("unimplemented {:?}", x),
         Expr::Collect(..) => unimplemented!(),
         Expr::GlobalVar(..) => unimplemented!(),
         Expr::TupleRef(..) => unimplemented!(),
