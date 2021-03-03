@@ -167,7 +167,7 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
             // generate a symbol for each tuple element
             let sym = es.iter().map(|_| gensym("tmp")).collect::<Vec<String>>();
 
-            // generate a let of tupleset expr into a tuple allocated on the heap
+            // generate a nested let of tupleset! for each elmt into a tuple allocated on the heap
             let tusym = gensym("tmp");
             let tuvar = RVarTExpr::Var(tusym.clone()).expr();
             let expr = sym
@@ -188,7 +188,7 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                      (let [{tusym} {RVarTExpr::Allocate(1, ty).expr()}] {expr}))
             };
 
-            // bind tuple elements to their respective symbols
+            // generated a nested bind of tuple elements to their respective symbols
             let expr = sym
                 .into_iter()
                 .zip(es.into_iter())
