@@ -5,7 +5,6 @@ mod macros;
 
 #[path = "rvar_lang.rs"]
 pub mod rvar_lang;
-use rvar_lang::expr;
 use rvar_lang::texpr;
 
 use rvar_lang as RVar;
@@ -155,7 +154,7 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
             let bytes = type_size_in_bytes(&ty);
 
             // generate a call to the garbage collector
-            let _collect_expr = texpr! {
+            let collect_expr = texpr! {
                 (if {Type::Void}
                     (lt {Type::Bool}
                         (add {Type::Int}
@@ -165,87 +164,52 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                     void
                     {RVarTExpr::Collect(bytes).texpr(Type::Void)})
             };
-            let collect_expr = expr! {
-                (if (lt (add {RVarTExpr::GlobalVar("free_ptr".to_string()).expr()} {bytes})
-                        {RVarTExpr::GlobalVar("fromspace_end".to_string()).expr()})
-                    {RVarTExpr::Void.expr()}
-                    {RVarTExpr::Collect(bytes).expr()})
-            };
 
             // generate a symbol for each tuple element
             let sym = es.iter().map(|_| gensym("tmp")).collect::<Vec<String>>();
-            let _sym = es.iter().map(|_| gensym("tmp")).collect::<Vec<String>>();
 
             // generate a nested let of tupleset! for each elmt into a tuple allocated on the heap
             let tusym = gensym("tmp");
-            let _tusym = tusym.clone();
-            let tuvar = RVarTExpr::Var(tusym.clone()).expr();
-            let _tuvar = RVarTExpr::Var(_tusym.clone()).texpr(ty.clone());
+            let tuvar = RVarTExpr::Var(tusym.clone()).texpr(ty.clone());
+            let elty = match &ty {
+                Type::Tuple(elty) => elty,
+                _ => panic!("not a tuple type {:?}", ty),
+            };
             let expr = sym
                 .iter()
                 .cloned()
+                .zip(elty.iter().cloned())
                 .enumerate()
-                .rfold(tuvar.clone(), |e, (xidx, xvar)| {
-                    expr! {
-                    (let [_ (tupleset! {tuvar.clone()}
-                                       {xidx as Int}
-                                       {RVarTExpr::Var(xvar).expr()})]
-                         {e})}
-                });
-
-            let _ty = ty.clone();
-            let _elty = match &_ty {
-                Type::Tuple(_elty) => _elty,
-                _ => panic!("not a tuple type {:?}", ty),
-            };
-            let _expr = _sym
-                .iter()
-                .cloned()
-                .zip(_elty.iter().cloned())
-                .enumerate()
-                .rfold(_tuvar.clone(), |RVarExpr(e, ety), (xidx, (xvar, xtype))| {
+                .rfold(tuvar.clone(), |RVarExpr(e, ety), (xidx, (xvar, xtype))| {
                     texpr! {
-                    (let {ety.clone()} [_ (tupleset! {_tuvar.clone()}
+                    (let {ety.clone()} [_ (tupleset! {tuvar.clone()}
                                                      {xidx as Int}
                                                      {RVarTExpr::Var(xvar).texpr(xtype)})]
                          {RVarExpr(e,ety.clone())})}
                 });
 
             // call to allocate tuple on the heap
-            let expr = expr! {
-                (let [_ {collect_expr}]
-                     (let [{tusym} {RVarTExpr::Allocate(1, ty).expr()}] {expr}))
-            };
-            let RVarExpr(_expr, _ety) = _expr;
-            let _expr = texpr! {
-                (let {_ety.clone()} [_ {_collect_expr}]
-                     (let {_ty.clone()}
-                          [{_tusym} {RVarTExpr::Allocate(1, _ty.clone()).texpr(_ty.clone())}]
-                          {_expr.texpr(_ety.clone())}))
+            let RVarExpr(expr, ety) = expr;
+            let expr = texpr! {
+                (let {ety.clone()} [_ {collect_expr}]
+                     (let {ty.clone()}
+                          [{tusym} {RVarTExpr::Allocate(1, ty.clone()).texpr(ty.clone())}]
+                          {expr.texpr(ety.clone())}))
             };
 
             // generated a nested bind of tuple elements to their respective symbols
-            let _es = es.clone();
-            let expr = sym
-                .into_iter()
-                .zip(es.into_iter())
-                .rfold(expr, |e, (x, xval)| {
-                    expr! {
-                        (let [{x} {xval.untyped()}] {e})
-                    }
-                });
-            let _expr = _sym.into_iter().zip(_es.into_iter()).rfold(
-                _expr,
-                |RVarExpr(e, ety), (x, xval)| {
-                    texpr! {
-                        (let {ety.clone()} [{x} {xval}] {RVarExpr(e,ety.clone())})
-                    }
-                },
-            );
+            let expr =
+                sym.into_iter()
+                    .zip(es.into_iter())
+                    .rfold(expr, |RVarExpr(e, ety), (x, xval)| {
+                        texpr! {
+                            (let {ety.clone()} [{x} {xval}] {RVarExpr(e,ety.clone())})
+                        }
+                    });
 
             /*
              pseudo-code of a generated code for 2-elemen tuple
-            let _e1 = expr! {
+            let e = expr! {
                 (let [x0 {es[0]}]
                  (let [x1 {es[1]}]
                   (let [_ {collect_expr}]
@@ -254,18 +218,8 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                      (let [_ (tupleset! v 1 x1)] v))))))
             };
             */
-            let ctx: RVar::Ctx = [
-                ("free_ptr".to_string(), Type::Int),
-                ("fromspace_end".to_string(), Type::Int),
-            ]
-            .iter()
-            .cloned()
-            .collect();
-            let expr = RVar::typed_expr_impl(&ctx, expr);
 
-            println!("\n:expr= {:?}", expr);
-            println!("\n_expr= {:?}", _expr);
-            rco_exp(_expr)
+            rco_exp(expr)
         }
         RVarTExpr::TupleRef(tu, idx) => rco_op(rco_atom(*tu), |tu| Expr::TupleRef(tu, idx)),
         RVarTExpr::TupleSet(tu, idx, val) => rco_op(rco_atom(*tu), |tu| {
