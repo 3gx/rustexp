@@ -97,8 +97,9 @@ mod rvar_anf_tests {
 
     #[test]
     fn t5() {
+        use ch5::rvar_anf_lang;
         let (e, v) = {
-            use ch5::rvar_lang::*;
+            use rvar_anf_lang::rvar_lang::*;
             let e = expr! {
                 (let [v (tuple (tuple 44))]
                      (let [x (let [w (tuple 48)]
@@ -107,20 +108,28 @@ mod rvar_anf_tests {
             };
             let v = interp_expr(&e);
             assert_eq!(v, Value::from(42));
-            println!("e={:?}", e);
+            println!("\nuntyped= {:?}", e);
             let e = typed_expr(e);
             let v1 = interp_texpr(&e);
             assert_eq!(v, v1);
             (e, v)
         };
-        println!("e= {:?}", e);
-        println!("v= {:?}", v);
+        println!("\ntyped= {:?}", e);
+        println!("\nval= {:?}", v);
+
+        use rvar_anf_lang::*;
+        let e_anf = rco_exp(e);
+        println!("\ne_anf= {:?} ", e_anf);
+
+        let v_anf = interp_expr(&e_anf);
+        assert_eq!(v, v_anf);
     }
 
     #[test]
     fn t6() {
+        use ch5::rvar_anf_lang;
         let (e, v) = {
-            use ch5::rvar_lang::*;
+            use rvar_anf_lang::rvar_lang::*;
             let e = expr! {
                 (let [t (tuple 40 true (tuple 2))]
                      (if (tupleref t 1)
@@ -136,26 +145,41 @@ mod rvar_anf_tests {
             assert_eq!(v, v1);
             (e, v)
         };
-        println!("e= {:?}", e);
-        println!("v= {:?}", v);
+        println!("\ntyped= {:?}", e);
+        println!("\nval= {:?}", v);
+
+        use rvar_anf_lang::*;
+        let e_anf = rco_exp(e);
+        println!("\ne_anf= {:?} ", e_anf);
+
+        let v_anf = interp_expr(&e_anf);
+        assert_eq!(v, v_anf);
     }
 
     #[test]
     fn t7() {
+        use ch5::rvar_anf_lang;
         let (e, v) = {
-            use ch5::rvar_lang::*;
+            use rvar_anf_lang::rvar_lang::*;
             let e = expr! {
                 (tupleref (tupleref (tuple (tuple 42)) 0) 0)
             };
             let v = interp_expr(&e);
             assert_eq!(v, Value::from(42));
-            println!("e={:?}", e);
+            println!("\nuntyped= {:?}", e);
             let e = typed_expr(e);
             let v1 = interp_texpr(&e);
             assert_eq!(v, v1);
             (e, v)
         };
-        println!("e= {:?}", e);
-        println!("v= {:?}", v);
+        println!("\ntyped= {:?}", e);
+        println!("\nval= {:?}", v);
+
+        use rvar_anf_lang::*;
+        let e_anf = rco_exp(e);
+        println!("\ne_anf= {:?} ", e_anf);
+
+        let v_anf = interp_expr(&e_anf);
+        assert_eq!(v, v_anf);
     }
 }
