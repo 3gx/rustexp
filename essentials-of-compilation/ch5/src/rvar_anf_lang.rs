@@ -187,12 +187,14 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
             };
 
             // bind tuple elements to their respective symbols
-            let es = es.into_iter().map(|e| e.untyped());
-            let expr = sym.into_iter().zip(es).rfold(expr, |e, (x, xval)| {
-                expr! {
-                    (let [{x} {xval}] {e})
-                }
-            });
+            let expr = sym
+                .into_iter()
+                .zip(es.into_iter())
+                .rfold(expr, |e, (x, xval)| {
+                    expr! {
+                        (let [{x} {xval.untyped()}] {e})
+                    }
+                });
 
             /*
              example of generated code for 2-elemen tuple
