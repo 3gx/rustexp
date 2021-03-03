@@ -190,14 +190,99 @@ pub macro expr {
                  Box::new(expr!{$then}.into_term()),
                  Box::new(expr!{$else}.into_term())))
     },
+    ({ $($tt:tt)* }) => {
+        $($tt)*
+    },
     ((read)) => { Expr(TExpr::Read) },
     (true) => { Expr(TExpr::Bool(true)) },
     (false) => { Expr(TExpr::Bool(false)) },
     ($id:ident) => { stringify!($id) },
     ($e:expr) => { $e },
+}
+
+pub macro texpr {
+    /*
+    ((let [$id:ident $body:tt] $tail:tt)) => {
+        Expr(TExpr::Let(
+            stringify!($id).to_string(),
+            Box::new(expr!{$body}.into_term()),
+            Box::new(expr!{$tail}.into_term()),
+        ))
+    },
+    ((let [_ $body:tt] $tail:tt)) => {
+        Expr(TExpr::Let(
+            stringify!(_).to_string(),
+            Box::new(expr!{$body}.into_term()),
+            Box::new(expr!{$tail}.into_term()),
+        ))
+    },
+    ((let [{ $($quote:tt)* } $body:tt] $tail:tt)) => {
+        Expr(TExpr::Let(
+            expr!{{ $($quote)* }},
+            Box::new(expr!{$body}.into_term()),
+            Box::new(expr!{$tail}.into_term()),
+        ))
+    },
+    ((tuple $($expr:tt)*)) => {
+        Expr(TExpr::Tuple(vec![$(expr!{$expr}.into_term()),*]))
+    },
+    ((tupleset! $tu:tt $idx:tt $val:tt)) => {
+        Expr(TExpr::TupleSet(Box::new(expr!{$tu}.into_term()), expr!{$idx},
+                       Box::new(expr!{$val}.into_term())))
+    },
+    ((tupleref $tu:tt $idx:tt)) => {
+        Expr(TExpr::TupleRef(Box::new(expr!{$tu}.into_term()), expr!{$idx}))
+    },
+    ((neg $opnd:tt)) => {
+        Expr(TExpr::UnaryOp(UnaryOpKind::Neg, Box::new(expr!{$opnd}.into_term())))
+    },
+    ((not $opnd:tt)) => {
+        Expr(TExpr::UnaryOp(UnaryOpKind::Not, Box::new(expr!{$opnd}.into_term())))
+    },
+    ((add $lhs:tt $rhs:tt)) => {
+        Expr(TExpr::BinaryOp(BinaryOpKind::Add,
+                       Box::new(expr!{$lhs}.into_term()),
+                       Box::new(expr!{$rhs}.into_term())))
+    },
+    ((or $lhs:tt $rhs:tt)) => {
+        Expr(TExpr::BinaryOp(BinaryOpKind::Or,
+                       Box::new(expr!{$lhs}.into_term()),
+                       Box::new(expr!{$rhs}.into_term())))
+    },
+    ((and $lhs:tt $rhs:tt)) => {
+        Expr(TExpr::BinaryOp(BinaryOpKind::And,
+                       Box::new(expr!{$lhs}.into_term()),
+                       Box::new(expr!{$rhs}.into_term())))
+    },
+    ((lt $lhs:tt $rhs:tt)) => {
+        Expr(TExpr::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Lt),
+                       Box::new(expr!{$lhs}.into_term()),
+                       Box::new(expr!{$rhs}.into_term())))
+    },
+    ((eq $lhs:tt $rhs:tt)) => {
+        Expr(TExpr::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Eq),
+                       Box::new(expr!{$lhs}.into_term()),
+                       Box::new(expr!{$rhs}.into_term())))
+    },
+    ((le $lhs:tt $rhs:tt)) => {
+        Expr(TExpr::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Le),
+                       Box::new(expr!{$lhs}.into_term()),
+                       Box::new(expr!{$rhs}.into_term())))
+    },
+    */
+    ((if $pred:tt $then:tt $else:tt)) => {
+        TExpr::If(Box::new(texpr!{$pred}),
+                  Box::new(texpr!{$then}),
+                  Box::new(texpr!{$else}))
+    },
     ({ $($tt:tt)* }) => {
         $($tt)*
     },
+    ((read)) => { Expr(TExpr::Read) },
+    (true) => { TExpr::Bool(true).texpr(Type::Bool) },
+    (false) => { TExpr::Bool(false).texpr(Type::Bool) },
+    ($id:ident) => { stringify!($id) },
+    ($e:expr) => { $e },
 }
 
 // ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@ mod macros;
 #[path = "rvar_lang.rs"]
 pub mod rvar_lang;
 use rvar_lang::expr;
+use rvar_lang::texpr;
 
 use rvar_lang as RVar;
 use RVar::TExpr as RVarTExpr;
@@ -105,6 +106,9 @@ fn simplify_and_rco_binop(op: RVar::BinaryOpKind, e1: RVarExpr, e2: RVarExpr, ty
 
     match op {
         // since and & or are shortcicuiting ops, convert to 'if'-expr
+        RVarOpKind::And => rco_exp(texpr! { (if {e1} {e2} false) }.texpr(ty)),
+        RVarOpKind::Or => rco_exp(texpr! { (if {e1} true {e2}) }.texpr(ty)),
+        /*
         RVarOpKind::And => rco_exp(
             RVarTExpr::If(
                 e1.bx(),
@@ -121,6 +125,7 @@ fn simplify_and_rco_binop(op: RVar::BinaryOpKind, e1: RVarExpr, e2: RVarExpr, ty
             )
             .texpr(ty),
         ),
+            */
         RVarOpKind::CmpOp(op) => match op {
             RVarCmpKind::Eq => rco_op_apply(BinaryOpKind::Eq, e1, e2, ty),
             RVarCmpKind::Lt => rco_op_apply(BinaryOpKind::Lt, e1, e2, ty),
