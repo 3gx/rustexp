@@ -97,24 +97,6 @@ fn simplify_and_rco_binop(op: RVar::BinaryOpKind, e1: RVarExpr, e2: RVarExpr, ty
         // since and & or are shortcicuiting ops, convert to 'if'-expr
         RVarOpKind::And => rco_exp(texpr! { (if {ty} {e1} {e2} false) }),
         RVarOpKind::Or => rco_exp(texpr! { (if {ty} {e1} true {e2}) }),
-        /*
-        RVarOpKind::And => rco_exp(
-            RVarTExpr::If(
-                e1.bx(),
-                e2.bx(),
-                RVarTExpr::Bool(false).texpr(Type::Bool).bx(),
-            )
-            .texpr(ty),
-        ),
-        RVarOpKind::Or => rco_exp(
-            RVarTExpr::If(
-                e1.bx(),
-                RVarTExpr::Bool(true).texpr(Type::Bool).bx(),
-                e2.bx(),
-            )
-            .texpr(ty),
-        ),
-            */
         RVarOpKind::CmpOp(op) => match op {
             RVarCmpKind::Eq => rco_op_apply(BinaryOpKind::Eq, e1, e2),
             RVarCmpKind::Lt => rco_op_apply(BinaryOpKind::Lt, e1, e2),
