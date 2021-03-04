@@ -4,6 +4,7 @@
 //#![allow(non_fmt_panic)] // investigate
 
 pub mod cvar_lang;
+pub mod grammars;
 pub mod rvar_anf_lang;
 pub mod rvar_lang;
 pub mod x86var_lang;
