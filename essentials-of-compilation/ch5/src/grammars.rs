@@ -1,3 +1,52 @@
+pub mod grammar {
+    pub type Int = i64;
+    pub type Bool = bool;
+
+    /*
+    pub enum AST {
+        Int(Int),
+        Bool(Bool),
+        Var(String),
+        Let(String, Box<dyn traits::Node>, Box<dyn traits::Node>),
+    }
+    */
+
+    pub mod traits {
+        pub trait Int {}
+    }
+    /*
+    mod CmpOpKind {
+        trait Eq {
+            fn eq() {}
+        }
+    }
+    mod input {
+
+        pub enum Expr {
+            // atoms
+            Int(Int),
+            Bool(Bool),
+            Var(String),
+
+            // let expr
+            Let(String, Box<Expr>, Box<Expr>),
+
+            //control-flow
+            If(Box<Expr>, Box<Expr>, Box<Expr>),
+
+            Read,
+
+            UnaryOp(UnaryOpKind, Box<Expr>),
+            BinaryOp(BinaryOpKind, Box<Expr>, Box<Expr>),
+
+            Tuple(Vec<Expr>),
+            TupleLen(Box<Expr>),
+            TupleRef(Box<Expr>, Int),
+            TupleSet(Box<Expr>, Int, Box<Expr>),
+        }
+    }
+    */
+}
 pub mod input_grammar {
     type Int = i64;
     type Bool = bool;
@@ -22,8 +71,6 @@ pub mod input_grammar {
         Or,
     }
 
-    // input grammar
-    // -------------
     pub enum Expr {
         // atoms
         Int(Int),
@@ -72,13 +119,11 @@ pub mod reduce_grammar {
     }
 
     pub enum BinaryOpKind {
-        And,
+        Add,
         Lt,
         Eq,
     }
 
-    // input grammar
-    // -------------
     pub enum Expr {
         // atoms
         Int(Int),
@@ -134,13 +179,11 @@ pub mod typed_grammar {
     }
 
     pub enum BinaryOpKind {
-        And,
+        Add,
         Lt,
         Eq,
     }
 
-    // input grammar
-    // -------------
     pub struct Expr(pub ExprK, pub Type);
     pub enum ExprK {
         // atoms
@@ -189,13 +232,11 @@ pub mod expose_alloca_grammar {
     }
 
     pub enum BinaryOpKind {
-        And,
+        Add,
         Lt,
         Eq,
     }
 
-    // input grammar
-    // -------------
     pub struct Expr(pub ExprK, pub Type);
     pub enum ExprK {
         // atoms
@@ -246,7 +287,7 @@ pub mod anf_grammar {
     }
 
     pub enum BinaryOpKind {
-        And,
+        Add,
         Lt,
         Eq,
     }
@@ -258,8 +299,6 @@ pub mod anf_grammar {
         Tuple(Vec<Type>),
     }
 
-    // input grammar
-    // -------------
     pub enum Expr {
         Atom(Atom),
 
@@ -300,7 +339,7 @@ pub mod c_grammar {
     }
 
     pub enum BinaryOpKind {
-        And,
+        Add,
         Lt,
         Eq,
     }
