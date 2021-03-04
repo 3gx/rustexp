@@ -582,57 +582,7 @@ pub fn uniquify(p: Program) -> Program {
 }
 
 pub type Ctx = SymTable<Type>;
-pub fn type_expr(ctx: &Ctx, Expr(expr): &Expr) -> Type {
-    match expr {
-        TExpr::Int(_) => Type::Int,
-        TExpr::Bool(_) => Type::Bool,
-        TExpr::Var(x) => sym_get(ctx, x).unwrap().clone(),
-        TExpr::Let(x, expr, body) => {
-            let ty = type_expr(ctx, expr);
-            let ctx = sym_set(ctx, x, &ty);
-            type_expr(&ctx, body)
-        }
-        TExpr::If(pred, then_, else_) => {
-            match type_expr(ctx, pred) {
-                Type::Bool => (),
-                x @ _ => panic!("type({:?}) must be Bool, got {:?}", pred, x),
-            };
-            let then_ty = type_expr(ctx, then_);
-            let else_ty = type_expr(ctx, else_);
-            if then_ty != else_ty {
-                panic!(
-                    "type({:?}) = {:?} != {:?} = type({:?})",
-                    then_, then_ty, else_ty, else_
-                )
-            }
-            then_ty
-        }
-        TExpr::Read => Type::Int,
-        TExpr::UnaryOp(op, expr) => match (op, type_expr(ctx, expr)) {
-            (UnaryOpKind::Not, Type::Bool) => Type::Bool,
-            (UnaryOpKind::Neg, Type::Int) => Type::Int,
-            x @ _ => panic!("unsupported {:?}", x),
-        },
-        TExpr::BinaryOp(op, e1, e2) => match (op, type_expr(ctx, e1), type_expr(ctx, e2)) {
-            (BinaryOpKind::Add, Type::Int, Type::Int) => Type::Int,
-            (BinaryOpKind::And, Type::Bool, Type::Bool) => Type::Bool,
-            (BinaryOpKind::Or, Type::Bool, Type::Bool) => Type::Bool,
-            (BinaryOpKind::CmpOp(CmpOpKind::Eq), Type::Bool, Type::Bool) => Type::Bool,
-            (BinaryOpKind::CmpOp(_), Type::Int, Type::Int) => Type::Bool,
-            x @ _ => panic!("unsupported {:?}", x),
-        },
-        TExpr::Tuple(..) => unimplemented!(),
-        TExpr::TupleLen(..) => unimplemented!(),
-        TExpr::TupleRef(..) => unimplemented!(),
-        TExpr::TupleSet(..) => unimplemented!(),
-        TExpr::Void => unimplemented!(),
-        TExpr::Collect(..) => unimplemented!(),
-        TExpr::Allocate(..) => unimplemented!(),
-        TExpr::GlobalVar(..) => unimplemented!(),
-    }
-}
-
-pub fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
+pub fn typed_expr_ctx(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
     //    r#match! { [expr]
     match expr {
         TExpr::Int(i) => TExpr::Int(i).texpr(Type::Int),
@@ -647,9 +597,9 @@ pub fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
             TExpr::Var(x).texpr(ty)
         }
         TExpr::Let(x, expr, body) => {
-            let TypedExpr(expr, expr_ty) = typed_expr_impl(ctx, *expr);
+            let TypedExpr(expr, expr_ty) = typed_expr_ctx(ctx, *expr);
             let ctx = sym_set(ctx, &x, &expr_ty);
-            let TypedExpr(body, body_ty) = typed_expr_impl(&ctx, *body);
+            let TypedExpr(body, body_ty) = typed_expr_ctx(&ctx, *body);
             TExpr::Let(
                 x,
                 TypedExpr(expr, expr_ty).bx(),
@@ -658,13 +608,13 @@ pub fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
             .texpr(body_ty)
         }
         TExpr::If(pred, then_, else_) => {
-            let TypedExpr(pred, pred_ty) = typed_expr_impl(ctx, *pred);
+            let TypedExpr(pred, pred_ty) = typed_expr_ctx(ctx, *pred);
             match &pred_ty {
                 Type::Bool => (),
                 x @ _ => panic!("type({:?}) must be Bool, got {:?}", pred, x),
             };
-            let TypedExpr(then_, then_ty) = typed_expr_impl(ctx, *then_);
-            let TypedExpr(else_, else_ty) = typed_expr_impl(ctx, *else_);
+            let TypedExpr(then_, then_ty) = typed_expr_ctx(ctx, *then_);
+            let TypedExpr(else_, else_ty) = typed_expr_ctx(ctx, *else_);
             if then_ty != else_ty {
                 panic!(
                     "type({:?}) = {:?} != {:?} = type({:?})",
@@ -680,7 +630,7 @@ pub fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
             .texpr(if_ty)
         }
         TExpr::Read => TExpr::Read.texpr(Type::Int),
-        TExpr::UnaryOp(op, expr) => match (op, typed_expr_impl(ctx, *expr)) {
+        TExpr::UnaryOp(op, expr) => match (op, typed_expr_ctx(ctx, *expr)) {
             (UnaryOpKind::Not, TypedExpr(e, Type::Bool)) => {
                 TExpr::UnaryOp(op, e.texpr(Type::Bool).bx()).texpr(Type::Bool)
             }
@@ -690,7 +640,7 @@ pub fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
             x @ _ => panic!("unsupported {:?}", x),
         },
         TExpr::BinaryOp(op, e1, e2) => {
-            match (op, typed_expr_impl(ctx, *e1), typed_expr_impl(ctx, *e2)) {
+            match (op, typed_expr_ctx(ctx, *e1), typed_expr_ctx(ctx, *e2)) {
                 (BinaryOpKind::Add, TypedExpr(e1, Type::Int), TypedExpr(e2, Type::Int)) => {
                     TExpr::BinaryOp(op, e1.texpr(Type::Int).bx(), e2.texpr(Type::Int).bx())
                         .texpr(Type::Int)
@@ -718,7 +668,7 @@ pub fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
             let (es, ty) = es
                 .into_iter()
                 .map(|e| {
-                    let TypedExpr(e, ty) = typed_expr_impl(ctx, e);
+                    let TypedExpr(e, ty) = typed_expr_ctx(ctx, e);
                     (TypedExpr(e, ty.clone()), ty)
                 })
                 .unzip();
@@ -726,7 +676,7 @@ pub fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
         }
         TExpr::TupleRef(tu, idx) => {
             assert!(idx >= 0, "idx must be non-negative, got {}", idx);
-            let TypedExpr(tu, tuty) = typed_expr_impl(ctx, *tu);
+            let TypedExpr(tu, tuty) = typed_expr_ctx(ctx, *tu);
             let elty = match &tuty {
                 Type::Tuple(tys) => {
                     let idx = idx as usize;
@@ -744,8 +694,8 @@ pub fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
         }
         TExpr::TupleSet(tu, idx, val) => {
             assert!(idx >= 0, "idx must be non-negative, got {}", idx);
-            let TypedExpr(tu, tuty) = typed_expr_impl(ctx, *tu);
-            let TypedExpr(val, valty) = typed_expr_impl(ctx, *val);
+            let TypedExpr(tu, tuty) = typed_expr_ctx(ctx, *tu);
+            let TypedExpr(val, valty) = typed_expr_ctx(ctx, *val);
             let elty = match &tuty {
                 Type::Tuple(tys) => {
                     let idx = idx as usize;
@@ -771,7 +721,7 @@ pub fn typed_expr_impl(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
 }
 
 pub fn typed_expr(e: Expr) -> TypedExpr {
-    typed_expr_impl(&vec![], e)
+    typed_expr_ctx(&vec![], e)
 }
 
 fn untyped_expr(TypedExpr(expr, _): TypedExpr) -> Expr {
