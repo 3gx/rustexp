@@ -79,9 +79,9 @@ fn main() {
         Department("Strategy", blair.clone(), vec![]),
     ]);
     println!("com={:#?}", com);
-    let com = {
+    let com_v1 = {
         use crate::v1::Increase;
         com.clone().increase(0.2)
     };
-    println!("com={:#?}", com);
+    println!("com={:#?}", com_v1);
 }
