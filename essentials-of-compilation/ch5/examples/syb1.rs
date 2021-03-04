@@ -18,7 +18,7 @@ pub type Manager = Employee;
 pub type Name = &'static str;
 pub type Address = &'static str;
 
-pub mod t1 {
+pub mod v1 {
     use super::*;
     pub trait Increase: Sized {
         fn increase(self, k: f64) -> Self;
@@ -80,8 +80,8 @@ fn main() {
     ]);
     println!("com={:#?}", com);
     let com = {
-        use crate::t1::Increase;
-        com.increase(0.2)
+        use crate::v1::Increase;
+        com.clone().increase(0.2)
     };
     println!("com={:#?}", com);
 }
