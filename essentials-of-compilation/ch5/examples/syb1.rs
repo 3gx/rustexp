@@ -18,44 +18,47 @@ pub type Manager = Employee;
 pub type Name = &'static str;
 pub type Address = &'static str;
 
-pub trait Increase: Sized {
-    fn increase(self, k: f64) -> Self;
-}
-
-impl Increase for Company {
-    fn increase(self, k: f64) -> Self {
-        Company(self.0.into_iter().map(|d| d.increase(k)).collect())
+pub mod t1 {
+    use super::*;
+    pub trait Increase: Sized {
+        fn increase(self, k: f64) -> Self;
     }
-}
 
-impl Increase for Department {
-    fn increase(self, k: f64) -> Self {
-        Department(
-            self.0,
-            self.1.increase(k),
-            self.2.into_iter().map(|s| s.increase(k)).collect(),
-        )
-    }
-}
-
-impl Increase for SubUnit {
-    fn increase(self, k: f64) -> Self {
-        match self {
-            SubUnit::Person(e) => SubUnit::Person(e.increase(k)),
-            SubUnit::Department(d) => SubUnit::Department(Box::new(d.increase(k))),
+    impl Increase for Company {
+        fn increase(self, k: f64) -> Self {
+            Company(self.0.into_iter().map(|d| d.increase(k)).collect())
         }
     }
-}
 
-impl Increase for Employee {
-    fn increase(self, k: f64) -> Employee {
-        Employee(self.0, self.1.increase(k))
+    impl Increase for Department {
+        fn increase(self, k: f64) -> Self {
+            Department(
+                self.0,
+                self.1.increase(k),
+                self.2.into_iter().map(|s| s.increase(k)).collect(),
+            )
+        }
     }
-}
 
-impl Increase for Salary {
-    fn increase(self, k: f64) -> Salary {
-        Salary(self.0 * (1.0 + k))
+    impl Increase for SubUnit {
+        fn increase(self, k: f64) -> Self {
+            match self {
+                SubUnit::Person(e) => SubUnit::Person(e.increase(k)),
+                SubUnit::Department(d) => SubUnit::Department(Box::new(d.increase(k))),
+            }
+        }
+    }
+
+    impl Increase for Employee {
+        fn increase(self, k: f64) -> Employee {
+            Employee(self.0, self.1.increase(k))
+        }
+    }
+
+    impl Increase for Salary {
+        fn increase(self, k: f64) -> Salary {
+            Salary(self.0 * (1.0 + k))
+        }
     }
 }
 
@@ -76,6 +79,9 @@ fn main() {
         Department("Strategy", blair.clone(), vec![]),
     ]);
     println!("com={:#?}", com);
-    let com = com.increase(0.2);
+    let com = {
+        use crate::t1::Increase;
+        com.increase(0.2)
+    };
     println!("com={:#?}", com);
 }
