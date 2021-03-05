@@ -108,7 +108,7 @@ fn simplify_and_rco_binop(op: RVar::BinaryOpKind, e1: RVarExpr, e2: RVarExpr, ty
     }
 }
 
-fn type_size_in_bytes(ty: &Type) -> Int {
+pub fn type_size_in_bytes(ty: &Type) -> Int {
     match ty {
         Type::Bool => 8,
         Type::Int => 8,

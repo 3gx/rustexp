@@ -9,7 +9,9 @@ pub use petgraph::stable_graph::StableGraph;
 pub mod cvar_lang;
 pub use cvar_lang as CVar;
 pub use CVar::rvar_anf_lang as RVarAnf;
+pub use CVar::Type;
 pub use RVarAnf::rvar_lang as RVarLang;
+use RVarAnf::type_size_in_bytes;
 
 type Int = i64;
 type Bool = bool;
@@ -256,6 +258,29 @@ pub fn select_inst_assign(dst: Arg, e: &CVar::Expr) -> Vec<Inst> {
                 Binary(Movzbq, Arg::ByteReg(ByteReg::al), dst),
             ]
         }
+        Expr::Allocate(1, ty @ Type::Tuple(..)) => vec![
+            Binary(
+                Movq,
+                Arg::Global("free_ptr".to_string()),
+                Arg::Reg(Reg::r11),
+            ),
+            Binary(
+                Addq,
+                Arg::Imm(type_size_in_bytes(ty)),
+                Arg::Global("free_ptr".to_string()),
+            ),
+            Binary(Movq, Arg::Reg(Reg::r11), dst),
+        ],
+        Expr::TupleSet(tu, idx, val) => vec![
+            Binary(Movq, select_inst_atom(tu), Arg::Reg(Reg::r11)),
+            Binary(
+                Movq,
+                select_inst_atom(val),
+                Arg::Deref(Reg::r11, 8 * (idx + 1)),
+            ),
+            Binary(Movq, Arg::Imm(0), dst),
+        ],
+
         x @ _ => panic!("unhandled expression {:?}", x),
     }
 }
