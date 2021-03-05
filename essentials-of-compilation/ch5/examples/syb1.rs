@@ -626,8 +626,16 @@ fn main() {
         // Definition
         let raise = |s: Salary| Salary(s.0 * (1.0 + 0.2));
         let raise = Everywhere::new(Transformation::new(raise));
-        // Usage
         raise.gmap(com.clone())
     };
     println!("com={:?}", com_v4a);
+
+    let com_v4b = {
+        use crate::v4::*;
+        // Definition
+        let rename = |p: Person| Person("Juan Offus", p.1);
+        let rename = Everywhere::new(Transformation::new(rename));
+        rename.gmap(com.clone())
+    };
+    println!("com={:?}", com_v4b);
 }
