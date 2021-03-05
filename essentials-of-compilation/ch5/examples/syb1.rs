@@ -68,9 +68,6 @@ pub mod v1 {
 
 mod v2 {
     use super::*;
-    pub trait GenericTransform {
-        fn transform<T: Term>(&mut self, t: T) -> T;
-    }
 
     // Implementing Cast
     // -----------------
@@ -100,6 +97,10 @@ mod v2 {
 
     // Implementing Everywhere
     // -----------------------
+
+    pub trait GenericTransform {
+        fn transform<T: Term>(&mut self, t: T) -> T;
+    }
 
     pub struct Everywhere<F: GenericTransform>(F);
 
@@ -262,10 +263,10 @@ fn main() {
     let com_v3 = {
         use crate::v2::*;
         // Definition
-        let rename = |s: Salary| Salary(s.0 * (1.0 + 0.2));
-        let mut rename = Everywhere::new(Transformation::new(rename));
+        let raise = |s: Salary| Salary(s.0 * (1.0 + 0.2));
+        let mut raise = Everywhere::new(Transformation::new(raise));
         // Usage
-        rename.transform(com)
+        raise.transform(com)
     };
     println!("com={:?}", com_v3);
 }
