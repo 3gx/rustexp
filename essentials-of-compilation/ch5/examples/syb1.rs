@@ -107,7 +107,7 @@ mod v2 {
         phantom: PhantomData<fn(U) -> U>,
     }
     impl<F: FnMut(U) -> U, U> Transformation<F, U> {
-        /// Construct a new `Transformation` from the given function.
+        // Construct a new `Transformation` from the given function.
         pub fn new(f: F) -> Transformation<F, U> {
             Transformation {
                 f,
