@@ -293,6 +293,10 @@ mod cvar_lang {
 
         let v_anf = RVarAnf::interp_expr(&e_anf);
         assert_eq!(v, v_anf);
+
+        let cprog = CVar::explicate_expr(e_anf);
+        let CVar::CProgram(tail) = &cprog;
+        println!("tail= {:?}", tail);
     }
 
     #[test]
@@ -324,6 +328,10 @@ mod cvar_lang {
 
         let v_anf = RVarAnf::interp_expr(&e_anf);
         assert_eq!(v, v_anf);
+
+        let cprog = CVar::explicate_expr(e_anf);
+        let CVar::CProgram(tail) = &cprog;
+        println!("tail= {:?}", tail);
     }
 
     #[test]
@@ -351,5 +359,9 @@ mod cvar_lang {
 
         let v_anf = RVarAnf::interp_expr(&e_anf);
         assert_eq!(v, v_anf);
+
+        let cprog = CVar::explicate_expr(e_anf);
+        let CVar::CProgram(tail) = &cprog;
+        println!("tail= {:?}", tail);
     }
 }

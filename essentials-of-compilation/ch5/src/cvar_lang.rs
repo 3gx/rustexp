@@ -223,6 +223,14 @@ fn explicate_ifpred(
             let (if_tail, bbs) = explicate_ifpred(*body, then_name, else_name, bbs);
             explicate_assign(&x, *expr, if_tail, bbs)
         }
+        RVarAnf::Expr::TupleRef(a, i) => (
+            Tail::IfStmt(
+                Expr::TupleRef(a.into(), i),
+                then_name.to_string(),
+                else_name.to_string(),
+            ),
+            bbs,
+        ),
         x @ _ => panic!("invalid 'if' predicate= {:?}", x),
     }
 }
@@ -294,7 +302,7 @@ fn explicate_assign(
         RVarAnf::Expr::Allocate(num, ty) => assign(Expr::Allocate(num, ty), tail, bbs),
         RVarAnf::Expr::Collect(bytes) => (Tail::Seq(Stmt::Collect(bytes), Box::new(tail)), bbs),
         RVarAnf::Expr::GlobalVar(var) => assign(Expr::GlobalVar(var), tail, bbs),
-        RVarAnf::Expr::TupleRef(..) => unimplemented!(),
+        RVarAnf::Expr::TupleRef(a, i) => assign(Expr::TupleRef(a.into(), i), tail, bbs),
         RVarAnf::Expr::TupleSet(a, i, v) => {
             assign(Expr::TupleSet(a.into(), i, v.into()), tail, bbs)
         }
