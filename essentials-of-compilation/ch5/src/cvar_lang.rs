@@ -364,6 +364,29 @@ pub fn explicate_expr(e: RVarAnf::Expr) -> CProgram {
     CProgram(bbs)
 }
 
+fn cprog_gen_globals(globals: &Vec<(String, Value)>) -> String {
+    {
+        let mut occurs = std::collections::HashSet::new();
+        let all_unique = globals.iter().all(|(name, _)| occurs.insert(name));
+        assert!(all_unique);
+    }
+    let cstr = globals
+        .iter()
+        .map(|(name, value)| match value {
+            Value::Int(i) => format!("int {} = {};\n", name, i),
+            _ => unreachable!("unexpected value {:?}", value),
+        })
+        .collect();
+    cstr
+}
 pub fn print_cprog(cprog: &CProgram) -> String {
-    "int main() {}".to_string()
+    let globals = [
+        ("free_ptr".to_string(), Value::Int(0)),
+        ("fromspace_end".to_string(), Value::Int(0)),
+    ]
+    .iter()
+    .cloned()
+    .collect::<Vec<_>>();
+    let prog = cprog_gen_globals(&globals);
+    prog
 }
