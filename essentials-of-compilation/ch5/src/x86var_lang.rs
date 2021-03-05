@@ -655,7 +655,9 @@ pub fn interp_prog(prog: &Program) -> Value {
         bbmap.insert(bb.name, bb.insts);
     }
     let insts = bbmap.get(&"start".to_string()).unwrap();
-    let mut env = Env::new();
+    let mut env = Env::new()
+        .add_global("free_ptr", Value::Int(0))
+        .add_global("fromspace_end", Value::Int(0));
     let mut frame = vec![];
     frame.resize(prog.stack as usize, Value::Int(0));
     env = interp_inst(
