@@ -364,7 +364,7 @@ pub fn explicate_expr(e: RVarAnf::Expr) -> CProgram {
     CProgram(bbs)
 }
 
-fn cprog_gen_globals(globals: &Vec<(String, Value)>) -> String {
+fn cprog_print_globals(globals: &Vec<(String, Value)>) -> String {
     {
         let mut occurs = std::collections::HashSet::new();
         let all_unique = globals.iter().all(|(name, _)| occurs.insert(name));
@@ -379,6 +379,11 @@ fn cprog_gen_globals(globals: &Vec<(String, Value)>) -> String {
         .collect();
     cstr
 }
+
+fn cprog_print_tail(tail: &Tail) -> String {
+    "\n".to_string()
+}
+
 pub fn print_cprog(cprog: &CProgram) -> String {
     let globals = [
         ("free_ptr".to_string(), Value::Int(0)),
@@ -392,12 +397,13 @@ pub fn print_cprog(cprog: &CProgram) -> String {
     let main_func = bbs
         .iter()
         .map(|BasicBlock(name, tail)| {
-            let bb: String = format!("{}:\n", name);
-            bb
+            let bb_name: String = format!("{}:\n", name);
+            let bb_tail = cprog_print_tail(tail);
+            bb_name + &bb_tail
         })
         .collect::<String>();
 
-    let mut prog = cprog_gen_globals(&globals);
+    let mut prog = cprog_print_globals(&globals);
     prog.push_str("int main() {\n");
     prog.push_str(&main_func);
     prog.push_str("}");
