@@ -98,30 +98,21 @@ mod v2 {
         }
     }
 
-    // Implementing Transformation
-    // ---------------------------
+    // Implementing Everywhere
+    // -----------------------
 
-    use std::marker::PhantomData;
-    pub struct Transformation<F: FnMut(U) -> U, U>(F, PhantomData<fn(U) -> U>);
-    impl<F: FnMut(U) -> U, U> Transformation<F, U> {
-        // Construct a new `Transformation` from the given function.
-        pub fn new(f: F) -> Transformation<F, U> {
-            Transformation(f, PhantomData)
+    pub struct Everywhere<F: GenericTransform>(F);
+
+    impl<F: GenericTransform> Everywhere<F> {
+        pub fn new(f: F) -> Everywhere<F> {
+            Everywhere(f)
         }
     }
 
-    impl<F: FnMut(U) -> U, U> GenericTransform for Transformation<F, U> {
-        fn transform<T>(&mut self, t: T) -> T {
-            // try to cast from the T into a U
-            match Cast::<U>::cast(t) {
-                // call transformation function and then cast resulting U back into a T
-                Ok(u) => match Cast::<T>::cast((self.0)(u)) {
-                    Ok(t) => t,
-                    Err(_) => unreachable!("If T=U, then U=T"),
-                    // Err(_) => unreachable!("If T=U, then U=T, t={:?}, u={:?}", t, u),
-                },
-                Err(t) => t,
-            }
+    impl<F: GenericTransform> GenericTransform for Everywhere<F> {
+        fn transform<T: Term>(&mut self, t: T) -> T {
+            let t = t.map_one_transform(self);
+            self.0.transform(t)
         }
     }
 
@@ -197,23 +188,30 @@ mod v2 {
         }
     }
 
-    // Implementing Everywhere
-    // -----------------------
+    // Implementing Transformation
+    // ---------------------------
 
-    pub struct Everywhere<F: GenericTransform> {
-        f: F,
-    }
-
-    impl<F: GenericTransform> Everywhere<F> {
-        pub fn new(f: F) -> Everywhere<F> {
-            Everywhere { f }
+    use std::marker::PhantomData;
+    pub struct Transformation<F: FnMut(U) -> U, U>(F, PhantomData<fn(U) -> U>);
+    impl<F: FnMut(U) -> U, U> Transformation<F, U> {
+        // Construct a new `Transformation` from the given function.
+        pub fn new(f: F) -> Transformation<F, U> {
+            Transformation(f, PhantomData)
         }
     }
 
-    impl<F: GenericTransform> GenericTransform for Everywhere<F> {
-        fn transform<T: Term>(&mut self, t: T) -> T {
-            let t = t.map_one_transform(self);
-            self.f.transform(t)
+    impl<F: FnMut(U) -> U, U> GenericTransform for Transformation<F, U> {
+        fn transform<T>(&mut self, t: T) -> T {
+            // try to cast from the T into a U
+            match Cast::<U>::cast(t) {
+                // call transformation function and then cast resulting U back into a T
+                Ok(u) => match Cast::<T>::cast((self.0)(u)) {
+                    Ok(t) => t,
+                    Err(_) => unreachable!("If T=U, then U=T"),
+                    // Err(_) => unreachable!("If T=U, then U=T, t={:?}, u={:?}", t, u),
+                },
+                Err(t) => t,
+            }
         }
     }
 }
