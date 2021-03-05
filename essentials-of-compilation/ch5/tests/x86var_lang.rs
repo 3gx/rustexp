@@ -365,6 +365,15 @@ mod x86var_lang {
         let v1clang = CVar::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v_anf, v1clang);
+
+        use X86Var::*;
+        let x86cfg = select_inst(cprog);
+        print_cfg(&x86cfg.cfg);
+        /*
+        let x86homes = assign_homes(x86cfg);
+        let x86val = X86Var::interp_prog(&x86homes);
+        assert_eq!(X86Var::Value::from(v.clone()), x86val);
+        */
     }
 
     #[test]

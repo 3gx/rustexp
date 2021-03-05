@@ -78,6 +78,7 @@ pub enum ByteReg {
 pub enum Arg {
     Imm(Int),
     Var(String),
+    Global(String),
     Reg(Reg),
     ByteReg(ByteReg),
     Deref(Reg, Int),
@@ -464,6 +465,7 @@ fn interp_arg(frame: &Vec<Value>, env: &Env, arg: &Arg) -> Value {
         Arg::EFlag => *env_get(env, &EnvKey::EFlag).unwrap(),
         Arg::Deref(Reg::rbp, idx) => frame[(-idx - 8) as usize],
         Arg::Deref(..) => panic!("unimplemented {:?}", arg),
+        Arg::Global(..) => unimplemented!(),
     }
 }
 
@@ -487,6 +489,7 @@ pub fn interp_inst(
             }
             x @ Arg::Deref(_, _) => panic!("cannot assign to no rbp loc {:?}", x),
             x @ Arg::Imm(_) => panic!("cannot assignt to immediate {:?}", x),
+            Arg::Global(..) => unimplemented!(),
         };
         Some(env)
     }
@@ -698,6 +701,7 @@ fn print_x86arg(arg: &Arg) -> String {
         Arg::EFlag => String::new(),
         Arg::ByteReg(breg) => format!("%{:?}", breg),
         Arg::Deref(reg, idx) => format!("{}(%{:?})", idx, reg),
+        Arg::Global(..) => unimplemented!(),
     }
 }
 fn print_x86cc(cc: &CndCode) -> &str {
