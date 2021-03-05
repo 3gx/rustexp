@@ -1,6 +1,6 @@
-#![feature(min_specialization)]
-//#![feature(specialization)]
-//#![allow(incomplete_features)]
+//#![feature(min_specialization)]
+#![feature(specialization)]
+#![allow(incomplete_features)]
 
 #[derive(Clone, Debug)]
 pub struct Company(Vec<Department>);
@@ -70,13 +70,65 @@ mod v2 {
     pub trait GenericTransform {
         fn transform<U>(&mut self, t: U) -> U;
     }
-    trait Cast<T>: Sized {
+    pub trait Cast<T>: Sized {
         fn cast(self) -> Result<T, Self>;
     }
 
     impl<T, U> Cast<T> for U {
         default fn cast(self) -> Result<T, Self> {
             Err(self)
+        }
+    }
+    /*
+    // requires 'specialization' feature, doesn't work with `min_specialization` feature
+    impl Cast<bool> for bool {
+        fn cast(self) -> Result<bool, Self> {
+            Ok(self)
+        }
+    }
+    */
+    impl<T> Cast<T> for T {
+        fn cast(self) -> Result<T, Self> {
+            Ok(self)
+        }
+    }
+
+    use std::marker::PhantomData;
+    pub struct Transformation<F, U>
+    where
+        F: FnMut(U) -> U,
+    {
+        f: F,
+        phantom: PhantomData<fn(U) -> U>,
+    }
+    impl<F, U> Transformation<F, U>
+    where
+        F: FnMut(U) -> U,
+    {
+        /// Construct a new `Transformation` from the given function.
+        #[inline]
+        pub fn new(f: F) -> Transformation<F, U> {
+            Transformation {
+                f,
+                phantom: ::std::marker::PhantomData,
+            }
+        }
+    }
+
+    impl<F, U: std::fmt::Debug> GenericTransform for Transformation<F, U>
+    where
+        F: FnMut(U) -> U,
+    {
+        fn transform<T>(&mut self, t: T) -> T {
+            // try to cast from the T into a U
+            match Cast::<U>::cast(t) {
+                // call transformation function and then cast resulting U back into a T
+                Ok(u) => match Cast::<T>::cast((self.f)(u)) {
+                    Ok(t) => t,
+                    Err(_) => unreachable!("If T=U, then U=T"), //                    Err(_) => unreachable!("If T=U, then U=T, t={:?}, u={:?}", t, u),
+                },
+                Err(t) => t,
+            }
         }
     }
 }
@@ -102,5 +154,15 @@ fn main() {
         use crate::v1::Increase;
         com.clone().increase(0.2)
     };
+
+    {
+        use crate::v2::*;
+        assert_eq!(Cast::<bool>::cast(1), Err(1));
+        assert_eq!(Cast::<bool>::cast(true), Ok(true));
+
+        let mut not = Transformation::new(|b: bool| !b);
+        assert_eq!(not.transform(true), false);
+        assert_eq!(not.transform("str"), "str");
+    }
     println!("com={:?}", com_v1);
 }
