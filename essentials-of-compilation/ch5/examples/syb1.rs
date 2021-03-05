@@ -191,33 +191,10 @@ mod v2 {
             self
         }
     }
-    impl<T: Sized + Term> Term for Box<T> {
-        fn map_one_transform<F>(self, f: &mut F) -> Box<T>
-        where
-            F: GenericTransform,
-        {
+    impl<T: Term> Term for Box<T> {
+        fn map_one_transform<F: GenericTransform>(self, f: &mut F) -> Box<T> {
             Box::new(f.transform(*self))
         }
-
-        /*
-        fn map_one_query<Q, R, F>(&self, query: &mut Q, mut each: F)
-        where
-            Q: GenericQuery<R>,
-            F: FnMut(&mut Q, R),
-        {
-            let r = query.query(&**self);
-            each(query, r);
-        }
-
-        fn map_one_mutation<M, R, F>(&mut self, mutation: &mut M, mut each: F)
-        where
-            M: GenericMutate<R>,
-            F: FnMut(&mut M, R),
-        {
-            let r = mutation.mutate(&mut **self);
-            each(mutation, r);
-        }
-        */
     }
 
     // Implementing Everywhere
