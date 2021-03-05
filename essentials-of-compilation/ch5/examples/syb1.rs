@@ -1,5 +1,5 @@
-#![feature(specialization)]
-#![allow(incomplete_features)]
+#![feature(min_specialization)]
+//#![allow(incomplete_features)]
 
 #[derive(Clone, Debug)]
 pub struct Company(Vec<Department>);
