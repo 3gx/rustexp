@@ -67,9 +67,14 @@ pub mod v1 {
 }
 
 mod v2 {
+    use super::*;
     pub trait GenericTransform {
-        fn transform<U>(&mut self, t: U) -> U;
+        fn transform<T: Term>(&mut self, t: T) -> T;
     }
+
+    // Implementing Cast
+    // -----------------
+
     pub trait Cast<T>: Sized {
         fn cast(self) -> Result<T, Self>;
     }
@@ -92,6 +97,9 @@ mod v2 {
             Ok(self)
         }
     }
+
+    // Implementing Transformation
+    // ---------------------------
 
     use std::marker::PhantomData;
     pub struct Transformation<F, U>
@@ -125,10 +133,126 @@ mod v2 {
                 // call transformation function and then cast resulting U back into a T
                 Ok(u) => match Cast::<T>::cast((self.f)(u)) {
                     Ok(t) => t,
-                    Err(_) => unreachable!("If T=U, then U=T"), //                    Err(_) => unreachable!("If T=U, then U=T, t={:?}, u={:?}", t, u),
+                    Err(_) => unreachable!("If T=U, then U=T"),
+                    // Err(_) => unreachable!("If T=U, then U=T, t={:?}, u={:?}", t, u),
                 },
                 Err(t) => t,
             }
+        }
+    }
+
+    // Implementing Term
+    // -----------------
+
+    pub trait Term: Sized {
+        fn map_one_transform<F: GenericTransform>(self, f: &mut F) -> Self;
+    }
+
+    impl Term for Employee {
+        fn map_one_transform<F: GenericTransform>(self, f: &mut F) -> Self {
+            Employee(f.transform(self.0), f.transform(self.1))
+        }
+    }
+
+    impl Term for Person {
+        fn map_one_transform<F: GenericTransform>(self, f: &mut F) -> Self {
+            Person(f.transform(self.0), f.transform(self.1))
+        }
+    }
+
+    impl Term for Company {
+        fn map_one_transform<F: GenericTransform>(self, f: &mut F) -> Self {
+            Company(self.0.into_iter().map(|x| f.transform(x)).collect())
+        }
+    }
+
+    impl Term for Department {
+        fn map_one_transform<F: GenericTransform>(self, f: &mut F) -> Self {
+            Department(
+                f.transform(self.0),
+                f.transform(self.1),
+                self.2.into_iter().map(|x| f.transform(x)).collect(),
+            )
+        }
+    }
+
+    impl Term for Salary {
+        fn map_one_transform<F: GenericTransform>(self, f: &mut F) -> Self {
+            Salary(f.transform(self.0))
+        }
+    }
+
+    impl Term for SubUnit {
+        fn map_one_transform<F: GenericTransform>(self, f: &mut F) -> Self {
+            match self {
+                SubUnit::Person(e) => SubUnit::Person(f.transform(e)),
+                SubUnit::Department(d) => SubUnit::Department(f.transform(d)),
+            }
+        }
+    }
+
+    impl Term for f64 {
+        fn map_one_transform<F: GenericTransform>(self, _: &mut F) -> Self {
+            self
+        }
+    }
+
+    impl Term for bool {
+        fn map_one_transform<F: GenericTransform>(self, _: &mut F) -> Self {
+            self
+        }
+    }
+    impl Term for &'static str {
+        fn map_one_transform<F: GenericTransform>(self, _: &mut F) -> Self {
+            self
+        }
+    }
+    impl<T: Sized + Term> Term for Box<T> {
+        fn map_one_transform<F>(self, f: &mut F) -> Box<T>
+        where
+            F: GenericTransform,
+        {
+            Box::new(f.transform(*self))
+        }
+
+        /*
+        fn map_one_query<Q, R, F>(&self, query: &mut Q, mut each: F)
+        where
+            Q: GenericQuery<R>,
+            F: FnMut(&mut Q, R),
+        {
+            let r = query.query(&**self);
+            each(query, r);
+        }
+
+        fn map_one_mutation<M, R, F>(&mut self, mutation: &mut M, mut each: F)
+        where
+            M: GenericMutate<R>,
+            F: FnMut(&mut M, R),
+        {
+            let r = mutation.mutate(&mut **self);
+            each(mutation, r);
+        }
+        */
+    }
+
+    // Implementing Everywhere
+    // -----------------------
+
+    pub struct Everywhere<F: GenericTransform> {
+        f: F,
+    }
+
+    impl<F: GenericTransform> Everywhere<F> {
+        pub fn new(f: F) -> Everywhere<F> {
+            Everywhere { f }
+        }
+    }
+
+    impl<F: GenericTransform> GenericTransform for Everywhere<F> {
+        fn transform<T: Term>(&mut self, t: T) -> T {
+            let t = t.map_one_transform(self);
+            self.f.transform(t)
         }
     }
 }
@@ -154,6 +278,7 @@ fn main() {
         use crate::v1::Increase;
         com.clone().increase(0.2)
     };
+    println!("com={:?}", com_v1);
 
     {
         use crate::v2::*;
@@ -164,5 +289,24 @@ fn main() {
         assert_eq!(not.transform(true), false);
         assert_eq!(not.transform("str"), "str");
     }
-    println!("com={:?}", com_v1);
+
+    let com_v2 = {
+        use crate::v2::*;
+        // Definition
+        let rename = |p: Person| Person("Juan Offus", p.1);
+        let mut rename = Everywhere::new(Transformation::new(rename));
+        // Usage
+        rename.transform(com.clone())
+    };
+    println!("com={:?}", com_v2);
+
+    let com_v3 = {
+        use crate::v2::*;
+        // Definition
+        let rename = |s: Salary| Salary(s.0 * (1.0 + 0.2));
+        let mut rename = Everywhere::new(Transformation::new(rename));
+        // Usage
+        rename.transform(com)
+    };
+    println!("com={:?}", com_v3);
 }
