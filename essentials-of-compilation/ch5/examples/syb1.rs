@@ -102,19 +102,12 @@ mod v2 {
     // ---------------------------
 
     use std::marker::PhantomData;
-    pub struct Transformation<F, U>
-    where
-        F: FnMut(U) -> U,
-    {
+    pub struct Transformation<F: FnMut(U) -> U, U> {
         f: F,
         phantom: PhantomData<fn(U) -> U>,
     }
-    impl<F, U> Transformation<F, U>
-    where
-        F: FnMut(U) -> U,
-    {
+    impl<F: FnMut(U) -> U, U> Transformation<F, U> {
         /// Construct a new `Transformation` from the given function.
-        #[inline]
         pub fn new(f: F) -> Transformation<F, U> {
             Transformation {
                 f,
