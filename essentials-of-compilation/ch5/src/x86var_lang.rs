@@ -16,7 +16,9 @@ use RVarAnf::type_size_in_bytes;
 type Int = i64;
 type Bool = bool;
 
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::rc::Rc;
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum Value {
@@ -495,15 +497,28 @@ pub enum EnvKey {
     EFlag,
 }
 
-pub type Env = Vec<(EnvKey, Value)>;
+#[derive(Debug, Clone)]
+pub struct Env(Vec<(EnvKey, Value)>, HashMap<String, Rc<RefCell<Value>>>);
+impl Env {
+    pub fn new() -> Self {
+        Env(vec![], vec![].into_iter().collect())
+    }
+    pub fn add_global(mut self, key: &str, val: Value) -> Self {
+        assert!(self.1.get(key).is_none());
+        self.1.insert(key.to_string(), Rc::new(RefCell::new(val)));
+        self
+    }
+}
+
 fn env_get<'a>(env: &'a Env, reg: &EnvKey) -> Option<&'a Value> {
-    env.iter()
+    env.0
+        .iter()
         .rev()
         .find_map(|x| if &x.0 != reg { None } else { Some(&x.1) })
 }
 
 fn env_set(mut env: Env, reg: EnvKey, val: Value) -> Env {
-    env.push((reg, val));
+    env.0.push((reg, val));
     env
 }
 
@@ -516,7 +531,10 @@ fn interp_arg(frame: &Vec<Value>, env: &Env, arg: &Arg) -> Value {
         Arg::EFlag => *env_get(env, &EnvKey::EFlag).unwrap(),
         Arg::Deref(Reg::rbp, idx) => frame[(-idx - 8) as usize],
         Arg::Deref(..) => panic!("unimplemented {:?}", arg),
-        Arg::Global(..) => unimplemented!(),
+        Arg::Global(var) => match env.1.get(var) {
+            Some(x) => x.borrow().clone(),
+            _ => panic!("unknown globalvar {:?}", var),
+        },
     }
 }
 
@@ -637,7 +655,7 @@ pub fn interp_prog(prog: &Program) -> Value {
         bbmap.insert(bb.name, bb.insts);
     }
     let insts = bbmap.get(&"start".to_string()).unwrap();
-    let mut env: Env = vec![];
+    let mut env = Env::new();
     let mut frame = vec![];
     frame.resize(prog.stack as usize, Value::Int(0));
     env = interp_inst(
