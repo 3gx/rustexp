@@ -387,6 +387,19 @@ pub fn print_cprog(cprog: &CProgram) -> String {
     .iter()
     .cloned()
     .collect::<Vec<_>>();
-    let prog = cprog_gen_globals(&globals);
+
+    let CProgram(bbs) = cprog;
+    let main_func = bbs
+        .iter()
+        .map(|BasicBlock(name, tail)| {
+            let bb: String = format!("{}:\n", name);
+            bb
+        })
+        .collect::<String>();
+
+    let mut prog = cprog_gen_globals(&globals);
+    prog.push_str("int main() {\n");
+    prog.push_str(&main_func);
+    prog.push_str("}");
     prog
 }
