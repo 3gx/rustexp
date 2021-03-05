@@ -68,6 +68,7 @@ pub mod v1 {
 
 mod v2 {
     use super::*;
+    use std::fmt::Debug;
 
     // Implementing Cast
     // -----------------
@@ -99,7 +100,7 @@ mod v2 {
     // -----------------------
 
     pub trait GenericTransform {
-        fn transform<T: Term>(&mut self, t: T) -> T;
+        fn transform<T: Term + Debug>(&mut self, t: T) -> T;
     }
 
     pub struct Everywhere<F: GenericTransform>(F);
@@ -111,9 +112,12 @@ mod v2 {
     }
 
     impl<F: GenericTransform> GenericTransform for Everywhere<F> {
-        fn transform<T: Term>(&mut self, t: T) -> T {
+        fn transform<T: Term + Debug>(&mut self, t: T) -> T {
             let t = t.map_one_transform(self);
-            self.0.transform(t)
+            //println!("t={:?}", t);
+            let u = self.0.transform(t);
+            //println!("u={:?}", u);
+            u
         }
     }
 
@@ -183,7 +187,7 @@ mod v2 {
             self
         }
     }
-    impl<T: Term> Term for Box<T> {
+    impl<T: Term + Debug> Term for Box<T> {
         fn map_one_transform<F: GenericTransform>(self, f: &mut F) -> Box<T> {
             Box::new(f.transform(*self))
         }
