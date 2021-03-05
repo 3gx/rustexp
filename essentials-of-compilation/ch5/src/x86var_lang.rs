@@ -356,6 +356,25 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BasicBlock) -> BasicBlock {
             block
         }
         Tail::IfStmt(expr, thn, els) => match expr {
+            CVar::Expr::TupleRef(tu, idx) => {
+                let tu = select_inst_atom(tu);
+                let a2 = select_inst_atom(&CVar::Atom::Int(0));
+                let insts = vec![
+                    Inst::Binary(BinaryKind::Movq, tu, Arg::Reg(Reg::r11)),
+                    Inst::Binary(BinaryKind::Cmpq, a2, Arg::Deref(Reg::r11, 8 * (idx + 1))),
+                    Inst::JmpIf(CndCode::Eq, els.clone()),
+                    Inst::Jmp(thn.clone()),
+                ];
+
+                let mut block = block;
+                for inst in insts {
+                    for v in get_vars(&inst) {
+                        block.vars.insert(v);
+                    }
+                    block.insts.push(inst);
+                }
+                block
+            }
             CVar::Expr::BinaryOp(cmpop, a1, a2) => {
                 let a1 = select_inst_atom(a1);
                 let a2 = select_inst_atom(a2);

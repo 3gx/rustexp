@@ -410,6 +410,10 @@ mod x86var_lang {
         let v1clang = CVar::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v_anf, v1clang);
+
+        use X86Var::*;
+        let x86cfg = select_inst(cprog);
+        print_cfg(&x86cfg.cfg);
     }
 
     #[test]
@@ -447,6 +451,10 @@ mod x86var_lang {
         let v1clang = CVar::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v_anf, v1clang);
+
+        use X86Var::*;
+        let x86cfg = select_inst(cprog);
+        print_cfg(&x86cfg.cfg);
     }
 
     #[test]
@@ -480,5 +488,9 @@ mod x86var_lang {
         let v1clang = CVar::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v_anf, v1clang);
+
+        use X86Var::*;
+        let x86cfg = select_inst(cprog);
+        print_cfg(&x86cfg.cfg);
     }
 }
