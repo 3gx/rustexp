@@ -1,3 +1,5 @@
+// adapted from https://fitzgeraldnick.com/2017/08/03/scrapmetal.html
+
 //#![feature(min_specialization)]
 #![feature(specialization)]
 #![allow(incomplete_features)]
