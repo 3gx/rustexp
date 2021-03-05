@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 lazy_static = "1.0"
 gc = { version = "0.3", features = ["derive"] }
-graphlib = { version = "*", features = ["no_std"] }
+# graphlib = { version = "*", features = ["no_std"] }
 ref-cast = "1.0"
 
 [dependencies.petgraph]
