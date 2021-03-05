@@ -370,14 +370,14 @@ mod x86var_lang {
         let x86cfg = select_inst(cprog);
         print_cfg(&x86cfg.cfg);
 
+        /*
         let x86val = X86Var::interp_prog(&x86cfg);
         assert_eq!(X86Var::Value::from(v.clone()), x86val);
 
-        // /*
         let x86homes = assign_homes(x86cfg);
         let x86val = X86Var::interp_prog(&x86homes);
         assert_eq!(X86Var::Value::from(v.clone()), x86val);
-        // */
+         */
     }
 
     #[test]
