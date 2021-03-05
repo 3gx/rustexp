@@ -76,6 +76,7 @@ pub enum CmpOp {
 pub enum Tail {
     Return(Expr),
     Seq(Stmt, Box<Tail>),
+    Collect(Int),
     Goto(String),
     IfStmt(Expr, String, String),
 }
@@ -151,6 +152,7 @@ pub fn interp_tail(env: &Env, tail: &Tail, bbs: &BTreeMap<String, Tail>) -> Valu
             Value::Bool(false) => interp_tail(env, bbs.get(els).unwrap(), bbs),
             x @ _ => panic!("predicate must be Bool, got {:?}", x),
         },
+        Tail::Collect(..) => unimplemented!(),
     }
 }
 

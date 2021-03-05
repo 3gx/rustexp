@@ -384,6 +384,7 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BasicBlock) -> BasicBlock {
             }
             x @ _ => panic!("unhandled 'if' predicate {:?}", x),
         },
+        Tail::Collect(..) => unimplemented!(),
     }
 }
 
