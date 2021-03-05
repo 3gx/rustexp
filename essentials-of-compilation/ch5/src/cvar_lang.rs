@@ -12,6 +12,7 @@ pub enum Atom {
     Int(Int),
     Bool(Bool),
     Var(String),
+    Void,
 }
 
 pub macro int($e:expr) {
@@ -28,6 +29,7 @@ impl From<Atom> for RVarAnf::Atom {
             Atom::Int(i) => RVarAnf::Atom::Int(i),
             Atom::Bool(b) => RVarAnf::Atom::Bool(b),
             Atom::Var(v) => RVarAnf::Atom::Var(v),
+            Atom::Void => RVarAnf::Atom::Void,
         }
     }
 }
@@ -38,7 +40,7 @@ impl From<RVarAnf::Atom> for Atom {
             RVarAnf::Atom::Int(i) => Atom::Int(i),
             RVarAnf::Atom::Bool(b) => Atom::Bool(b),
             RVarAnf::Atom::Var(v) => Atom::Var(v),
-            RVarAnf::Atom::Void => panic!("Void atom cannot be handled in CVarLang"),
+            RVarAnf::Atom::Void => Atom::Void,
         }
     }
 }
@@ -64,6 +66,7 @@ pub enum Expr {
 #[derive(Debug, Clone)]
 pub enum Stmt {
     AssignVar(String, Expr),
+    Collect(Int),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -76,7 +79,6 @@ pub enum CmpOp {
 pub enum Tail {
     Return(Expr),
     Seq(Stmt, Box<Tail>),
-    Collect(Int),
     Goto(String),
     IfStmt(Expr, String, String),
 }
@@ -136,6 +138,7 @@ pub fn interp_expr(env: &Env, e: &Expr) -> Value {
 pub fn interp_stmt(env: &Env, stmt: &Stmt) -> Env {
     match stmt {
         Stmt::AssignVar(var, exp) => sym_set(env, var, &interp_expr(env, exp)),
+        Stmt::Collect(..) => unimplemented!(),
     }
 }
 
@@ -152,7 +155,6 @@ pub fn interp_tail(env: &Env, tail: &Tail, bbs: &BTreeMap<String, Tail>) -> Valu
             Value::Bool(false) => interp_tail(env, bbs.get(els).unwrap(), bbs),
             x @ _ => panic!("predicate must be Bool, got {:?}", x),
         },
-        Tail::Collect(..) => unimplemented!(),
     }
 }
 
@@ -248,7 +250,7 @@ fn explicate_tail(e: RVarAnf::Expr, bbs: Vec<BasicBlock>) -> (Tail, Vec<BasicBlo
         RVarAnf::Expr::Allocate(..) => unimplemented!(),
         RVarAnf::Expr::Collect(..) => unimplemented!(),
         RVarAnf::Expr::GlobalVar(..) => unimplemented!(),
-        RVarAnf::Expr::TupleRef(..) => unimplemented!(),
+        RVarAnf::Expr::TupleRef(a, i) => ret(Expr::TupleRef(a.into(), i), bbs),
         RVarAnf::Expr::TupleSet(..) => unimplemented!(),
     }
 }
@@ -289,11 +291,13 @@ fn explicate_assign(
             bbs.push(BasicBlock(else_name.clone(), else_bb));
             explicate_ifpred(*cnd, then_name, else_name, bbs)
         }
-        RVarAnf::Expr::Allocate(..) => unimplemented!(),
-        RVarAnf::Expr::Collect(..) => unimplemented!(),
-        RVarAnf::Expr::GlobalVar(..) => unimplemented!(),
+        RVarAnf::Expr::Allocate(num, ty) => assign(Expr::Allocate(num, ty), tail, bbs),
+        RVarAnf::Expr::Collect(bytes) => (Tail::Seq(Stmt::Collect(bytes), Box::new(tail)), bbs),
+        RVarAnf::Expr::GlobalVar(var) => assign(Expr::GlobalVar(var), tail, bbs),
         RVarAnf::Expr::TupleRef(..) => unimplemented!(),
-        RVarAnf::Expr::TupleSet(..) => unimplemented!(),
+        RVarAnf::Expr::TupleSet(a, i, v) => {
+            assign(Expr::TupleSet(a.into(), i, v.into()), tail, bbs)
+        }
     }
 }
 

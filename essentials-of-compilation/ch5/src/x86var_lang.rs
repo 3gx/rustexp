@@ -215,6 +215,7 @@ pub fn select_inst_atom(a: &CVar::Atom) -> Arg {
             }
         }
         CVar::Atom::Var(x) => Arg::Var(x.clone()),
+        CVar::Atom::Void => unreachable!("can't handle void"),
     }
 }
 
@@ -262,6 +263,7 @@ pub fn select_inst_stmt(s: &CVar::Stmt) -> Vec<Inst> {
     use CVar::Stmt;
     match s {
         Stmt::AssignVar(x, e) => select_inst_assign(Arg::Var(x.clone()), e),
+        Stmt::Collect(..) => unimplemented!(),
     }
 }
 
@@ -384,7 +386,6 @@ pub fn select_inst_tail(t: &CVar::Tail, block: BasicBlock) -> BasicBlock {
             }
             x @ _ => panic!("unhandled 'if' predicate {:?}", x),
         },
-        Tail::Collect(..) => unimplemented!(),
     }
 }
 
