@@ -234,8 +234,8 @@ mod cvar_lang {
 
     #[test]
     fn t7() {
-        use ch5::cvar_lang;
-        use cvar_lang::{RVar, RVarAnf};
+        use ch5::cvar_lang as CVar;
+        use CVar::{RVar, RVarAnf};
         let (e, v) = {
             use RVar::*;
             let e = expr! {
@@ -259,12 +259,16 @@ mod cvar_lang {
 
         let v_anf = RVarAnf::interp_expr(&e_anf);
         assert_eq!(v, v_anf);
+
+        let cprog = CVar::explicate_expr(e_anf);
+        let CVar::CProgram(tail) = &cprog;
+        println!("tail= {:?}", tail);
     }
 
     #[test]
     fn t8() {
-        use ch5::cvar_lang;
-        use cvar_lang::{RVar, RVarAnf};
+        use ch5::cvar_lang as CVar;
+        use CVar::{RVar, RVarAnf};
         let (e, v) = {
             use RVar::*;
             let e = expr! {
@@ -293,8 +297,8 @@ mod cvar_lang {
 
     #[test]
     fn t9() {
-        use ch5::cvar_lang;
-        use cvar_lang::{RVar, RVarAnf};
+        use ch5::cvar_lang as CVar;
+        use CVar::{RVar, RVarAnf};
         let (e, v) = {
             use RVar::*;
             let e = expr! {
@@ -324,8 +328,8 @@ mod cvar_lang {
 
     #[test]
     fn t10() {
-        use ch5::cvar_lang;
-        use cvar_lang::{RVar, RVarAnf};
+        use ch5::cvar_lang as CVar;
+        use CVar::{RVar, RVarAnf};
         let (e, v) = {
             use RVar::*;
             let e = expr! {
