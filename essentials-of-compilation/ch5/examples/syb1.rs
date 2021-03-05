@@ -255,19 +255,19 @@ mod v3 {
     // -----------------------
 
     pub trait GenericTransform {
-        fn gmap<T: Term + Debug>(&mut self, t: T) -> T;
+        fn gmap<T: Term + Debug>(&self, t: T) -> T;
     }
 
-    pub struct Everywhere<F: FnMut(U) -> U, U>(Transformation<F, U>);
+    pub struct Everywhere<F: Fn(U) -> U, U>(Transformation<F, U>);
 
-    impl<F: FnMut(U) -> U, U> Everywhere<F, U> {
+    impl<F: Fn(U) -> U, U> Everywhere<F, U> {
         pub fn new(f: Transformation<F, U>) -> Everywhere<F, U> {
             Everywhere(f)
         }
     }
 
-    impl<F: FnMut(U) -> U, U> GenericTransform for Everywhere<F, U> {
-        fn gmap<T: Term + Debug>(&mut self, t: T) -> T {
+    impl<F: Fn(U) -> U, U> GenericTransform for Everywhere<F, U> {
+        fn gmap<T: Term + Debug>(&self, t: T) -> T {
             let t = t.map_one_transform(self);
             //println!("t={:?}", t);
             let u = self.0.transform(t);
@@ -280,29 +280,29 @@ mod v3 {
     // -----------------
 
     pub trait Term: Sized {
-        fn map_one_transform<F: GenericTransform>(self, f: &mut F) -> Self;
+        fn map_one_transform<F: GenericTransform>(self, f: &F) -> Self;
     }
 
     impl Term for Employee {
-        fn map_one_transform<F: GenericTransform>(self, f: &mut F) -> Self {
+        fn map_one_transform<F: GenericTransform>(self, f: &F) -> Self {
             Employee(f.gmap(self.0), f.gmap(self.1))
         }
     }
 
     impl Term for Person {
-        fn map_one_transform<F: GenericTransform>(self, f: &mut F) -> Self {
+        fn map_one_transform<F: GenericTransform>(self, f: &F) -> Self {
             Person(f.gmap(self.0), f.gmap(self.1))
         }
     }
 
     impl Term for Company {
-        fn map_one_transform<F: GenericTransform>(self, f: &mut F) -> Self {
+        fn map_one_transform<F: GenericTransform>(self, f: &F) -> Self {
             Company(self.0.into_iter().map(|x| f.gmap(x)).collect())
         }
     }
 
     impl Term for Department {
-        fn map_one_transform<F: GenericTransform>(self, f: &mut F) -> Self {
+        fn map_one_transform<F: GenericTransform>(self, f: &F) -> Self {
             Department(
                 f.gmap(self.0),
                 f.gmap(self.1),
@@ -312,13 +312,13 @@ mod v3 {
     }
 
     impl Term for Salary {
-        fn map_one_transform<F: GenericTransform>(self, f: &mut F) -> Self {
+        fn map_one_transform<F: GenericTransform>(self, f: &F) -> Self {
             Salary(f.gmap(self.0))
         }
     }
 
     impl Term for SubUnit {
-        fn map_one_transform<F: GenericTransform>(self, f: &mut F) -> Self {
+        fn map_one_transform<F: GenericTransform>(self, f: &F) -> Self {
             match self {
                 SubUnit::Person(e) => SubUnit::Person(f.gmap(e)),
                 SubUnit::Department(d) => SubUnit::Department(f.gmap(d)),
@@ -327,23 +327,23 @@ mod v3 {
     }
 
     impl Term for f64 {
-        fn map_one_transform<F: GenericTransform>(self, _: &mut F) -> Self {
+        fn map_one_transform<F: GenericTransform>(self, _: &F) -> Self {
             self
         }
     }
 
     impl Term for bool {
-        fn map_one_transform<F: GenericTransform>(self, _: &mut F) -> Self {
+        fn map_one_transform<F: GenericTransform>(self, _: &F) -> Self {
             self
         }
     }
     impl Term for &'static str {
-        fn map_one_transform<F: GenericTransform>(self, _: &mut F) -> Self {
+        fn map_one_transform<F: GenericTransform>(self, _: &F) -> Self {
             self
         }
     }
     impl<T: Term + Debug> Term for Box<T> {
-        fn map_one_transform<F: GenericTransform>(self, f: &mut F) -> Box<T> {
+        fn map_one_transform<F: GenericTransform>(self, f: &F) -> Box<T> {
             Box::new(f.gmap(*self))
         }
     }
@@ -352,13 +352,13 @@ mod v3 {
     // ---------------------------
 
     use std::marker::PhantomData;
-    pub struct Transformation<F: FnMut(U) -> U, U>(F, PhantomData<fn(U) -> U>);
-    impl<F: FnMut(U) -> U, U> Transformation<F, U> {
+    pub struct Transformation<F: Fn(U) -> U, U>(F, PhantomData<fn(U) -> U>);
+    impl<F: Fn(U) -> U, U> Transformation<F, U> {
         // Construct a new `Transformation` from the given function.
         pub fn new(f: F) -> Transformation<F, U> {
             Transformation(f, PhantomData)
         }
-        fn transform<T>(&mut self, t: T) -> T {
+        fn transform<T>(&self, t: T) -> T {
             // try to cast from the T into a U
             match Cast::<U>::cast(t) {
                 // call transformation function and then cast resulting U back into a T
@@ -430,7 +430,7 @@ fn main() {
         use crate::v3::*;
         // Definition
         let raise = |s: Salary| Salary(s.0 * (1.0 + 0.2));
-        let mut raise = Everywhere::new(Transformation::new(raise));
+        let raise = Everywhere::new(Transformation::new(raise));
         // Usage
         raise.gmap(com.clone())
     };
