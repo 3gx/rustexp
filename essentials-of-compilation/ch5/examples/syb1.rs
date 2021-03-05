@@ -1,3 +1,6 @@
+#![feature(specialization)]
+#![allow(incomplete_features)]
+
 #[derive(Clone, Debug)]
 pub struct Company(Vec<Department>);
 #[derive(Clone, Debug)]
@@ -62,6 +65,21 @@ pub mod v1 {
     }
 }
 
+mod v2 {
+    pub trait GenericTransform {
+        fn transform<U>(&mut self, t: U) -> U;
+    }
+    trait Cast<T>: Sized {
+        fn cast(self) -> Result<T, Self>;
+    }
+
+    impl<T, U> Cast<T> for U {
+        default fn cast(self) -> Result<T, Self> {
+            Err(self)
+        }
+    }
+}
+
 fn main() {
     let ralf = Employee(Person("Ralf", "Amsterdam"), Salary(8000.0));
     let joost = Employee(Person("Joost", "Amsterdam"), Salary(1000.0));
@@ -78,10 +96,10 @@ fn main() {
         ),
         Department("Strategy", blair.clone(), vec![]),
     ]);
-    println!("com={:#?}", com);
+    println!("com={:?}", com);
     let com_v1 = {
         use crate::v1::Increase;
         com.clone().increase(0.2)
     };
-    println!("com={:#?}", com_v1);
+    println!("com={:?}", com_v1);
 }
