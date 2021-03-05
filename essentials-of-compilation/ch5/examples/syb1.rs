@@ -614,7 +614,7 @@ fn main() {
     let com_v3a = {
         use crate::v3::*;
         // Definition
-        let raise = |s: Salary| Salary(s.0 * (1.0 + 0.2));
+        let raise = |Salary(s): Salary| Salary(s * (1.0 + 0.2));
         let raise = Everywhere::new(Transformation::new(raise));
         // Usage
         raise.gmap(com.clone())
@@ -624,7 +624,7 @@ fn main() {
     let com_v4a = {
         use crate::v4::*;
         // Definition
-        let raise = |s: Salary| Salary(s.0 * (1.0 + 0.2));
+        let raise = |Salary(s): Salary| Salary(s * (1.0 + 0.2));
         let raise = Everywhere::new(Transformation::new(raise));
         raise.gmap(com.clone())
     };
