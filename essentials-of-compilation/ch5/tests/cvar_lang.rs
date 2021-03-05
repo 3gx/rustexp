@@ -231,4 +231,121 @@ mod cvar_lang {
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
     }
+
+    #[test]
+    fn t7() {
+        use ch5::cvar_lang;
+        use cvar_lang::{RVar, RVarAnf};
+        let (e, v) = {
+            use RVar::*;
+            let e = expr! {
+            (let [t1 (tuple 3 7)]
+                 (let [t2 t1]
+                      (let [_ (tupleset! t2 0 42)]
+                           (tupleref t1 0))))};
+            let v = interp_expr(&e);
+            assert_eq!(v, Value::from(42));
+            println!("\nuntyped= {:?}", e);
+            let e = typed_expr(e);
+            let v1 = interp_texpr(&e);
+            assert_eq!(v, v1);
+            (e, v)
+        };
+        println!("\ntyped= {:?}", e);
+        println!("\nval= {:?}", v);
+
+        let e_anf = RVarAnf::rco_exp(e);
+        println!("\ne_anf= {:?} ", e_anf);
+
+        let v_anf = RVarAnf::interp_expr(&e_anf);
+        assert_eq!(v, v_anf);
+    }
+
+    #[test]
+    fn t8() {
+        use ch5::cvar_lang;
+        use cvar_lang::{RVar, RVarAnf};
+        let (e, v) = {
+            use RVar::*;
+            let e = expr! {
+                (let [v (tuple (tuple 44))]
+                     (let [x (let [w (tuple 48)]
+                                   (let [_ (tupleset! v 0 w)] (-6)))]
+                          (add x (tupleref (tupleref v 0) 0))))
+            };
+            let v = interp_expr(&e);
+            assert_eq!(v, Value::from(42));
+            println!("\nuntyped= {:?}", e);
+            let e = typed_expr(e);
+            let v1 = interp_texpr(&e);
+            assert_eq!(v, v1);
+            (e, v)
+        };
+        println!("\ntyped= {:?}", e);
+        println!("\nval= {:?}", v);
+
+        let e_anf = RVarAnf::rco_exp(e);
+        println!("\ne_anf= {:?} ", e_anf);
+
+        let v_anf = RVarAnf::interp_expr(&e_anf);
+        assert_eq!(v, v_anf);
+    }
+
+    #[test]
+    fn t9() {
+        use ch5::cvar_lang;
+        use cvar_lang::{RVar, RVarAnf};
+        let (e, v) = {
+            use RVar::*;
+            let e = expr! {
+                (let [t (tuple 40 true (tuple 2))]
+                     (if (tupleref t 1)
+                         (add (tupleref t 0)
+                              (tupleref (tupleref t 2) 0))
+                         44))
+            };
+            let v = interp_expr(&e);
+            assert_eq!(v, Value::from(42));
+            println!("e={:?}", e);
+            let e = typed_expr(e);
+            let v1 = interp_texpr(&e);
+            assert_eq!(v, v1);
+            (e, v)
+        };
+        println!("\ntyped= {:?}", e);
+        println!("\nval= {:?}", v);
+
+        let e_anf = RVarAnf::rco_exp(e);
+        println!("\ne_anf= {:?} ", e_anf);
+
+        let v_anf = RVarAnf::interp_expr(&e_anf);
+        assert_eq!(v, v_anf);
+    }
+
+    #[test]
+    fn t10() {
+        use ch5::cvar_lang;
+        use cvar_lang::{RVar, RVarAnf};
+        let (e, v) = {
+            use RVar::*;
+            let e = expr! {
+                (tupleref (tupleref (tuple (tuple 42)) 0) 0)
+            };
+            let v = interp_expr(&e);
+            assert_eq!(v, Value::from(42));
+            println!("\nuntyped= {:?}", e);
+            let e = typed_expr(e);
+            let v1 = interp_texpr(&e);
+            assert_eq!(v, v1);
+            (e, v)
+        };
+        println!("\ntyped= {:?}", e);
+        println!("\nval= {:?}", v);
+
+        let e_anf = RVarAnf::rco_exp(e);
+        println!("\ne_anf= {:?} ", e_anf);
+
+        let v_anf = RVarAnf::interp_expr(&e_anf);
+        assert_eq!(v, v_anf);
+    }
 }
