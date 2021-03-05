@@ -110,10 +110,7 @@ mod v2 {
         }
     }
 
-    impl<F, U: std::fmt::Debug> GenericTransform for Transformation<F, U>
-    where
-        F: FnMut(U) -> U,
-    {
+    impl<F: FnMut(U) -> U, U> GenericTransform for Transformation<F, U> {
         fn transform<T>(&mut self, t: T) -> T {
             // try to cast from the T into a U
             match Cast::<U>::cast(t) {
