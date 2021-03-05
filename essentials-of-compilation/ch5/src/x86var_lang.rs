@@ -116,7 +116,7 @@ pub enum CndCode {
 pub enum Inst {
     Unary(UnaryKind, Arg),
     Binary(BinaryKind, Arg, Arg),
-    Callq(String, Int /*arity*/),
+    Callq(String),
     Retq,
     Jmp(String),
     JmpIf(CndCode, String),
@@ -218,7 +218,7 @@ pub fn select_inst_atom(a: &CVar::Atom) -> Arg {
             }
         }
         CVar::Atom::Var(x) => Arg::Var(x.clone()),
-        CVar::Atom::Void => unreachable!("can't handle void"),
+        CVar::Atom::Void => Arg::Imm(0),
     }
 }
 
@@ -231,10 +231,7 @@ pub fn select_inst_assign(dst: Arg, e: &CVar::Expr) -> Vec<Inst> {
     use UnaryKind::*;
     match e {
         Expr::Atom(a) => vec![Binary(Movq, select_inst_atom(a), dst)],
-        Expr::Read => vec![
-            Callq("Read".to_string(), 0),
-            Binary(Movq, Arg::Reg(rax), dst),
-        ],
+        Expr::Read => vec![Callq("Read".to_string()), Binary(Movq, Arg::Reg(rax), dst)],
         Expr::UnaryOp(UnaryOpKind::Neg, a) => {
             vec![
                 Binary(Movq, select_inst_atom(a), dst.clone()),
@@ -280,16 +277,26 @@ pub fn select_inst_assign(dst: Arg, e: &CVar::Expr) -> Vec<Inst> {
             ),
             Binary(Movq, Arg::Imm(0), dst),
         ],
-
+        Expr::TupleRef(tu, idx) => vec![
+            Binary(Movq, select_inst_atom(tu), Arg::Reg(Reg::r11)),
+            Binary(Movq, Arg::Deref(Reg::r11, 8 * (idx + 1)), dst),
+        ],
+        Expr::GlobalVar(var) => vec![Binary(Movq, Arg::Global(var.clone()), dst)],
         x @ _ => panic!("unhandled expression {:?}", x),
     }
 }
 
 pub fn select_inst_stmt(s: &CVar::Stmt) -> Vec<Inst> {
+    use BinaryKind::*;
     use CVar::Stmt;
+    use Inst::*;
     match s {
         Stmt::AssignVar(x, e) => select_inst_assign(Arg::Var(x.clone()), e),
-        Stmt::Collect(..) => unimplemented!(),
+        Stmt::Collect(bytes) => vec![
+            Binary(Movq, Arg::Reg(Reg::r15), Arg::Reg(Reg::rdi)),
+            Binary(Movq, Arg::Imm(*bytes), Arg::Reg(Reg::rsi)),
+            Callq("collect".to_string()),
+        ],
     }
 }
 
@@ -762,7 +769,7 @@ fn print_x86inst(inst: &Inst) -> String {
             };
             format!("{}\t{}", opcode, arg)
         }
-        Callq(_label, _) => {
+        Callq(_label) => {
             //format!("callq\t{}", label),
             format!("int\t$3")
         }
