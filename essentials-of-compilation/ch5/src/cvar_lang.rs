@@ -363,3 +363,7 @@ pub fn explicate_expr(e: RVarAnf::Expr) -> CProgram {
     }
     CProgram(bbs)
 }
+
+pub fn print_cprog(cprog: &CProgram) -> String {
+    "int main() {}".to_string()
+}
