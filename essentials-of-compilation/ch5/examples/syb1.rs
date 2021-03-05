@@ -102,17 +102,11 @@ mod v2 {
     // ---------------------------
 
     use std::marker::PhantomData;
-    pub struct Transformation<F: FnMut(U) -> U, U> {
-        f: F,
-        phantom: PhantomData<fn(U) -> U>,
-    }
+    pub struct Transformation<F: FnMut(U) -> U, U>(F, PhantomData<fn(U) -> U>);
     impl<F: FnMut(U) -> U, U> Transformation<F, U> {
         // Construct a new `Transformation` from the given function.
         pub fn new(f: F) -> Transformation<F, U> {
-            Transformation {
-                f,
-                phantom: ::std::marker::PhantomData,
-            }
+            Transformation(f, PhantomData)
         }
     }
 
@@ -124,7 +118,7 @@ mod v2 {
             // try to cast from the T into a U
             match Cast::<U>::cast(t) {
                 // call transformation function and then cast resulting U back into a T
-                Ok(u) => match Cast::<T>::cast((self.f)(u)) {
+                Ok(u) => match Cast::<T>::cast((self.0)(u)) {
                     Ok(t) => t,
                     Err(_) => unreachable!("If T=U, then U=T"),
                     // Err(_) => unreachable!("If T=U, then U=T, t={:?}, u={:?}", t, u),
