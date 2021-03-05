@@ -269,10 +269,7 @@ mod v3 {
     impl<F: Fn(U) -> U, U> GenericTransform for Everywhere<F, U> {
         fn gmap<T: Term + Debug>(&self, t: T) -> T {
             let t = t.map_one_transform(self);
-            //println!("t={:?}", t);
-            let u = self.0.transform(t);
-            //println!("u={:?}", u);
-            u
+            self.0.transform(t)
         }
     }
 
