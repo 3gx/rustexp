@@ -263,6 +263,10 @@ mod cvar_lang {
         let cprog = CVar::explicate_expr(e_anf);
         let CVar::CProgram(tail) = &cprog;
         println!("tail= {:?}", tail);
+
+        let v1clang = CVar::interp_prog(&cprog);
+        println!("v1clang= {:?}", v1clang);
+        assert_eq!(v_anf, v1clang);
     }
 
     #[test]
@@ -297,6 +301,10 @@ mod cvar_lang {
         let cprog = CVar::explicate_expr(e_anf);
         let CVar::CProgram(tail) = &cprog;
         println!("tail= {:?}", tail);
+
+        let v1clang = CVar::interp_prog(&cprog);
+        println!("v1clang= {:?}", v1clang);
+        assert_eq!(v_anf, v1clang);
     }
 
     #[test]
@@ -332,6 +340,10 @@ mod cvar_lang {
         let cprog = CVar::explicate_expr(e_anf);
         let CVar::CProgram(tail) = &cprog;
         println!("tail= {:?}", tail);
+
+        let v1clang = CVar::interp_prog(&cprog);
+        println!("v1clang= {:?}", v1clang);
+        assert_eq!(v_anf, v1clang);
     }
 
     #[test]
@@ -363,5 +375,9 @@ mod cvar_lang {
         let cprog = CVar::explicate_expr(e_anf);
         let CVar::CProgram(tail) = &cprog;
         println!("tail= {:?}", tail);
+
+        let v1clang = CVar::interp_prog(&cprog);
+        println!("v1clang= {:?}", v1clang);
+        assert_eq!(v_anf, v1clang);
     }
 }

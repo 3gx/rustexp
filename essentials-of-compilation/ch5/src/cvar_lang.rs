@@ -3,7 +3,11 @@ pub mod rvar_anf_lang;
 pub use rvar_anf_lang as RVarAnf;
 pub use RVarAnf::rvar_lang as RVar;
 
-use RVar::{gensym, /*gensym_reset, sym_get,*/ sym_set, Env};
+#[path = "./macros.rs"]
+mod macros;
+use macros::r#match;
+
+use RVar::{gensym, /*gensym_reset,*/ sym_get, sym_set, Env};
 use RVarAnf::{interp_atom, Value};
 pub use RVarAnf::{BinaryOpKind, Bool, Int, Type, UnaryOpKind};
 
@@ -127,10 +131,33 @@ pub fn interp_expr(env: &Env, e: &Expr) -> Value {
                 x @ _ => panic!("type mismatch: {:?}", x),
             }
         }
-        Allocate(..) => unimplemented!(),
-        TupleRef(..) => unimplemented!(),
-        TupleSet(..) => unimplemented!(),
-        GlobalVar(..) => unimplemented!(),
+        Allocate(1, Type::Tuple(ty)) => {
+            let mut val = Vec::new();
+            val.resize(ty.len(), Value::default());
+            Value::Tuple(val).onheap()
+        }
+        x @ Allocate(..) => panic!("unimplemented {:?}", x),
+        TupleRef(tu, idx) => {
+            r#match! { [interp_atom(env, &tu.into())]
+                Value::Heap(el) if @{let Value::Tuple(tu) = &mut *el.borrow_mut()} =>
+                    tu[*idx as usize].clone(),
+                _ => panic!("expecting tuple, but got  {:?}", tu)
+            }
+        }
+        TupleSet(tu, idx, val) => {
+            r#match! { [(interp_atom(env, &tu.into()), interp_atom(env, &val.into()))]
+                (Value::Heap(el), val) if @{let Value::Tuple(tu) = &mut *el.borrow_mut()} =>
+                    tu[*idx as usize] = val,
+                _ => panic!("expecting tuple, but got  {:?}", tu)
+            };
+            Value::Void
+        }
+        GlobalVar(var) => {
+            r#match! { [sym_get(env, var)]
+                Some(x) if @{let Value::Heap(x) = x} => x.borrow().clone(),
+                _ => panic!("unknown globalvar {:?}", var)
+            }
+        }
         Void => unimplemented!(),
     }
 }
@@ -138,7 +165,16 @@ pub fn interp_expr(env: &Env, e: &Expr) -> Value {
 pub fn interp_stmt(env: &Env, stmt: &Stmt) -> Env {
     match stmt {
         Stmt::AssignVar(var, exp) => sym_set(env, var, &interp_expr(env, exp)),
-        Stmt::Collect(..) => unimplemented!(),
+        Stmt::Collect(bytes) => {
+            r#match! { [sym_get(env, "fromspace_end")]
+                Some(x) if @{let Value::Heap(x) = x,
+                             let Value::Int(end) = &mut *x.borrow_mut()} =>
+                         {*end = ((bytes as &Int) + *end)*2;},
+                x@_ => panic!("fromspace_end is not valid, got {:?}", x)
+            }
+            println!("\ncall to collect");
+            env.clone()
+        }
     }
 }
 
@@ -166,7 +202,14 @@ pub fn interp_prog(cprog: &CProgram) -> Value {
         prog.insert(name, tail);
     }
     let tail = prog.get(&"start".to_string()).unwrap();
-    interp_tail(&vec![], tail, &prog)
+    let env = [
+        ("free_ptr".to_string(), Value::Int(0).onheap()),
+        ("fromspace_end".to_string(), Value::Int(0).onheap()),
+    ]
+    .iter()
+    .cloned()
+    .collect();
+    interp_tail(&env, tail, &prog)
 }
 
 fn explicate_ifpred(
