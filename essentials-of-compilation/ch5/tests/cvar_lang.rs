@@ -269,7 +269,7 @@ mod cvar_lang {
         assert_eq!(v_anf, v1clang);
 
         let cstr = CVar::print_cprog(&cprog);
-        println!("{}", cstr);
+        println!("\n{}\n", cstr);
     }
 
     #[test]
