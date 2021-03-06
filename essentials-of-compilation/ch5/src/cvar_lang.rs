@@ -463,7 +463,7 @@ fn cprog_print_expr(expr: &Expr) -> String {
         Expr::BinaryOp(BinaryOpKind::Eq, a1, a2) => {
             format!("({} == {})", cprog_print_atom(a1), cprog_print_atom(a2))
         }
-        _ => unimplemented!(),
+        expr @ _ => unimplemented!("{:?}", expr),
     };
     s
 }
@@ -472,7 +472,7 @@ fn cprog_print_stmt(indent: usize, stmt: &Stmt) -> String {
         Stmt::AssignVar(var, e) => {
             indent_string(indent, &format!("{} = {};", var, cprog_print_expr(e)))
         }
-        _ => unimplemented!(),
+        expr @ _ => unimplemented!("{:?}", expr),
     };
     s + "\n"
 }
