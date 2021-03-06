@@ -114,9 +114,9 @@ pub struct BasicBlock {
 }
 
 impl BasicBlock {
-    fn new(name: String, tail: Tail) -> Self {
+    fn new(name: &str, tail: Tail) -> Self {
         BasicBlock {
-            name,
+            name: name.to_string(),
             vars: BTreeMap::new(),
             tail,
         }
@@ -267,7 +267,7 @@ fn explicate_ifpred(
     else_name: &str,
     prog: Program,
 ) -> (BasicBlock, Program) {
-    let ret = |t, prog| (BasicBlock::new("".to_string(), t), prog);
+    let ret = |t, prog| (BasicBlock::new("", t), prog);
     match e {
         RVarAnf::Expr::UnaryOp(UnaryOpKind::Not, a) => ret(
             Tail::IfStmt(
@@ -310,8 +310,8 @@ fn explicate_ifpred(
             let (else_bb, prog) = explicate_ifpred(*e_expr, then_name, else_name, prog);
             let then_name = gensym("then_bb");
             let else_name = gensym("else_bb");
-            let prog = prog.add_bb(BasicBlock::new(then_name.clone(), then_bb.tail));
-            let prog = prog.add_bb(BasicBlock::new(else_name.clone(), else_bb.tail));
+            let prog = prog.add_bb(BasicBlock::new(&then_name, then_bb.tail));
+            let prog = prog.add_bb(BasicBlock::new(&else_name, else_bb.tail));
             explicate_ifpred(*p_expr, &then_name, &else_name, prog)
         }
         RVarAnf::Expr::Let(x, expr, body) => {
@@ -331,7 +331,7 @@ fn explicate_ifpred(
 }
 
 fn explicate_tail(e: RVarAnf::Expr, prog: Program) -> (BasicBlock, Program) {
-    let ret = |e, prog| (BasicBlock::new("".to_string(), Tail::Return(e)), prog);
+    let ret = |e, prog| (BasicBlock::new("", Tail::Return(e)), prog);
     match e {
         RVarAnf::Expr::Atom(a) => ret(Expr::Atom(a.into()), prog),
         RVarAnf::Expr::Read => ret(Expr::Read, prog),
@@ -346,8 +346,8 @@ fn explicate_tail(e: RVarAnf::Expr, prog: Program) -> (BasicBlock, Program) {
             let (else_bb, prog) = explicate_tail(*els, prog);
             let then_name = &gensym("then_bb");
             let else_name = &gensym("else_bb");
-            let prog = prog.add_bb(BasicBlock::new(then_name.clone(), then_bb.tail));
-            let prog = prog.add_bb(BasicBlock::new(else_name.clone(), else_bb.tail));
+            let prog = prog.add_bb(BasicBlock::new(&then_name, then_bb.tail));
+            let prog = prog.add_bb(BasicBlock::new(&else_name, else_bb.tail));
             explicate_ifpred(*cnd, then_name, else_name, prog)
         }
         RVarAnf::Expr::Allocate(..) => unimplemented!(),
@@ -367,7 +367,7 @@ fn explicate_assign(
     let assign = |e, bb: BasicBlock, prog| {
         (
             BasicBlock::new(
-                "".to_string(),
+                "",
                 Tail::Seq(Stmt::AssignVar(var.to_string(), e), Box::new(bb.tail)),
             ),
             prog,
@@ -386,31 +386,28 @@ fn explicate_assign(
         }
         RVarAnf::Expr::If(cnd, thn, els) => {
             let tail_name = &gensym("tail_bb");
-            let prog = prog.add_bb(BasicBlock::new(tail_name.clone(), bb.tail));
+            let prog = prog.add_bb(BasicBlock::new(&tail_name, bb.tail));
             let (then_bb, prog) = explicate_assign(
                 var,
                 *thn,
-                BasicBlock::new("".to_string(), Tail::Goto(tail_name.clone())),
+                BasicBlock::new("", Tail::Goto(tail_name.clone())),
                 prog,
             );
             let (else_bb, prog) = explicate_assign(
                 var,
                 *els,
-                BasicBlock::new("".to_string(), Tail::Goto(tail_name.clone())),
+                BasicBlock::new("", Tail::Goto(tail_name.clone())),
                 prog,
             );
             let then_name = &gensym("then_bb");
             let else_name = &gensym("else_bb");
-            let prog = prog.add_bb(BasicBlock::new(then_name.clone(), then_bb.tail));
-            let prog = prog.add_bb(BasicBlock::new(else_name.clone(), else_bb.tail));
+            let prog = prog.add_bb(BasicBlock::new(&then_name, then_bb.tail));
+            let prog = prog.add_bb(BasicBlock::new(&else_name, else_bb.tail));
             explicate_ifpred(*cnd, then_name, else_name, prog)
         }
         RVarAnf::Expr::Allocate(num, ty) => assign(Expr::Allocate(num, ty), bb, prog),
         RVarAnf::Expr::Collect(bytes) => (
-            BasicBlock::new(
-                "".to_string(),
-                Tail::Seq(Stmt::Collect(bytes), Box::new(bb.tail)),
-            ),
+            BasicBlock::new("", Tail::Seq(Stmt::Collect(bytes), Box::new(bb.tail))),
             prog,
         ),
         RVarAnf::Expr::GlobalVar(var) => assign(Expr::GlobalVar(var), bb, prog),
@@ -423,7 +420,7 @@ use std::collections::BTreeSet;
 pub fn explicate_expr(e: RVarAnf::Expr) -> Program {
     RVar::gensym_reset();
     let (bb, prog) = explicate_tail(e, Program::new());
-    let prog = prog.add_bb(BasicBlock::new("start".to_string(), bb.tail));
+    let prog = prog.add_bb(BasicBlock::new("start", bb.tail));
     let mut names = BTreeSet::new();
     for node_idx in prog.cfg.node_indices() {
         assert_eq!(names.insert(&prog.cfg[node_idx].name), true);
