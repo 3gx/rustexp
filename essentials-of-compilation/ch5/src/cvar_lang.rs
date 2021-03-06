@@ -380,7 +380,7 @@ fn cprog_print_globals(globals: &Vec<(String, Value)>) -> String {
     cstr
 }
 
-fn indent_string(indent: usize, s: &String) -> String {
+fn indent_string(indent: usize, s: &str) -> String {
     (0..indent)
         .into_iter()
         .map(|_| " ".to_string())
@@ -483,6 +483,7 @@ pub fn print_cprog(cprog: &CProgram) -> String {
             .collect::<String>(),
     );
     prog.push_str("\n");
+    prog.push_str(&indent_string(indent, "goto start;\n\n"));
     prog.push_str(&main_func);
     prog.push_str("}");
     prog
