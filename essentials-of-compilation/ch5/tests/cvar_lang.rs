@@ -16,6 +16,9 @@ mod cvar_lang {
         let prog = CProgram(vec![BasicBlock("start".to_string(), Tail::Return(exp))]);
         println!("prog= {:?}", prog);
         println!("eval= {:?}", interp_prog(&prog));
+
+        let cstr = cvar_lang::print_cprog(&prog);
+        println!("\n{}\n", cstr);
     }
 
     #[test]
@@ -100,6 +103,9 @@ mod cvar_lang {
         let v1clang = cvar_lang::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
+
+        let cstr = cvar_lang::print_cprog(&cprog);
+        println!("\n{}\n", cstr);
     }
 
     #[test]
@@ -147,6 +153,9 @@ mod cvar_lang {
             println!("{:#?}", bb);
         }
         */
+
+        let cstr = cvar_lang::print_cprog(&cprog);
+        println!("\n{}\n", cstr);
     }
 
     #[test]
@@ -188,6 +197,9 @@ mod cvar_lang {
         let v1clang = cvar_lang::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
+
+        let cstr = cvar_lang::print_cprog(&cprog);
+        println!("\n{}\n", cstr);
     }
 
     #[test]
@@ -233,6 +245,9 @@ mod cvar_lang {
         let v1clang = cvar_lang::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
+
+        let cstr = cvar_lang::print_cprog(&cprog);
+        println!("\n{}\n", cstr);
     }
 
     #[test]
@@ -311,6 +326,9 @@ mod cvar_lang {
         let v1clang = CVar::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v_anf, v1clang);
+
+        let cstr = CVar::print_cprog(&cprog);
+        println!("\n{}\\nn", cstr);
     }
 
     #[test]
@@ -350,6 +368,9 @@ mod cvar_lang {
         let v1clang = CVar::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v_anf, v1clang);
+
+        let cstr = CVar::print_cprog(&cprog);
+        println!("\n{}\\nn", cstr);
     }
 
     #[test]
@@ -385,5 +406,8 @@ mod cvar_lang {
         let v1clang = CVar::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v_anf, v1clang);
+
+        let cstr = CVar::print_cprog(&cprog);
+        println!("\n{}\\nn", cstr);
     }
 }
