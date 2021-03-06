@@ -467,10 +467,9 @@ fn cprog_print_expr(expr: &Expr) -> String {
     };
     s
 }
-fn cprog_print_stmt(indent: usize, stmt: &Stmt, vars: &mut Vars) -> String {
+fn cprog_print_stmt(indent: usize, stmt: &Stmt) -> String {
     let s: String = match stmt {
         Stmt::AssignVar(var, e) => {
-            vars.insert(var.clone());
             indent_string(indent, &format!("{} = {};", var, cprog_print_expr(e)))
         }
         _ => unimplemented!(),
@@ -480,12 +479,12 @@ fn cprog_print_stmt(indent: usize, stmt: &Stmt, vars: &mut Vars) -> String {
 
 type Vars = BTreeSet<String>;
 
-fn cprog_print_tail(indent: usize, tail: &Tail, vars: &mut Vars) -> String {
+fn cprog_print_tail(indent: usize, tail: &Tail) -> String {
     let tail: String = match tail {
         Tail::Return(e) => indent_string(indent, &format!("return {};", cprog_print_expr(e))),
         Tail::Seq(stmt, tail) => {
-            let stmt = cprog_print_stmt(indent, stmt, vars);
-            stmt + &cprog_print_tail(indent, tail, vars)
+            let stmt = cprog_print_stmt(indent, stmt);
+            stmt + &cprog_print_tail(indent, tail)
         }
         Tail::Goto(label) => indent_string(indent, &format!("goto {};", label)),
         Tail::IfStmt(pred, thn, els) => indent_string(
@@ -510,9 +509,6 @@ pub fn print_cprog(prog: &Program) -> String {
     .cloned()
     .collect::<Vec<_>>();
 
-    println!("locals={:#?}", prog.local_vars);
-    let mut vars: Vars = vec![].into_iter().collect();
-
     let indent = 4;
     let cfg = &prog.cfg;
     let main_func = cfg
@@ -520,22 +516,36 @@ pub fn print_cprog(prog: &Program) -> String {
         .map(|idx| &cfg[idx])
         .map(|bb| {
             let bb_name: String = format!("{}:\n", bb.name);
-            let bb_tail = cprog_print_tail(indent, &bb.tail, &mut vars);
+            let bb_tail = cprog_print_tail(indent, &bb.tail);
             bb_name + &bb_tail + "\n\n"
         })
         .collect::<String>();
 
-    let mut prog = cprog_print_globals(&globals);
-    prog.push_str("\nint main() {\n\n");
-    prog.push_str(
-        &vars
+    let mut sprog = cprog_print_globals(&globals);
+    sprog.push_str("\nint main() {\n\n");
+    sprog.push_str(
+        &prog
+            .local_vars
             .iter()
-            .map(|x| indent_string(indent, &format!("int {} = 0;\n", x)))
+            .map(|(name, ty)| {
+                indent_string(
+                    indent,
+                    &format!(
+                        "{} {} = 0;\n",
+                        match ty {
+                            Type::Int => "int",
+                            Type::Bool => "bool",
+                            _ => panic!("unhandled typed {:?}", ty),
+                        },
+                        name
+                    ),
+                )
+            })
             .collect::<String>(),
     );
-    prog.push_str("\n");
-    prog.push_str(&indent_string(indent, "goto start;\n\n"));
-    prog.push_str(&main_func);
-    prog.push_str("}");
-    prog
+    sprog.push_str("\n");
+    sprog.push_str(&indent_string(indent, "goto start;\n\n"));
+    sprog.push_str(&main_func);
+    sprog.push_str("}");
+    sprog
 }
