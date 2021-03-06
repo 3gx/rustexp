@@ -452,7 +452,7 @@ fn cprog_print_expr(expr: &Expr) -> String {
         Expr::BinaryOp(BinaryOpKind::Eq, a1, a2) => {
             format!("({} == {})", cprog_print_atom(a1), cprog_print_atom(a2))
         }
-        _ => "".to_string(),
+        _ => unimplemented!(),
     };
     s
 }
@@ -462,7 +462,7 @@ fn cprog_print_stmt(indent: usize, stmt: &Stmt, vars: &mut Vars) -> String {
             vars.insert(var.clone());
             indent_string(indent, &format!("{} = {};", var, cprog_print_expr(e)))
         }
-        _ => format!("(void)42;"),
+        _ => unimplemented!(),
     };
     s + "\n"
 }
