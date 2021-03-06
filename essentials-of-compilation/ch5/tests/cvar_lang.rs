@@ -179,10 +179,10 @@ mod cvar_lang {
             let e1 = expr! {
                 (let [x 1]
                      (let [y 101]
-                          (if (let [x (if (or (eq x 1) (lt (read) 5))
+                          (if (let [x1 (if (or (eq x 1) (lt (read) 5))
                                           (eq y 101)
                                           (eq y 102))]
-                                   (not x))
+                                   (not x1))
                               (add y 20)
                               (add y 30))))
             };

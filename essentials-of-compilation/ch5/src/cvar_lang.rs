@@ -108,6 +108,7 @@ pub type CfgGraph = StableGraph<BasicBlock, ()>;
 #[derive(Debug, Clone)]
 pub struct Program {
     pub global_vars: BTreeMap<String, Value>,
+    pub local_vars: BTreeMap<String, Type>,
     pub bb2node: HashMap<String, petgraph::prelude::NodeIndex>,
     pub cfg: CfgGraph,
 }
@@ -115,6 +116,7 @@ impl Program {
     fn new() -> Self {
         Program {
             global_vars: BTreeMap::default(),
+            local_vars: BTreeMap::default(),
             bb2node: HashMap::default(),
             cfg: CfgGraph::default(),
         }
@@ -127,6 +129,14 @@ impl Program {
         let name = bb.name.clone();
         let node_idx = self.cfg.add_node(bb);
         assert!(self.bb2node.insert(name, node_idx).is_none());
+        self
+    }
+    fn add_local_var(mut self, var: &str, ty: Type) -> Self {
+        match self.local_vars.get(var) {
+            Some(vty) => assert_eq!(vty, &ty),
+            _ => (),
+        };
+        self.local_vars.insert(var.to_string(), ty);
         self
     }
 }
@@ -333,17 +343,17 @@ fn explicate_tail(RVarAnf::Expr(e, _ty): RVarAnf::Expr, prog: Program) -> (Basic
 
 fn explicate_assign(
     var: &str,
-    RVarAnf::Expr(e, _ty): RVarAnf::Expr,
+    RVarAnf::Expr(e, ty): RVarAnf::Expr,
     bb: BasicBlock,
     prog: Program,
 ) -> (BasicBlock, Program) {
-    let assign = |e, bb: BasicBlock, prog| {
+    let assign = |e, bb: BasicBlock, prog: Program| {
         (
             BasicBlock::new(
                 "",
                 Tail::Seq(Stmt::AssignVar(var.to_string(), e), Box::new(bb.tail)),
             ),
-            prog,
+            prog.add_local_var(var, ty),
         )
     };
     match e {
@@ -500,6 +510,7 @@ pub fn print_cprog(prog: &Program) -> String {
     .cloned()
     .collect::<Vec<_>>();
 
+    println!("locals={:#?}", prog.local_vars);
     let mut vars: Vars = vec![].into_iter().collect();
 
     let indent = 4;
