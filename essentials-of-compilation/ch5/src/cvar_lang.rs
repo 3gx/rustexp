@@ -442,7 +442,7 @@ fn cprog_print_tail(indent: usize, tail: &Tail, vars: &mut Vars) -> String {
         Tail::IfStmt(pred, thn, els) => indent_string(
             indent,
             &format!(
-                "if {} {{ {} }} {{ {} }}",
+                "if {} {{ {} }} else {{ {} }}",
                 cprog_print_expr(pred),
                 format!("goto {};", thn),
                 format!("goto {};", els)
