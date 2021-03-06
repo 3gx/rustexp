@@ -109,7 +109,6 @@ impl AppendBB for Vec<BasicBlock> {
 #[derive(Debug, Clone)]
 pub struct BasicBlock {
     pub name: String,
-    pub vars: BTreeMap<String, Type>,
     pub tail: Tail,
 }
 
@@ -117,7 +116,6 @@ impl BasicBlock {
     fn new(name: &str, tail: Tail) -> Self {
         BasicBlock {
             name: name.to_string(),
-            vars: BTreeMap::new(),
             tail,
         }
     }
