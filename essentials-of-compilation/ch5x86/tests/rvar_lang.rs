@@ -2,7 +2,7 @@
 mod rvar_lang {
     #[test]
     fn t0() {
-        use ch5::rvar_lang::*;
+        use ch5x86::rvar_lang::*;
         let p1 = expr! {(let [x (add 12 20)] (add 10 x))};
         let tp1 = typed_expr(p1.clone());
         println!("type= {:?}", tp1);
@@ -36,8 +36,8 @@ mod rvar_lang {
 
     #[test]
     fn t1() {
-        use ch5::rvar_lang::sym;
-        use ch5::rvar_lang::*;
+        use ch5x86::rvar_lang::sym;
+        use ch5x86::rvar_lang::*;
         let e1 = expr! { (let [x 32] (add (let [x 10] x) x)) };
         let e2 = expr! { (let [x1 32] (add (let [x2 10] x2) x1)) };
         println!("e1= {:?}", e1);
@@ -64,7 +64,7 @@ mod rvar_lang {
 
     #[test]
     fn t2() {
-        use ch5::rvar_lang;
+        use ch5x86::rvar_lang;
         let (p1, v1) = {
             // not the same as
             // use ch2::rvar_lang::*;
@@ -82,7 +82,7 @@ mod rvar_lang {
 
     #[test]
     fn t3() {
-        use ch5::rvar_lang::*;
+        use ch5x86::rvar_lang::*;
         let expr = expr! {
             (let [x 0]
                  (let [y 100]
@@ -120,7 +120,7 @@ mod rvar_lang {
     #[test]
     fn t4() {
         let (e, v) = {
-            use ch5::rvar_lang::*;
+            use ch5x86::rvar_lang::*;
             let e = expr! {
             (let [t1 (tuple 3 7)]
                  (let [t2 t1]
@@ -140,7 +140,7 @@ mod rvar_lang {
     #[test]
     fn t5() {
         let (e, v) = {
-            use ch5::rvar_lang::*;
+            use ch5x86::rvar_lang::*;
             let e = expr! {
                 (let [v (tuple (tuple 44))]
                      (let [x (let [w (tuple 48)]
@@ -162,7 +162,7 @@ mod rvar_lang {
     #[test]
     fn t6() {
         let (e, v) = {
-            use ch5::rvar_lang::*;
+            use ch5x86::rvar_lang::*;
             let x = 40;
             let two = 2;
             let e = expr! {
@@ -187,7 +187,7 @@ mod rvar_lang {
     #[test]
     fn t7() {
         let (e, v) = {
-            use ch5::rvar_lang::*;
+            use ch5x86::rvar_lang::*;
             let e = expr! {
                 (tupleref (tupleref (tuple (tuple 42)) 0) 0)
             };

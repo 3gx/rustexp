@@ -2,7 +2,7 @@
 mod rvar_anf_tests {
     #[test]
     fn t1() {
-        use ch5::rvar_anf_lang;
+        use ch5x86::rvar_anf_lang;
         let (p1, v1) = {
             use rvar_anf_lang::rvar_lang::*;
             let p1 = expr! {
@@ -36,7 +36,7 @@ mod rvar_anf_tests {
 
     #[test]
     fn t2() {
-        use ch5::rvar_anf_lang;
+        use ch5x86::rvar_anf_lang;
         let (e1, v1) = {
             use rvar_anf_lang::rvar_lang::*;
             let e1 = expr! {
@@ -68,7 +68,7 @@ mod rvar_anf_tests {
 
     #[test]
     fn t4() {
-        use ch5::rvar_anf_lang;
+        use ch5x86::rvar_anf_lang;
         let (e, v) = {
             use rvar_anf_lang::rvar_lang::*;
             let e = expr! {
@@ -97,7 +97,7 @@ mod rvar_anf_tests {
 
     #[test]
     fn t5() {
-        use ch5::rvar_anf_lang;
+        use ch5x86::rvar_anf_lang;
         let (e, v) = {
             use rvar_anf_lang::rvar_lang::*;
             let e = expr! {
@@ -127,7 +127,7 @@ mod rvar_anf_tests {
 
     #[test]
     fn t6() {
-        use ch5::rvar_anf_lang;
+        use ch5x86::rvar_anf_lang;
         let (e, v) = {
             use rvar_anf_lang::rvar_lang::*;
             let e = expr! {
@@ -158,7 +158,7 @@ mod rvar_anf_tests {
 
     #[test]
     fn t7() {
-        use ch5::rvar_anf_lang;
+        use ch5x86::rvar_anf_lang;
         let (e, v) = {
             use rvar_anf_lang::rvar_lang::*;
             let e = expr! {

@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod x86var_lang {
-    use ch5::x86var_lang as X86Var;
+    use ch5x86::x86var_lang as X86Var;
     use CVar::{RVar, RVarAnf};
     use X86Var::cvar_lang as CVar;
 

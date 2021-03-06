@@ -2,7 +2,7 @@
 mod cvar_lang {
     #[test]
     fn t1() {
-        use ch5::cvar_lang;
+        use ch5x86::cvar_lang;
         use cvar_lang::*;
         let v = int!(42);
         println!("v= {:?}", v);
@@ -23,7 +23,7 @@ mod cvar_lang {
 
     #[test]
     fn t2() {
-        use ch5::cvar_lang;
+        use ch5x86::cvar_lang;
         use cvar_lang::{RVar, RVarAnf};
         let (p1, v1) = {
             use RVar::*;
@@ -61,7 +61,7 @@ mod cvar_lang {
 
     #[test]
     fn t3() {
-        use ch5::cvar_lang;
+        use ch5x86::cvar_lang;
         use cvar_lang::{RVar, RVarAnf};
         let (e1, v1) = {
             use RVar::*;
@@ -110,7 +110,7 @@ mod cvar_lang {
 
     #[test]
     fn t4() {
-        use ch5::cvar_lang;
+        use ch5x86::cvar_lang;
         use cvar_lang::{RVar, RVarAnf};
         let (e1, v1) = {
             use RVar::*;
@@ -160,7 +160,7 @@ mod cvar_lang {
 
     #[test]
     fn t5() {
-        use ch5::cvar_lang;
+        use ch5x86::cvar_lang;
         use cvar_lang::{RVar, RVarAnf};
         let (e1, v1) = {
             use RVar::*;
@@ -204,7 +204,7 @@ mod cvar_lang {
 
     #[test]
     fn t6() {
-        use ch5::cvar_lang;
+        use ch5x86::cvar_lang;
         use cvar_lang::{RVar, RVarAnf};
         let (e1, v1) = {
             use RVar::*;
@@ -252,7 +252,7 @@ mod cvar_lang {
 
     #[test]
     fn t7() {
-        use ch5::cvar_lang as CVar;
+        use ch5x86::cvar_lang as CVar;
         use CVar::{RVar, RVarAnf};
         let (e, v) = {
             use RVar::*;
@@ -292,7 +292,7 @@ mod cvar_lang {
 
     #[test]
     fn t8() {
-        use ch5::cvar_lang as CVar;
+        use ch5x86::cvar_lang as CVar;
         use CVar::{RVar, RVarAnf};
         let (e, v) = {
             use RVar::*;
@@ -333,7 +333,7 @@ mod cvar_lang {
 
     #[test]
     fn t9() {
-        use ch5::cvar_lang as CVar;
+        use ch5x86::cvar_lang as CVar;
         use CVar::{RVar, RVarAnf};
         let (e, v) = {
             use RVar::*;
@@ -375,7 +375,7 @@ mod cvar_lang {
 
     #[test]
     fn t10() {
-        use ch5::cvar_lang as CVar;
+        use ch5x86::cvar_lang as CVar;
         use CVar::{RVar, RVarAnf};
         let (e, v) = {
             use RVar::*;
