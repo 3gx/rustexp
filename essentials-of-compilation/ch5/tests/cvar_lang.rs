@@ -51,6 +51,9 @@ mod cvar_lang {
         let v1clang = cvar_lang::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
+
+        let cstr = cvar_lang::print_cprog(&cprog);
+        println!("\n{}\n", cstr);
     }
 
     #[test]
@@ -269,7 +272,7 @@ mod cvar_lang {
         assert_eq!(v_anf, v1clang);
 
         let cstr = CVar::print_cprog(&cprog);
-        println!("\n{}\n", cstr);
+        println!("\n{}\\nn", cstr);
     }
 
     #[test]

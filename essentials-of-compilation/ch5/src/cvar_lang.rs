@@ -380,8 +380,76 @@ fn cprog_print_globals(globals: &Vec<(String, Value)>) -> String {
     cstr
 }
 
-fn cprog_print_tail(tail: &Tail) -> String {
-    "\n".to_string()
+fn indent_string(indent: usize, s: &String) -> String {
+    (0..indent)
+        .into_iter()
+        .map(|_| " ".to_string())
+        .collect::<String>()
+        + s
+}
+fn cprog_print_atom(a: &Atom) -> String {
+    match a {
+        Atom::Int(i) => format!("{}", i),
+        Atom::Bool(b) => format!("{}", if *b { "true" } else { "false" }),
+        Atom::Var(v) => format!("{}", v),
+        Atom::Void => format!("void"),
+    }
+}
+fn cprog_print_expr(expr: &Expr) -> String {
+    let s: String = match expr {
+        Expr::Atom(a) => cprog_print_atom(a),
+        Expr::Read => "read_int()".to_string(),
+        Expr::UnaryOp(UnaryOpKind::Not, a) => {
+            format!("(!{})", cprog_print_atom(a))
+        }
+        Expr::UnaryOp(UnaryOpKind::Neg, a) => {
+            format!("(-{})", cprog_print_atom(a))
+        }
+        Expr::BinaryOp(BinaryOpKind::Add, a1, a2) => {
+            format!("({} + {})", cprog_print_atom(a1), cprog_print_atom(a2))
+        }
+        Expr::BinaryOp(BinaryOpKind::Lt, a1, a2) => {
+            format!("({} < {})", cprog_print_atom(a1), cprog_print_atom(a2))
+        }
+        Expr::BinaryOp(BinaryOpKind::Eq, a1, a2) => {
+            format!("({} == {})", cprog_print_atom(a1), cprog_print_atom(a2))
+        }
+        _ => "".to_string(),
+    };
+    s
+}
+fn cprog_print_stmt(indent: usize, stmt: &Stmt, vars: &mut Vars) -> String {
+    let s: String = match stmt {
+        Stmt::AssignVar(var, e) => {
+            vars.insert(var.clone());
+            indent_string(indent, &format!("{} = {};", var, cprog_print_expr(e)))
+        }
+        _ => format!("(void)42;"),
+    };
+    s + "\n"
+}
+
+type Vars = BTreeSet<String>;
+
+fn cprog_print_tail(indent: usize, tail: &Tail, vars: &mut Vars) -> String {
+    let tail: String = match tail {
+        Tail::Return(e) => indent_string(indent, &format!("return {};", cprog_print_expr(e))),
+        Tail::Seq(stmt, tail) => {
+            let stmt = cprog_print_stmt(indent, stmt, vars);
+            stmt + &cprog_print_tail(indent, tail, vars)
+        }
+        Tail::Goto(label) => indent_string(indent, &format!("goto {};", label)),
+        Tail::IfStmt(pred, thn, els) => indent_string(
+            indent,
+            &format!(
+                "if {} {{ {} }} {{ {} }}",
+                cprog_print_expr(pred),
+                format!("goto {};", thn),
+                format!("goto {};", els)
+            ),
+        ),
+    };
+    tail
 }
 
 pub fn print_cprog(cprog: &CProgram) -> String {
@@ -393,18 +461,28 @@ pub fn print_cprog(cprog: &CProgram) -> String {
     .cloned()
     .collect::<Vec<_>>();
 
+    let mut vars: Vars = vec![].into_iter().collect();
+
+    let indent = 4;
     let CProgram(bbs) = cprog;
     let main_func = bbs
         .iter()
         .map(|BasicBlock(name, tail)| {
             let bb_name: String = format!("{}:\n", name);
-            let bb_tail = cprog_print_tail(tail);
-            bb_name + &bb_tail
+            let bb_tail = cprog_print_tail(indent, tail, &mut vars);
+            bb_name + &bb_tail + "\n\n"
         })
         .collect::<String>();
 
     let mut prog = cprog_print_globals(&globals);
-    prog.push_str("int main() {\n");
+    prog.push_str("\nint main() {\n\n");
+    prog.push_str(
+        &vars
+            .iter()
+            .map(|x| indent_string(indent, &format!("int {} = 0;\n", x)))
+            .collect::<String>(),
+    );
+    prog.push_str("\n");
     prog.push_str(&main_func);
     prog.push_str("}");
     prog
