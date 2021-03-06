@@ -8,4 +8,3 @@ pub mod grammars;
 pub mod grammars_delta;
 pub mod rvar_anf_lang;
 pub mod rvar_lang;
-pub mod x86var_lang;
