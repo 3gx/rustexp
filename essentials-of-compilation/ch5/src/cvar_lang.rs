@@ -87,25 +87,6 @@ pub enum Tail {
     IfStmt(Expr, String, String),
 }
 
-/*
-#[derive(Debug, Clone)]
-pub struct BasicBlock(pub String, pub Tail);
-
-#[derive(Debug, Clone)]
-pub struct CProgram(pub Vec<BasicBlock>);
-
-trait AppendBB {
-    fn add_bb<'a>(&'a mut self, _: BasicBlock) -> String;
-}
-
-impl AppendBB for Vec<BasicBlock> {
-    fn add_bb<'a>(&'a mut self, bb: BasicBlock) -> String {
-        self.push(bb);
-        self.last().unwrap().0.clone()
-    }
-}
-*/
-
 #[derive(Debug, Clone)]
 pub struct BasicBlock {
     pub name: String,
@@ -119,12 +100,6 @@ impl BasicBlock {
             tail,
         }
     }
-    /*
-    fn name(mut self, name: String) -> Self {
-        self.name = name;
-        self
-    }
-    */
 }
 
 pub use petgraph::stable_graph::StableGraph;
@@ -260,14 +235,14 @@ pub fn interp_prog(prog: &Program) -> Value {
 }
 
 fn explicate_ifpred(
-    e: RVarAnf::Expr,
+    RVarAnf::Expr(e, _ty): RVarAnf::Expr,
     then_name: &str,
     else_name: &str,
     prog: Program,
 ) -> (BasicBlock, Program) {
     let ret = |t, prog| (BasicBlock::new("", t), prog);
     match e {
-        RVarAnf::Expr::UnaryOp(UnaryOpKind::Not, a) => ret(
+        RVarAnf::ExprK::UnaryOp(UnaryOpKind::Not, a) => ret(
             Tail::IfStmt(
                 Expr::UnaryOp(UnaryOpKind::Not, a.into()),
                 then_name.to_string(),
@@ -275,7 +250,7 @@ fn explicate_ifpred(
             ),
             prog,
         ),
-        RVarAnf::Expr::BinaryOp(cmp, a1, a2)
+        RVarAnf::ExprK::BinaryOp(cmp, a1, a2)
             if cmp == BinaryOpKind::Eq || cmp == BinaryOpKind::Lt =>
         {
             ret(
@@ -287,7 +262,7 @@ fn explicate_ifpred(
                 prog,
             )
         }
-        RVarAnf::Expr::Atom(RVarAnf::Atom::Bool(pred)) => ret(
+        RVarAnf::ExprK::Atom(RVarAnf::Atom::Bool(pred)) => ret(
             Tail::Goto(if pred {
                 then_name.to_string()
             } else {
@@ -295,7 +270,7 @@ fn explicate_ifpred(
             }),
             prog,
         ),
-        RVarAnf::Expr::Atom(a @ RVarAnf::Atom::Var(_)) => ret(
+        RVarAnf::ExprK::Atom(a @ RVarAnf::Atom::Var(_)) => ret(
             Tail::IfStmt(
                 Expr::Atom(a.into()),
                 then_name.to_string(),
@@ -303,7 +278,7 @@ fn explicate_ifpred(
             ),
             prog,
         ),
-        RVarAnf::Expr::If(p_expr, t_expr, e_expr) => {
+        RVarAnf::ExprK::If(p_expr, t_expr, e_expr) => {
             let (then_bb, prog) = explicate_ifpred(*t_expr, then_name, else_name, prog);
             let (else_bb, prog) = explicate_ifpred(*e_expr, then_name, else_name, prog);
             let then_name = gensym("then_bb");
@@ -312,11 +287,11 @@ fn explicate_ifpred(
             let prog = prog.add_bb(BasicBlock::new(&else_name, else_bb.tail));
             explicate_ifpred(*p_expr, &then_name, &else_name, prog)
         }
-        RVarAnf::Expr::Let(x, expr, body) => {
+        RVarAnf::ExprK::Let(x, expr, body) => {
             let (if_tail, prog) = explicate_ifpred(*body, then_name, else_name, prog);
             explicate_assign(&x, *expr, if_tail, prog)
         }
-        RVarAnf::Expr::TupleRef(a, i) => ret(
+        RVarAnf::ExprK::TupleRef(a, i) => ret(
             Tail::IfStmt(
                 Expr::TupleRef(a.into(), i),
                 then_name.to_string(),
@@ -328,18 +303,18 @@ fn explicate_ifpred(
     }
 }
 
-fn explicate_tail(e: RVarAnf::Expr, prog: Program) -> (BasicBlock, Program) {
+fn explicate_tail(RVarAnf::Expr(e, _ty): RVarAnf::Expr, prog: Program) -> (BasicBlock, Program) {
     let ret = |e, prog| (BasicBlock::new("", Tail::Return(e)), prog);
     match e {
-        RVarAnf::Expr::Atom(a) => ret(Expr::Atom(a.into()), prog),
-        RVarAnf::Expr::Read => ret(Expr::Read, prog),
-        RVarAnf::Expr::UnaryOp(op, a) => ret(Expr::UnaryOp(op, a.into()), prog),
-        RVarAnf::Expr::BinaryOp(op, a1, a2) => ret(Expr::BinaryOp(op, a1.into(), a2.into()), prog),
-        RVarAnf::Expr::Let(x, expr, body) => {
+        RVarAnf::ExprK::Atom(a) => ret(Expr::Atom(a.into()), prog),
+        RVarAnf::ExprK::Read => ret(Expr::Read, prog),
+        RVarAnf::ExprK::UnaryOp(op, a) => ret(Expr::UnaryOp(op, a.into()), prog),
+        RVarAnf::ExprK::BinaryOp(op, a1, a2) => ret(Expr::BinaryOp(op, a1.into(), a2.into()), prog),
+        RVarAnf::ExprK::Let(x, expr, body) => {
             let (bb, prog) = explicate_tail(*body, prog);
             explicate_assign(&x, *expr, bb, prog)
         }
-        RVarAnf::Expr::If(cnd, thn, els) => {
+        RVarAnf::ExprK::If(cnd, thn, els) => {
             let (then_bb, prog) = explicate_tail(*thn, prog);
             let (else_bb, prog) = explicate_tail(*els, prog);
             let then_name = &gensym("then_bb");
@@ -348,17 +323,17 @@ fn explicate_tail(e: RVarAnf::Expr, prog: Program) -> (BasicBlock, Program) {
             let prog = prog.add_bb(BasicBlock::new(&else_name, else_bb.tail));
             explicate_ifpred(*cnd, then_name, else_name, prog)
         }
-        RVarAnf::Expr::Allocate(..) => unimplemented!(),
-        RVarAnf::Expr::Collect(..) => unimplemented!(),
-        RVarAnf::Expr::GlobalVar(..) => unimplemented!(),
-        RVarAnf::Expr::TupleRef(a, i) => ret(Expr::TupleRef(a.into(), i), prog),
-        RVarAnf::Expr::TupleSet(..) => unimplemented!(),
+        RVarAnf::ExprK::Allocate(..) => unimplemented!(),
+        RVarAnf::ExprK::Collect(..) => unimplemented!(),
+        RVarAnf::ExprK::GlobalVar(..) => unimplemented!(),
+        RVarAnf::ExprK::TupleRef(a, i) => ret(Expr::TupleRef(a.into(), i), prog),
+        RVarAnf::ExprK::TupleSet(..) => unimplemented!(),
     }
 }
 
 fn explicate_assign(
     var: &str,
-    e: RVarAnf::Expr,
+    RVarAnf::Expr(e, _ty): RVarAnf::Expr,
     bb: BasicBlock,
     prog: Program,
 ) -> (BasicBlock, Program) {
@@ -372,17 +347,17 @@ fn explicate_assign(
         )
     };
     match e {
-        RVarAnf::Expr::Atom(a) => assign(Expr::Atom(a.into()), bb, prog),
-        RVarAnf::Expr::Read => assign(Expr::Read, bb, prog),
-        RVarAnf::Expr::UnaryOp(op, a) => assign(Expr::UnaryOp(op, a.into()), bb, prog),
-        RVarAnf::Expr::BinaryOp(op, a1, a2) => {
+        RVarAnf::ExprK::Atom(a) => assign(Expr::Atom(a.into()), bb, prog),
+        RVarAnf::ExprK::Read => assign(Expr::Read, bb, prog),
+        RVarAnf::ExprK::UnaryOp(op, a) => assign(Expr::UnaryOp(op, a.into()), bb, prog),
+        RVarAnf::ExprK::BinaryOp(op, a1, a2) => {
             assign(Expr::BinaryOp(op, a1.into(), a2.into()), bb, prog)
         }
-        RVarAnf::Expr::Let(x, expr, body) => {
+        RVarAnf::ExprK::Let(x, expr, body) => {
             let (bb, prog) = explicate_assign(var, *body, bb, prog);
             explicate_assign(&x, *expr, bb, prog)
         }
-        RVarAnf::Expr::If(cnd, thn, els) => {
+        RVarAnf::ExprK::If(cnd, thn, els) => {
             let tail_name = &gensym("tail_bb");
             let prog = prog.add_bb(BasicBlock::new(&tail_name, bb.tail));
             let (then_bb, prog) = explicate_assign(
@@ -403,14 +378,16 @@ fn explicate_assign(
             let prog = prog.add_bb(BasicBlock::new(&else_name, else_bb.tail));
             explicate_ifpred(*cnd, then_name, else_name, prog)
         }
-        RVarAnf::Expr::Allocate(num, ty) => assign(Expr::Allocate(num, ty), bb, prog),
-        RVarAnf::Expr::Collect(bytes) => (
+        RVarAnf::ExprK::Allocate(num, ty) => assign(Expr::Allocate(num, ty), bb, prog),
+        RVarAnf::ExprK::Collect(bytes) => (
             BasicBlock::new("", Tail::Seq(Stmt::Collect(bytes), Box::new(bb.tail))),
             prog,
         ),
-        RVarAnf::Expr::GlobalVar(var) => assign(Expr::GlobalVar(var), bb, prog),
-        RVarAnf::Expr::TupleRef(a, i) => assign(Expr::TupleRef(a.into(), i), bb, prog),
-        RVarAnf::Expr::TupleSet(a, i, v) => assign(Expr::TupleSet(a.into(), i, v.into()), bb, prog),
+        RVarAnf::ExprK::GlobalVar(var) => assign(Expr::GlobalVar(var), bb, prog),
+        RVarAnf::ExprK::TupleRef(a, i) => assign(Expr::TupleRef(a.into(), i), bb, prog),
+        RVarAnf::ExprK::TupleSet(a, i, v) => {
+            assign(Expr::TupleSet(a.into(), i, v.into()), bb, prog)
+        }
     }
 }
 
