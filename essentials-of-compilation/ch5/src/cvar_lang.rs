@@ -93,6 +93,21 @@ pub struct BasicBlock(pub String, pub Tail);
 #[derive(Debug, Clone)]
 pub struct CProgram(pub Vec<BasicBlock>);
 
+#[derive(Debug, Clone)]
+pub struct _BasicBlock {
+    pub name: String,
+    pub vars: BTreeMap<String, Type>,
+    pub tail: Tail,
+}
+
+pub use petgraph::stable_graph::StableGraph;
+pub type CfgGraph = StableGraph<_BasicBlock, ()>;
+#[derive(Debug, Clone)]
+pub struct _Program {
+    pub global_vars: BTreeMap<String, Value>,
+    pub cfg: CfgGraph,
+}
+
 trait AppendBB {
     fn add_bb<'a>(&'a mut self, _: BasicBlock) -> String;
 }
