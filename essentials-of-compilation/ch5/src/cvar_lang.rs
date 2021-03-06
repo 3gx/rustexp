@@ -87,26 +87,12 @@ pub enum Tail {
     IfStmt(Expr, String, String),
 }
 
+/*
 #[derive(Debug, Clone)]
 pub struct BasicBlock(pub String, pub Tail);
 
 #[derive(Debug, Clone)]
 pub struct CProgram(pub Vec<BasicBlock>);
-
-#[derive(Debug, Clone)]
-pub struct _BasicBlock {
-    pub name: String,
-    pub vars: BTreeMap<String, Type>,
-    pub tail: Tail,
-}
-
-pub use petgraph::stable_graph::StableGraph;
-pub type CfgGraph = StableGraph<_BasicBlock, ()>;
-#[derive(Debug, Clone)]
-pub struct _Program {
-    pub global_vars: BTreeMap<String, Value>,
-    pub cfg: CfgGraph,
-}
 
 trait AppendBB {
     fn add_bb<'a>(&'a mut self, _: BasicBlock) -> String;
@@ -116,6 +102,30 @@ impl AppendBB for Vec<BasicBlock> {
     fn add_bb<'a>(&'a mut self, bb: BasicBlock) -> String {
         self.push(bb);
         self.last().unwrap().0.clone()
+    }
+}
+*/
+
+#[derive(Debug, Clone)]
+pub struct BasicBlock {
+    pub name: String,
+    pub vars: BTreeMap<String, Type>,
+    pub tail: Tail,
+}
+
+pub use petgraph::stable_graph::StableGraph;
+pub use std::collections::HashMap;
+pub type CfgGraph = StableGraph<BasicBlock, ()>;
+#[derive(Debug, Clone)]
+pub struct Program {
+    pub global_vars: BTreeMap<String, Value>,
+    pub bb2node: HashMap<String, petgraph::prelude::NodeIndex>,
+    pub cfg: CfgGraph,
+}
+impl Program {
+    fn get_bb<'a>(&'a self, name: &str) -> Option<&'a BasicBlock> {
+        let node_idx = self.bb2node.get(name)?;
+        self.cfg.node_weight(*node_idx)
     }
 }
 
@@ -193,30 +203,25 @@ pub fn interp_stmt(env: &Env, stmt: &Stmt) -> Env {
     }
 }
 
-pub fn interp_tail(env: &Env, tail: &Tail, bbs: &BTreeMap<String, Tail>) -> Value {
+pub fn interp_tail(env: &Env, bb: &BasicBlock, prog: &Program) -> Value {
+    let tail = &bb.tail;
     match tail {
         Tail::Return(exp) => interp_expr(env, exp),
         Tail::Seq(stmt, tail) => {
             let new_env = interp_stmt(env, stmt);
-            interp_tail(&new_env, tail, bbs)
+            interp_tail(&new_env, bb, prog)
         }
-        Tail::Goto(label) => interp_tail(env, bbs.get(label).unwrap(), bbs),
+        Tail::Goto(label) => interp_tail(env, &prog.get_bb(label).unwrap(), prog),
         Tail::IfStmt(pred, thn, els) => match interp_expr(env, pred) {
-            Value::Bool(true) => interp_tail(env, bbs.get(thn).unwrap(), bbs),
-            Value::Bool(false) => interp_tail(env, bbs.get(els).unwrap(), bbs),
+            Value::Bool(true) => interp_tail(env, &prog.get_bb(thn).unwrap(), prog),
+            Value::Bool(false) => interp_tail(env, &prog.get_bb(els).unwrap(), prog),
             x @ _ => panic!("predicate must be Bool, got {:?}", x),
         },
     }
 }
 
 use std::collections::BTreeMap;
-pub fn interp_prog(cprog: &CProgram) -> Value {
-    let mut prog = BTreeMap::new();
-    let CProgram(bbs) = cprog;
-    for BasicBlock(name, tail) in bbs.clone() {
-        prog.insert(name, tail);
-    }
-    let tail = prog.get(&"start".to_string()).unwrap();
+pub fn interp_prog(prog: &Program) -> Value {
     let env = [
         ("free_ptr".to_string(), Value::Int(0).onheap()),
         ("fromspace_end".to_string(), Value::Int(0).onheap()),
@@ -224,7 +229,8 @@ pub fn interp_prog(cprog: &CProgram) -> Value {
     .iter()
     .cloned()
     .collect();
-    interp_tail(&env, tail, &prog)
+    let start = prog.get_bb("start").unwrap();
+    interp_tail(&env, &start, &prog)
 }
 
 fn explicate_ifpred(
