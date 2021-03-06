@@ -9,7 +9,7 @@ use macros::r#match;
 
 use RVar::{gensym, /*gensym_reset,*/ sym_get, sym_set, Env};
 use RVarAnf::{interp_atom, Value};
-pub use RVarAnf::{BinaryOpKind, Bool, Int, Type, UnaryOpKind};
+pub use RVarAnf::{type_size_in_bytes, BinaryOpKind, Bool, Int, Type, UnaryOpKind};
 
 #[derive(Debug, Clone)]
 pub enum Atom {
@@ -441,7 +441,8 @@ fn cprog_print_atom(a: &Atom) -> String {
         Atom::Int(i) => format!("{}", i),
         Atom::Bool(b) => format!("{}", if *b { "true" } else { "false" }),
         Atom::Var(v) => format!("{}", v),
-        Atom::Void => format!("void"),
+        //        Atom::Void => format!("void"),
+        Atom::Void => unimplemented!(),
     }
 }
 fn cprog_print_expr(expr: &Expr) -> String {
@@ -463,6 +464,20 @@ fn cprog_print_expr(expr: &Expr) -> String {
         Expr::BinaryOp(BinaryOpKind::Eq, a1, a2) => {
             format!("({} == {})", cprog_print_atom(a1), cprog_print_atom(a2))
         }
+        Expr::Allocate(1, ty @ Type::Tuple(..)) => {
+            format!("(int64_t(free_ptr += {}))", type_size_in_bytes(&ty))
+        }
+        /*
+        Expr::TupleSet(tu, idx, val) => {
+            format!("/* tuple_set */")
+        }
+        Expr::TupleRef(tu, idx) => {
+            format!("/* tuple_ref */")
+        }
+        Expr::GlobalVar(label) => {
+            format!("{}", label)
+        }
+        */
         expr @ _ => unimplemented!("{:?}", expr),
     };
     s
@@ -470,9 +485,16 @@ fn cprog_print_expr(expr: &Expr) -> String {
 fn cprog_print_stmt(indent: usize, stmt: &Stmt) -> String {
     let s: String = match stmt {
         Stmt::AssignVar(var, e) => {
-            indent_string(indent, &format!("{} = {};", var, cprog_print_expr(e)))
+            let sexpr = cprog_print_expr(e);
+            indent_string(indent, &{
+                if var != "_" {
+                    format!("{} = {};", var, sexpr)
+                } else {
+                    sexpr
+                }
+            })
         }
-        expr @ _ => unimplemented!("{:?}", expr),
+        Stmt::Collect(bytes) => indent_string(indent, &format!("/* collect */;")),
     };
     s + "\n"
 }
@@ -501,14 +523,6 @@ fn cprog_print_tail(indent: usize, tail: &Tail) -> String {
 }
 
 pub fn print_cprog(prog: &Program) -> String {
-    let globals = [
-        ("free_ptr".to_string(), Value::Int(0)),
-        ("fromspace_end".to_string(), Value::Int(0)),
-    ]
-    .iter()
-    .cloned()
-    .collect::<Vec<_>>();
-
     let indent = 4;
     let cfg = &prog.cfg;
     let main_func = cfg
@@ -521,25 +535,28 @@ pub fn print_cprog(prog: &Program) -> String {
         })
         .collect::<String>();
 
-    let mut sprog = cprog_print_globals(&globals);
+    let mut sprog = String::new();
+    sprog.push_str("#include <stdint.h>\n");
+    sprog.push_str("#include \"runtime.h\"\n\n");
+    //sprog.push_str(&cprog_print_globals(&globals));
     sprog.push_str("\nint main() {\n\n");
     sprog.push_str(
         &prog
             .local_vars
             .iter()
             .map(|(name, ty)| {
-                indent_string(
-                    indent,
-                    &format!(
-                        "{} {} = 0;\n",
-                        match ty {
-                            Type::Int => "int",
-                            Type::Bool => "bool",
-                            _ => panic!("unhandled typed {:?}", ty),
-                        },
-                        name
-                    ),
-                )
+                indent_string(indent, &{
+                    let s = match ty {
+                        Type::Int => format!("int64_t {};", name),
+                        Type::Bool => format!("bool {};", name),
+                        Type::Tuple(..) => format!("int64_t {}; // tuple", name),
+                        Type::Void => {
+                            assert_eq!(name, "_");
+                            format!("")
+                        } //_ => panic!("unhandled typed {:?}", ty),
+                    };
+                    s + "\n"
+                })
             })
             .collect::<String>(),
     );

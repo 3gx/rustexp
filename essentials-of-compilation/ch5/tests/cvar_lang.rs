@@ -250,10 +250,8 @@ mod cvar_lang {
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v_anf, v1clang);
 
-        /*
-        let cstr = CVar::print_cprog(&cprog);
-        println!("\n{}\\nn", cstr);
-        */
+        //let cstr = CVar::print_cprog(&cprog);
+        //println!("\n{}\\nn", cstr);
     }
 
     #[test]
