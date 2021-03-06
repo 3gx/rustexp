@@ -113,6 +113,16 @@ pub struct BasicBlock {
     pub tail: Tail,
 }
 
+impl BasicBlock {
+    fn new(name: String, tail: Tail) -> Self {
+        BasicBlock {
+            name,
+            vars: BTreeMap::new(),
+            tail,
+        }
+    }
+}
+
 pub use petgraph::stable_graph::StableGraph;
 pub use std::collections::HashMap;
 pub type CfgGraph = StableGraph<BasicBlock, ()>;
@@ -123,9 +133,22 @@ pub struct Program {
     pub cfg: CfgGraph,
 }
 impl Program {
+    fn new() -> Self {
+        Program {
+            global_vars: BTreeMap::default(),
+            bb2node: HashMap::default(),
+            cfg: CfgGraph::default(),
+        }
+    }
     fn get_bb<'a>(&'a self, name: &str) -> Option<&'a BasicBlock> {
         let node_idx = self.bb2node.get(name)?;
         self.cfg.node_weight(*node_idx)
+    }
+    fn add_bb(mut self, bb: BasicBlock) -> Self {
+        let name = bb.name.clone();
+        let node_idx = self.cfg.add_node(bb);
+        assert!(self.bb2node.insert(name, node_idx).is_none());
+        self
     }
 }
 
@@ -203,18 +226,17 @@ pub fn interp_stmt(env: &Env, stmt: &Stmt) -> Env {
     }
 }
 
-pub fn interp_tail(env: &Env, bb: &BasicBlock, prog: &Program) -> Value {
-    let tail = &bb.tail;
+pub fn interp_tail(env: &Env, tail: &Tail, prog: &Program) -> Value {
     match tail {
         Tail::Return(exp) => interp_expr(env, exp),
         Tail::Seq(stmt, tail) => {
             let new_env = interp_stmt(env, stmt);
-            interp_tail(&new_env, bb, prog)
+            interp_tail(&new_env, tail, prog)
         }
-        Tail::Goto(label) => interp_tail(env, &prog.get_bb(label).unwrap(), prog),
+        Tail::Goto(label) => interp_tail(env, &prog.get_bb(label).unwrap().tail, prog),
         Tail::IfStmt(pred, thn, els) => match interp_expr(env, pred) {
-            Value::Bool(true) => interp_tail(env, &prog.get_bb(thn).unwrap(), prog),
-            Value::Bool(false) => interp_tail(env, &prog.get_bb(els).unwrap(), prog),
+            Value::Bool(true) => interp_tail(env, &prog.get_bb(thn).unwrap().tail, prog),
+            Value::Bool(false) => interp_tail(env, &prog.get_bb(els).unwrap().tail, prog),
             x @ _ => panic!("predicate must be Bool, got {:?}", x),
         },
     }
@@ -230,15 +252,15 @@ pub fn interp_prog(prog: &Program) -> Value {
     .cloned()
     .collect();
     let start = prog.get_bb("start").unwrap();
-    interp_tail(&env, &start, &prog)
+    interp_tail(&env, &start.tail, &prog)
 }
 
 fn explicate_ifpred(
     e: RVarAnf::Expr,
     then_name: &str,
     else_name: &str,
-    bbs: Vec<BasicBlock>,
-) -> (Tail, Vec<BasicBlock>) {
+    prog: Program,
+) -> (Tail, Program) {
     match e {
         RVarAnf::Expr::UnaryOp(UnaryOpKind::Not, a) => (
             Tail::IfStmt(
@@ -246,7 +268,7 @@ fn explicate_ifpred(
                 then_name.to_string(),
                 else_name.to_string(),
             ),
-            bbs,
+            prog,
         ),
         RVarAnf::Expr::BinaryOp(cmp, a1, a2)
             if cmp == BinaryOpKind::Eq || cmp == BinaryOpKind::Lt =>
@@ -257,7 +279,7 @@ fn explicate_ifpred(
                     then_name.to_string(),
                     else_name.to_string(),
                 ),
-                bbs,
+                prog,
             )
         }
         RVarAnf::Expr::Atom(RVarAnf::Atom::Bool(pred)) => (
@@ -266,7 +288,7 @@ fn explicate_ifpred(
             } else {
                 else_name.to_string()
             }),
-            bbs,
+            prog,
         ),
         RVarAnf::Expr::Atom(a @ RVarAnf::Atom::Var(_)) => (
             Tail::IfStmt(
@@ -274,18 +296,20 @@ fn explicate_ifpred(
                 then_name.to_string(),
                 else_name.to_string(),
             ),
-            bbs,
+            prog,
         ),
         RVarAnf::Expr::If(p_expr, t_expr, e_expr) => {
-            let (then_tail, bbs) = explicate_ifpred(*t_expr, then_name, else_name, bbs);
-            let (else_tail, mut bbs) = explicate_ifpred(*e_expr, then_name, else_name, bbs);
-            let then_name = &bbs.add_bb(BasicBlock(gensym("then_bb"), then_tail)).clone();
-            let else_name = &bbs.add_bb(BasicBlock(gensym("else_bb"), else_tail)).clone();
-            explicate_ifpred(*p_expr, then_name, else_name, bbs)
+            let (then_tail, prog) = explicate_ifpred(*t_expr, then_name, else_name, prog);
+            let (else_tail, prog) = explicate_ifpred(*e_expr, then_name, else_name, prog);
+            let then_name = gensym("then_bb");
+            let else_name = gensym("else_bb");
+            let prog = prog.add_bb(BasicBlock::new(then_name.clone(), then_tail));
+            let prog = prog.add_bb(BasicBlock::new(else_name.clone(), else_tail));
+            explicate_ifpred(*p_expr, &then_name, &else_name, prog)
         }
         RVarAnf::Expr::Let(x, expr, body) => {
-            let (if_tail, bbs) = explicate_ifpred(*body, then_name, else_name, bbs);
-            explicate_assign(&x, *expr, if_tail, bbs)
+            let (if_tail, prog) = explicate_ifpred(*body, then_name, else_name, prog);
+            explicate_assign(&x, *expr, if_tail, prog)
         }
         RVarAnf::Expr::TupleRef(a, i) => (
             Tail::IfStmt(
@@ -293,96 +317,89 @@ fn explicate_ifpred(
                 then_name.to_string(),
                 else_name.to_string(),
             ),
-            bbs,
+            prog,
         ),
         x @ _ => panic!("invalid 'if' predicate= {:?}", x),
     }
 }
 
-fn explicate_tail(e: RVarAnf::Expr, bbs: Vec<BasicBlock>) -> (Tail, Vec<BasicBlock>) {
-    let ret = |e, bbs| (Tail::Return(e), bbs);
+fn explicate_tail(e: RVarAnf::Expr, prog: Program) -> (Tail, Program) {
+    let ret = |e, prog| (Tail::Return(e), prog);
     match e {
-        RVarAnf::Expr::Atom(a) => ret(Expr::Atom(a.into()), bbs),
-        RVarAnf::Expr::Read => ret(Expr::Read, bbs),
-        RVarAnf::Expr::UnaryOp(op, a) => ret(Expr::UnaryOp(op, a.into()), bbs),
-        RVarAnf::Expr::BinaryOp(op, a1, a2) => ret(Expr::BinaryOp(op, a1.into(), a2.into()), bbs),
+        RVarAnf::Expr::Atom(a) => ret(Expr::Atom(a.into()), prog),
+        RVarAnf::Expr::Read => ret(Expr::Read, prog),
+        RVarAnf::Expr::UnaryOp(op, a) => ret(Expr::UnaryOp(op, a.into()), prog),
+        RVarAnf::Expr::BinaryOp(op, a1, a2) => ret(Expr::BinaryOp(op, a1.into(), a2.into()), prog),
         RVarAnf::Expr::Let(x, expr, body) => {
-            let (tail, bbs) = explicate_tail(*body, bbs);
-            explicate_assign(&x, *expr, tail, bbs)
+            let (tail, prog) = explicate_tail(*body, prog);
+            explicate_assign(&x, *expr, tail, prog)
         }
         RVarAnf::Expr::If(cnd, thn, els) => {
-            let (then_bb, bbs) = explicate_tail(*thn, bbs);
-            let (else_bb, mut bbs) = explicate_tail(*els, bbs);
+            let (then_bb, prog) = explicate_tail(*thn, prog);
+            let (else_bb, prog) = explicate_tail(*els, prog);
             let then_name = &gensym("then_bb");
             let else_name = &gensym("else_bb");
-            bbs.push(BasicBlock(then_name.clone(), then_bb));
-            bbs.push(BasicBlock(else_name.clone(), else_bb));
-            explicate_ifpred(*cnd, then_name, else_name, bbs)
+            let prog = prog.add_bb(BasicBlock::new(then_name.clone(), then_bb));
+            let prog = prog.add_bb(BasicBlock::new(else_name.clone(), else_bb));
+            explicate_ifpred(*cnd, then_name, else_name, prog)
         }
         RVarAnf::Expr::Allocate(..) => unimplemented!(),
         RVarAnf::Expr::Collect(..) => unimplemented!(),
         RVarAnf::Expr::GlobalVar(..) => unimplemented!(),
-        RVarAnf::Expr::TupleRef(a, i) => ret(Expr::TupleRef(a.into(), i), bbs),
+        RVarAnf::Expr::TupleRef(a, i) => ret(Expr::TupleRef(a.into(), i), prog),
         RVarAnf::Expr::TupleSet(..) => unimplemented!(),
     }
 }
 
-fn explicate_assign(
-    var: &str,
-    e: RVarAnf::Expr,
-    tail: Tail,
-    bbs: Vec<BasicBlock>,
-) -> (Tail, Vec<BasicBlock>) {
-    let assign = |e, tail, bbs| {
+fn explicate_assign(var: &str, e: RVarAnf::Expr, tail: Tail, prog: Program) -> (Tail, Program) {
+    let assign = |e, tail, prog| {
         (
             Tail::Seq(Stmt::AssignVar(var.to_string(), e), Box::new(tail)),
-            bbs,
+            prog,
         )
     };
     match e {
-        RVarAnf::Expr::Atom(a) => assign(Expr::Atom(a.into()), tail, bbs),
-        RVarAnf::Expr::Read => assign(Expr::Read, tail, bbs),
-        RVarAnf::Expr::UnaryOp(op, a) => assign(Expr::UnaryOp(op, a.into()), tail, bbs),
+        RVarAnf::Expr::Atom(a) => assign(Expr::Atom(a.into()), tail, prog),
+        RVarAnf::Expr::Read => assign(Expr::Read, tail, prog),
+        RVarAnf::Expr::UnaryOp(op, a) => assign(Expr::UnaryOp(op, a.into()), tail, prog),
         RVarAnf::Expr::BinaryOp(op, a1, a2) => {
-            assign(Expr::BinaryOp(op, a1.into(), a2.into()), tail, bbs)
+            assign(Expr::BinaryOp(op, a1.into(), a2.into()), tail, prog)
         }
         RVarAnf::Expr::Let(x, expr, body) => {
-            let (tail, bbs) = explicate_assign(var, *body, tail, bbs);
-            explicate_assign(&x, *expr, tail, bbs)
+            let (tail, prog) = explicate_assign(var, *body, tail, prog);
+            explicate_assign(&x, *expr, tail, prog)
         }
         RVarAnf::Expr::If(cnd, thn, els) => {
-            let mut bbs = bbs;
             let tail_name = &gensym("tail_bb");
-            bbs.push(BasicBlock(tail_name.clone(), tail));
-            let (then_bb, bbs) = explicate_assign(var, *thn, Tail::Goto(tail_name.clone()), bbs);
-            let (else_bb, mut bbs) =
-                explicate_assign(var, *els, Tail::Goto(tail_name.clone()), bbs);
+            let prog = prog.add_bb(BasicBlock::new(tail_name.clone(), tail));
+            let (then_bb, prog) = explicate_assign(var, *thn, Tail::Goto(tail_name.clone()), prog);
+            let (else_bb, prog) = explicate_assign(var, *els, Tail::Goto(tail_name.clone()), prog);
             let then_name = &gensym("then_bb");
             let else_name = &gensym("else_bb");
-            bbs.push(BasicBlock(then_name.clone(), then_bb));
-            bbs.push(BasicBlock(else_name.clone(), else_bb));
-            explicate_ifpred(*cnd, then_name, else_name, bbs)
+            let prog = prog.add_bb(BasicBlock::new(then_name.clone(), then_bb));
+            let prog = prog.add_bb(BasicBlock::new(else_name.clone(), else_bb));
+            explicate_ifpred(*cnd, then_name, else_name, prog)
         }
-        RVarAnf::Expr::Allocate(num, ty) => assign(Expr::Allocate(num, ty), tail, bbs),
-        RVarAnf::Expr::Collect(bytes) => (Tail::Seq(Stmt::Collect(bytes), Box::new(tail)), bbs),
-        RVarAnf::Expr::GlobalVar(var) => assign(Expr::GlobalVar(var), tail, bbs),
-        RVarAnf::Expr::TupleRef(a, i) => assign(Expr::TupleRef(a.into(), i), tail, bbs),
+        RVarAnf::Expr::Allocate(num, ty) => assign(Expr::Allocate(num, ty), tail, prog),
+        RVarAnf::Expr::Collect(bytes) => (Tail::Seq(Stmt::Collect(bytes), Box::new(tail)), prog),
+        RVarAnf::Expr::GlobalVar(var) => assign(Expr::GlobalVar(var), tail, prog),
+        RVarAnf::Expr::TupleRef(a, i) => assign(Expr::TupleRef(a.into(), i), tail, prog),
         RVarAnf::Expr::TupleSet(a, i, v) => {
-            assign(Expr::TupleSet(a.into(), i, v.into()), tail, bbs)
+            assign(Expr::TupleSet(a.into(), i, v.into()), tail, prog)
         }
     }
 }
 
 use std::collections::BTreeSet;
-pub fn explicate_expr(e: RVarAnf::Expr) -> CProgram {
+pub fn explicate_expr(e: RVarAnf::Expr) -> Program {
     RVar::gensym_reset();
-    let (tail, mut bbs) = explicate_tail(e, vec![]);
-    bbs.push(BasicBlock("start".to_string(), tail));
+    let (tail, prog) = explicate_tail(e, Program::new());
+    let prog = prog.add_bb(BasicBlock::new("start".to_string(), tail));
     let mut names = BTreeSet::new();
-    for BasicBlock(name, _) in &bbs {
-        assert_eq!(names.insert(name), true);
+    for node_idx in prog.cfg.node_indices() {
+        assert_eq!(names.insert(&prog.cfg[node_idx].name), true);
     }
-    CProgram(bbs)
+    prog
 }
 
 fn cprog_print_globals(globals: &Vec<(String, Value)>) -> String {
@@ -473,7 +490,7 @@ fn cprog_print_tail(indent: usize, tail: &Tail, vars: &mut Vars) -> String {
     tail
 }
 
-pub fn print_cprog(cprog: &CProgram) -> String {
+pub fn print_cprog(prog: &Program) -> String {
     let globals = [
         ("free_ptr".to_string(), Value::Int(0)),
         ("fromspace_end".to_string(), Value::Int(0)),
@@ -485,12 +502,13 @@ pub fn print_cprog(cprog: &CProgram) -> String {
     let mut vars: Vars = vec![].into_iter().collect();
 
     let indent = 4;
-    let CProgram(bbs) = cprog;
-    let main_func = bbs
-        .iter()
-        .map(|BasicBlock(name, tail)| {
-            let bb_name: String = format!("{}:\n", name);
-            let bb_tail = cprog_print_tail(indent, tail, &mut vars);
+    let cfg = &prog.cfg;
+    let main_func = cfg
+        .node_indices()
+        .map(|idx| &cfg[idx])
+        .map(|bb| {
+            let bb_name: String = format!("{}:\n", bb.name);
+            let bb_tail = cprog_print_tail(indent, &bb.tail, &mut vars);
             bb_name + &bb_tail + "\n\n"
         })
         .collect::<String>();

@@ -1,30 +1,16 @@
 #[cfg(test)]
 mod cvar_lang {
-    #[test]
-    fn t1() {
-        use ch5::cvar_lang;
-        use cvar_lang::*;
-        let v = int!(42);
-        println!("v= {:?}", v);
-        let v = var!(x);
-        println!("v= {:?}", v);
+    use ch5::cvar_lang as CVar;
+    use CVar::{RVar, RVarAnf};
 
-        let exp = Expr::BinaryOp(BinaryOpKind::Add, int!(10), int!(32));
-        println!("expr= {:?}", exp);
-        println!("res= {:?}", interp_expr(&vec![], &exp));
-
-        let prog = CProgram(vec![BasicBlock("start".to_string(), Tail::Return(exp))]);
-        println!("prog= {:?}", prog);
-        println!("eval= {:?}", interp_prog(&prog));
-
-        let cstr = cvar_lang::print_cprog(&prog);
-        println!("\n{}\n", cstr);
+    fn print_cfg(cfg: &CVar::CfgGraph) {
+        for idx in cfg.node_indices() {
+            println!("\t{:?}", cfg[idx]);
+        }
     }
 
     #[test]
     fn t2() {
-        use ch5::cvar_lang;
-        use cvar_lang::{RVar, RVarAnf};
         let (p1, v1) = {
             use RVar::*;
             let p1 = expr! {
@@ -47,22 +33,19 @@ mod cvar_lang {
         println!("v1anf= {:?}", v1anf);
         assert_eq!(v1, v1anf);
 
-        let cprog = cvar_lang::explicate_expr(p1anf);
-        let cvar_lang::CProgram(tail) = &cprog;
-        println!("tail= {:?}", tail);
+        let cprog = CVar::explicate_expr(p1anf);
+        print_cfg(&cprog.cfg);
 
-        let v1clang = cvar_lang::interp_prog(&cprog);
+        let v1clang = CVar::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
 
-        let cstr = cvar_lang::print_cprog(&cprog);
+        let cstr = CVar::print_cprog(&cprog);
         println!("\n{}\n", cstr);
     }
 
     #[test]
     fn t3() {
-        use ch5::cvar_lang;
-        use cvar_lang::{RVar, RVarAnf};
         let (e1, v1) = {
             use RVar::*;
             let e1 = expr! {
@@ -95,23 +78,20 @@ mod cvar_lang {
         assert_eq!(v1, v1anf);
         println!("v1= {:?} ", v1);
 
-        let cprog = cvar_lang::explicate_expr(e1anf);
-        let cvar_lang::CProgram(tail) = &cprog;
-        println!("tail= {:?}", tail);
+        let cprog = CVar::explicate_expr(e1anf);
+        print_cfg(&cprog.cfg);
 
         println!("interp_prog");
-        let v1clang = cvar_lang::interp_prog(&cprog);
+        let v1clang = CVar::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
 
-        let cstr = cvar_lang::print_cprog(&cprog);
+        let cstr = CVar::print_cprog(&cprog);
         println!("\n{}\n", cstr);
     }
 
     #[test]
     fn t4() {
-        use ch5::cvar_lang;
-        use cvar_lang::{RVar, RVarAnf};
         let (e1, v1) = {
             use RVar::*;
             let e1 = expr! {
@@ -140,28 +120,19 @@ mod cvar_lang {
         assert_eq!(v1, v1anf);
         println!("v1= {:?} ", v1);
 
-        let cprog = cvar_lang::explicate_expr(e1anf);
-        let cvar_lang::CProgram(tail) = &cprog;
-        println!("tail= {:?}", tail);
+        let cprog = CVar::explicate_expr(e1anf);
+        print_cfg(&cprog.cfg);
 
-        let v1clang = cvar_lang::interp_prog(&cprog);
+        let v1clang = CVar::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
-        /*
-        for cvar_lang::BasicBlock(name, bb) in cprog.0 {
-            println!("{}:", name);
-            println!("{:#?}", bb);
-        }
-        */
 
-        let cstr = cvar_lang::print_cprog(&cprog);
+        let cstr = CVar::print_cprog(&cprog);
         println!("\n{}\n", cstr);
     }
 
     #[test]
     fn t5() {
-        use ch5::cvar_lang;
-        use cvar_lang::{RVar, RVarAnf};
         let (e1, v1) = {
             use RVar::*;
             let e1 = expr! {
@@ -190,22 +161,19 @@ mod cvar_lang {
         assert_eq!(v1, v1anf);
         println!("v1= {:?} ", v1);
 
-        let cprog = cvar_lang::explicate_expr(e1anf);
-        let cvar_lang::CProgram(tail) = &cprog;
-        println!("tail= {:?}", tail);
+        let cprog = CVar::explicate_expr(e1anf);
+        print_cfg(&cprog.cfg);
 
-        let v1clang = cvar_lang::interp_prog(&cprog);
+        let v1clang = CVar::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
 
-        let cstr = cvar_lang::print_cprog(&cprog);
+        let cstr = CVar::print_cprog(&cprog);
         println!("\n{}\n", cstr);
     }
 
     #[test]
     fn t6() {
-        use ch5::cvar_lang;
-        use cvar_lang::{RVar, RVarAnf};
         let (e1, v1) = {
             use RVar::*;
             let e1 = expr! {
@@ -238,22 +206,19 @@ mod cvar_lang {
         assert_eq!(v1, v1anf);
         println!("v1= {:?} ", v1);
 
-        let cprog = cvar_lang::explicate_expr(e1anf);
-        let cvar_lang::CProgram(tail) = &cprog;
-        println!("tail= {:?}", tail);
+        let cprog = CVar::explicate_expr(e1anf);
+        print_cfg(&cprog.cfg);
 
-        let v1clang = cvar_lang::interp_prog(&cprog);
+        let v1clang = CVar::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
         assert_eq!(v1anf, v1clang);
 
-        let cstr = cvar_lang::print_cprog(&cprog);
+        let cstr = CVar::print_cprog(&cprog);
         println!("\n{}\n", cstr);
     }
 
     #[test]
     fn t7() {
-        use ch5::cvar_lang as CVar;
-        use CVar::{RVar, RVarAnf};
         let (e, v) = {
             use RVar::*;
             let e = expr! {
@@ -279,8 +244,7 @@ mod cvar_lang {
         assert_eq!(v, v_anf);
 
         let cprog = CVar::explicate_expr(e_anf);
-        let CVar::CProgram(tail) = &cprog;
-        println!("tail= {:?}", tail);
+        print_cfg(&cprog.cfg);
 
         let v1clang = CVar::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
@@ -292,8 +256,6 @@ mod cvar_lang {
 
     #[test]
     fn t8() {
-        use ch5::cvar_lang as CVar;
-        use CVar::{RVar, RVarAnf};
         let (e, v) = {
             use RVar::*;
             let e = expr! {
@@ -320,8 +282,7 @@ mod cvar_lang {
         assert_eq!(v, v_anf);
 
         let cprog = CVar::explicate_expr(e_anf);
-        let CVar::CProgram(tail) = &cprog;
-        println!("tail= {:?}", tail);
+        print_cfg(&cprog.cfg);
 
         let v1clang = CVar::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
@@ -362,8 +323,7 @@ mod cvar_lang {
         assert_eq!(v, v_anf);
 
         let cprog = CVar::explicate_expr(e_anf);
-        let CVar::CProgram(tail) = &cprog;
-        println!("tail= {:?}", tail);
+        print_cfg(&cprog.cfg);
 
         let v1clang = CVar::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
@@ -400,8 +360,7 @@ mod cvar_lang {
         assert_eq!(v, v_anf);
 
         let cprog = CVar::explicate_expr(e_anf);
-        let CVar::CProgram(tail) = &cprog;
-        println!("tail= {:?}", tail);
+        print_cfg(&cprog.cfg);
 
         let v1clang = CVar::interp_prog(&cprog);
         println!("v1clang= {:?}", v1clang);
