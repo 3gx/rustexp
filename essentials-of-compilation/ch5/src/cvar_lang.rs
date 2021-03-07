@@ -441,8 +441,8 @@ fn cprog_print_atom(a: &Atom) -> String {
         Atom::Int(i) => format!("{}", i),
         Atom::Bool(b) => format!("{}", if *b { "true" } else { "false" }),
         Atom::Var(v) => format!("{}", v),
-        //        Atom::Void => format!("void"),
-        Atom::Void => unimplemented!(),
+        Atom::Void => format!("/*void*/"),
+        // Atom::Void => unimplemented!(),
     }
 }
 fn cprog_print_expr(expr: &Expr) -> String {
@@ -474,10 +474,10 @@ fn cprog_print_expr(expr: &Expr) -> String {
         Expr::TupleRef(tu, idx) => {
             format!("/* tuple_ref */")
         }
+        */
         Expr::GlobalVar(label) => {
             format!("{}", label)
         }
-        */
         expr @ _ => unimplemented!("{:?}", expr),
     };
     s
