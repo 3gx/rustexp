@@ -7,4 +7,5 @@ members = [
     "ch4",
     "ch5",
     "ch5x86",
+    "ch6",
 ]
