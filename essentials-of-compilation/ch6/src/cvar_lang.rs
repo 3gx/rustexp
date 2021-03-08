@@ -413,7 +413,7 @@ pub fn explicate_expr(e: RVarAnf::Expr) -> Program {
     prog
 }
 
-fn cprog_print_globals(globals: &Vec<(String, Value)>) -> String {
+fn _cprog_print_globals(globals: &Vec<(String, Value)>) -> String {
     {
         let mut occurs = std::collections::HashSet::new();
         let all_unique = globals.iter().all(|(name, _)| occurs.insert(name));
@@ -494,7 +494,7 @@ fn cprog_print_stmt(indent: usize, stmt: &Stmt) -> String {
                 }
             })
         }
-        Stmt::Collect(bytes) => indent_string(indent, &format!("/* collect */;")),
+        Stmt::Collect(_bytes) => indent_string(indent, &format!("/* collect */;")),
     };
     s + "\n"
 }
