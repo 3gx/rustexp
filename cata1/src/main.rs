@@ -60,6 +60,15 @@ impl<A> Functor for ExprF<A> {
     }
 }
 
+pub fn eval_exprf(e: &ExprF<Int>) -> Int {
+    use ExprF::*;
+    match e {
+        ValueF(v) => *v,
+        AddF(e1, e2) => (**e1) + (**e2),
+        MulF(e1, e2) => (**e1) * (**e2),
+    }
+}
+
 fn main() {
     use Expr::*;
     let expr = Mul(Add(Value(1).bx(), Value(2).bx()).bx(), Value(3).bx());
@@ -70,8 +79,22 @@ fn main() {
     println!("val= {:?}", val1);
     assert_eq!(val, val1);
 
+    let exprf = ValueF(42);
+    let valf = eval_exprf(&exprf);
+    println!("exprf= {:?}, valf= {:?}", exprf, valf);
+    let exprf = AddF(Box::new(2), Box::new(3));
+    let valf = eval_exprf(&exprf);
+    println!("exprf= {:?}, valf= {:?}", exprf, valf);
+    let exprf = MulF(Box::new(2), Box::new(3));
+    let valf = eval_exprf(&exprf);
+    println!("exprf= {:?}, valf= {:?}", exprf, valf);
     use ExprF::*;
     let exprf: ExprF<ExprF<ExprF<Int>>> =
         MulF(AddF(ValueF(1).bx(), ValueF(2).bx()).bx(), ValueF(3).bx());
     println!("exprf= {:?}", exprf);
+
+    /*
+    let valf = eval_exprf(&exprf);
+    println!("valf= {:?}", valf);
+    */
 }
