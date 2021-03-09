@@ -12,8 +12,19 @@ impl Expr {
     }
 }
 
+pub fn eval_expr(e: &Expr) -> Int {
+    use Expr::*;
+    match e {
+        Value(i) => *i,
+        Add(e1, e2) => eval_expr(e1) + eval_expr(e2),
+        Mul(e1, e2) => eval_expr(e1) * eval_expr(e2),
+    }
+}
+
 fn main() {
     use Expr::*;
     let expr = Mul(Add(Value(1).bx(), Value(2).bx()).bx(), Value(3).bx());
     println!("expr= {:?}", expr);
+    let val = eval_expr(&expr);
+    println!("val= {:?}", val);
 }
