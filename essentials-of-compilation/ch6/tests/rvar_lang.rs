@@ -36,7 +36,6 @@ mod rvar_lang {
 
     #[test]
     fn t1() {
-        use ch6::rvar_lang::sym;
         use ch6::rvar_lang::*;
         let e1 = expr! { (let [x 32] (add (let [x 10] x) x)) };
         let e2 = expr! { (let [x1 32] (add (let [x2 10] x2) x1)) };
@@ -46,7 +45,7 @@ mod rvar_lang {
         let TypedExpr(_, e2ty) = typed_expr(e2.clone());
         println!("e1ty= {:?}", e1ty);
         println!("e2ty= {:?}", e2ty);
-        let e1u = uniquify_expr(&sym![], e1);
+        let e1u = uniquify_expr(e1);
         println!("e1u= {:?}", e1u);
         assert_eq!(e2, e1u);
         let TypedExpr(_, e1u_ty) = typed_expr(e1u);
@@ -57,7 +56,7 @@ mod rvar_lang {
         let e2 = expr! { (let [x1 32] (add (let [y1 10] y1) x1)) };
         println!("e1= {:?}", e1);
         println!("e2= {:?}", e2);
-        let e1u = uniquify_expr(&sym![], e1);
+        let e1u = uniquify_expr(e1);
         println!("e1u= {:?}", e1u);
         assert_eq!(e2, e1u);
     }
@@ -107,7 +106,7 @@ mod rvar_lang {
                       (add y 10)))) };
         let TypedExpr(_, ety) = typed_expr(expr.clone());
         println!("ety= {:?}", ety);
-        let uexpr = uniquify_expr(&sym![], expr);
+        let uexpr = uniquify_expr(expr);
         println!("uexpr= {:?}", uexpr);
         let prog = program![uexpr];
         let uval = interp_program(&prog);

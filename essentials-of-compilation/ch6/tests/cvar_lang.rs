@@ -17,6 +17,7 @@ mod cvar_lang {
                 (let [x (add 12 (add (neg 20) (neg (add 18 (neg 15)))))]
                      (add (add 30 (neg 15)) x))
             };
+            let p1 = uniquify_expr(p1);
             let v1 = interp_expr(&p1);
             let p1 = typed_expr(p1);
             (p1, v1)
@@ -61,6 +62,7 @@ mod cvar_lang {
             println!("interp_exp");
             let v1 = interp_expr(&e1);
 
+            let e1 = uniquify_expr(e1);
             let e1 = typed_expr(e1);
             println!("ety= {:?}", e1);
             let v1a = interp_texpr(&e1);
@@ -104,6 +106,7 @@ mod cvar_lang {
                                   (add y 30)))))
             };
             let v1 = interp_expr(&e1);
+            let e1 = uniquify_expr(e1);
             let e1 = typed_expr(e1);
             let v1a = interp_texpr(&e1);
             assert_eq!(v1, v1a);
@@ -145,6 +148,7 @@ mod cvar_lang {
                               (add y 30))))
             };
             let v1 = interp_expr(&e1);
+            let e1 = uniquify_expr(e1);
             let e1 = typed_expr(e1);
             let v1a = interp_texpr(&e1);
             assert_eq!(v1, v1a);
@@ -190,6 +194,7 @@ mod cvar_lang {
             println!("ety= {:?}", ety);
 
             let v1 = interp_expr(&e1);
+            let e1 = uniquify_expr(e1);
             let e1 = typed_expr(e1);
             let v1a = interp_texpr(&e1);
             assert_eq!(v1, v1a);
@@ -229,6 +234,7 @@ mod cvar_lang {
             let v = interp_expr(&e);
             assert_eq!(v, Value::from(42));
             println!("\nuntyped= {:?}", e);
+            let e = uniquify_expr(e);
             let e = typed_expr(e);
             let v1 = interp_texpr(&e);
             assert_eq!(v, v1);
@@ -269,6 +275,7 @@ mod cvar_lang {
             let v = interp_expr(&e);
             assert_eq!(v, Value::from(42));
             println!("\nuntyped= {:?}", e);
+            let e = uniquify_expr(e);
             let e = typed_expr(e);
             let v1 = interp_texpr(&e);
             assert_eq!(v, v1);
@@ -312,6 +319,7 @@ mod cvar_lang {
             let v = interp_expr(&e);
             assert_eq!(v, Value::from(42));
             println!("e={:?}", e);
+            let e = uniquify_expr(e);
             let e = typed_expr(e);
             let v1 = interp_texpr(&e);
             assert_eq!(v, v1);
@@ -351,6 +359,7 @@ mod cvar_lang {
             let v = interp_expr(&e);
             assert_eq!(v, Value::from(42));
             println!("\nuntyped= {:?}", e);
+            let e = uniquify_expr(e);
             let e = typed_expr(e);
             let v1 = interp_texpr(&e);
             assert_eq!(v, v1);

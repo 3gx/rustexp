@@ -536,7 +536,7 @@ pub fn gensym(x: &str) -> String {
 }
 
 type UMap = SymTable<String>;
-pub fn uniquify_expr(umap: &UMap, Expr(expr): Expr) -> Expr {
+pub fn uniquify_expr_impl(umap: &UMap, Expr(expr): Expr) -> Expr {
     use TExpr::*;
     let e = match expr {
         Var(x) => Var(sym_get(umap, &x).unwrap().clone()),
@@ -547,26 +547,34 @@ pub fn uniquify_expr(umap: &UMap, Expr(expr): Expr) -> Expr {
             let umap = sym_set(umap, &x, &newvar);
             Let(
                 newvar,
-                uniquify_expr(&umap, *e).bx(),
-                uniquify_expr(&umap, *body).bx(),
+                uniquify_expr_impl(&umap, *e).bx(),
+                uniquify_expr_impl(&umap, *body).bx(),
             )
         }
-        UnaryOp(op, expr) => UnaryOp(op, uniquify_expr(umap, *expr).bx()),
+        UnaryOp(op, expr) => UnaryOp(op, uniquify_expr_impl(umap, *expr).bx()),
         BinaryOp(op, e1, e2) => BinaryOp(
             op,
-            uniquify_expr(umap, *e1).bx(),
-            uniquify_expr(umap, *e2).bx(),
+            uniquify_expr_impl(umap, *e1).bx(),
+            uniquify_expr_impl(umap, *e2).bx(),
         ),
         Read => Read,
         If(e1, e2, e3) => If(
-            uniquify_expr(umap, *e1).bx(),
-            uniquify_expr(umap, *e2).bx(),
-            uniquify_expr(umap, *e3).bx(),
+            uniquify_expr_impl(umap, *e1).bx(),
+            uniquify_expr_impl(umap, *e2).bx(),
+            uniquify_expr_impl(umap, *e3).bx(),
         ),
-        Tuple(..) => unimplemented!(),
-        TupleLen(..) => unimplemented!(),
-        TupleRef(..) => unimplemented!(),
-        TupleSet(..) => unimplemented!(),
+        Tuple(es) => Tuple(
+            es.into_iter()
+                .map(|e| uniquify_expr_impl(umap, e))
+                .collect(),
+        ),
+        TupleLen(e) => TupleLen(uniquify_expr_impl(umap, *e).bx()),
+        TupleRef(tu, idx) => TupleRef(uniquify_expr_impl(umap, *tu).bx(), idx),
+        TupleSet(tu, idx, val) => TupleSet(
+            uniquify_expr_impl(umap, *tu).bx(),
+            idx,
+            uniquify_expr_impl(umap, *val).bx(),
+        ),
         Void => unimplemented!(),
         TExpr::Collect(..) => unimplemented!(),
         TExpr::Allocate(..) => unimplemented!(),
@@ -575,9 +583,12 @@ pub fn uniquify_expr(umap: &UMap, Expr(expr): Expr) -> Expr {
     Expr(e)
 }
 
+pub fn uniquify_expr(e: Expr) -> Expr {
+    uniquify_expr_impl(&sym![], e)
+}
 pub fn uniquify(p: Program) -> Program {
     match p {
-        Program(e) => Program(uniquify_expr(&sym![], e)),
+        Program(e) => Program(uniquify_expr(e)),
     }
 }
 
