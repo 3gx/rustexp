@@ -133,6 +133,32 @@ pub macro program($e:expr) {
         expr: $e.into_term(),
     }
 }
+pub macro mktype {
+    (Int) => {Type::Int},
+    (Bool) => {Type::Bool},
+    (Void) => {Type::Void},
+    ((Tuple $($types:tt)*)) => {Type::Tuple(vec![$(mktype!($types))*])},
+}
+
+pub macro mkfun(($name:ident $([$var:ident : $varty:tt])*)) { // : $retty:tt $expr:tt) {
+    FunDef{
+          name : stringify!($name).to_string(),
+          params: vec![$((stringify!($var).to_string(), mktype!($varty))),*],
+          ret: Type::Void, //mktype!($retty),
+          body: ExprK::Void.expr(), //expr!{$expr}
+    }
+}
+pub macro program1impl {
+    ((@prog) (@funs $($funs:expr),*) (@body $($body:tt)*)) => {
+        Program { funs : vec![$($funs)*,], expr: ExprK::Void.expr() }
+    },
+    ((@prog (fundef $($fundef:tt)*) $($tail:tt)*) (@funs $($funs:expr),*) (@body $($body:tt)*)) => {
+       program1impl!((@prog $($tail)*) (@funs $($funs),* mkfun!($($fundef)*)) (@body $($body)*))
+    },
+}
+pub macro program1 {
+    ($($tt:tt)*) => {program1impl!((@prog $($tt)*) (@funs) (@body))},
+}
 
 pub macro expr {
     ((let [$id:ident $body:tt] $tail:tt)) => {

@@ -206,18 +206,18 @@ mod rvar_lang {
     #[test]
     fn t06a() {
         let (p, v) = {
-            /*
             use RVar::*;
-            let p = program! {
+            let p = program1! {
+                (fundef (f1 [f : Int] [g : Int]))
+                /*
                 (fundef (map_tu2 [f: (Int -> Int)]
-                                 [v: (Tuple Int Int)]) : (Tuple Int Int)
+                                 [v: (Tuple Int Int)]) -> (Tuple Int Int)
                         (tuple (f (tupleref v 0) (tupleref v 1))))
                 (fundef (add1 [x : Int]) : Int
                         (add x 1))
                 (tupleref (map_tu2 add1 (vector 0 41)) 1)
+                */
             };
-            */
-            let p = 41;
             let v = 42;
             (p, v)
         };
