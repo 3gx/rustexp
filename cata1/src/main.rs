@@ -1,5 +1,6 @@
 #![feature(generic_associated_types)]
 #![allow(incomplete_features)]
+#![feature(box_syntax)]
 
 pub type Int = i64;
 
@@ -35,7 +36,7 @@ pub enum ExprF<A> {
     MulF(Box<A>, Box<A>),
 }
 
-impl<A> ExprF<A> {
+impl<A: Clone + Debug> ExprF<A> {
     pub fn bx(self) -> Box<Self> {
         Box::new(self)
     }
@@ -67,6 +68,11 @@ trait FixTrait {
 }
 
 struct Fix<F: FixTrait + Clone + Debug>(Box<F::Fix<Fix<F>>>);
+impl<F: FixTrait + Clone + Debug> Fix<F> {
+    fn bx(self) -> Box<Self> {
+        Box::new(self)
+    }
+}
 impl<F: FixTrait + Clone + Debug> Clone for Fix<F> {
     fn clone(&self) -> Self {
         Fix(self.0.clone())
@@ -139,13 +145,30 @@ fn main() {
     let vf2 = almost_cata(&eval_exprf, &ef2);
     println!("vf2= {:?}", vf2);
 
-    /*
     let exprf: ExprF<ExprF<ExprF<Int>>> =
         MulF(AddF(ValueF(1).bx(), ValueF(2).bx()).bx(), ValueF(3).bx());
     println!("exprf= {:?}", exprf);
+    /*
     let valf = eval_fixed_expr(&exprf);
     println!("valf= {:?}", valf);
     let valf = almost_cata(&eval_exprf, &exprf);
     println!("valf= {:?}", valf);
     */
+
+    let fexprf: Fix<ExprF<Int>> = Fix(box MulF(
+        box Fix(AddF(box Fix(ValueF(1).bx()), box Fix(ValueF(2).bx())).bx()),
+        box Fix(ValueF(3).bx()),
+    ));
+    println!("fexprf= {:?}", fexprf);
+    let fvalf = almost_cata(&eval_exprf, &fexprf);
+    println!("fvalf= {:?}", fvalf);
+
+    let fexprf: Fix<ExprF<Int>> = Fix(MulF(
+        Fix(AddF(Fix(ValueF(1).bx()).bx(), Fix(ValueF(2).bx()).bx()).bx()).bx(),
+        Fix(ValueF(3).bx()).bx(),
+    )
+    .bx());
+    println!("fexprf= {:?}", fexprf);
+    let fvalf = almost_cata(&eval_exprf, &fexprf);
+    println!("fvalf= {:?}", fvalf);
 }
