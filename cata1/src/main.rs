@@ -69,9 +69,11 @@ pub fn eval_exprf(e: &ExprF<Int>) -> Int {
     }
 }
 
+/*
 trait Fix<T> {
     fn unfix(&self, f: &dyn Fix<T>) -> T;
 }
+*/
 
 //impl<T, F: Fn(&Mu<T>) -> T> Mu<T> for ExprF
 
