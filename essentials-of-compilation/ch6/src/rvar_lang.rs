@@ -142,8 +142,10 @@ pub macro mktype {
            let retty = types.pop().unwrap();
            Type::Fun(types,  Box::new(retty))
         }
+   //     Type::Fun(vec![$(mktype!($argty)),*], Box::new(mktype!($retty)))
     },
     ((Tuple $($types:tt)*)) => {Type::Tuple(vec![$(mktype!($types)),*])},
+    //($($tt:tt)*) => {Type::Void},
 }
 
 pub macro mkfun(($name:ident $([$var:ident : $($varty:tt)*])*), $retty:tt, $body:tt) {
