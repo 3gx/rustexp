@@ -104,7 +104,7 @@ impl Expr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct FunDef {
+pub struct DefFun {
     pub name: String,
     pub params: Vec<(String, Type)>,
     pub ret: Type,
@@ -113,7 +113,7 @@ pub struct FunDef {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
-    pub funs: Vec<FunDef>,
+    pub funs: Vec<DefFun>,
     pub expr: Expr,
 }
 
@@ -149,7 +149,7 @@ pub macro mktype {
 }
 
 pub macro mkfun(($name:ident $([$var:ident : $($varty:tt)*])*), $retty:tt, $body:tt) {
-    FunDef{
+    DefFun{
           name : stringify!($name).to_string(),
           params: vec![$((stringify!($var).to_string(), mktype!($($varty)*))),*],
           ret: mktype!($retty),
@@ -157,7 +157,7 @@ pub macro mkfun(($name:ident $([$var:ident : $($varty:tt)*])*), $retty:tt, $body
     }
 }
 pub macro program1impl {
-    ((@prog (fundef $params:tt -> $retty:tt $funbody:tt) $($tail:tt)*)
+    ((@prog (defun $params:tt -> $retty:tt $funbody:tt) $($tail:tt)*)
      (@funs $($funs:tt)*)) => {
         program1impl!((@prog $($tail)*)
                       (@funs $($funs)* mkfun!($params, $retty, $funbody),))
