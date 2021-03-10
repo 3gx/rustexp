@@ -74,14 +74,26 @@ pub struct Fix<F: FixTr>(Box<F::DoFix<Fix<F>>>);
 use std::fmt::Debug;
 
 trait TFix {
-    type Unwrapped;
-    type Wrapped<F>;
+    type Unwrapped: Clone + Debug;
+    type Wrapped<F: Clone + Debug>: Clone + Debug;
 }
-#[derive(Debug, Clone)]
-struct Fix<F: TFix>(Box<F::Wrapped<Fix<F>>>);
-impl<F> TFix for ExprF<F> {
+
+//#[derive(Debug, Clone)]
+struct Fix<F: TFix + Clone + Debug>(Box<F::Wrapped<Fix<F>>>);
+impl<F: TFix + Clone + Debug> Clone for Fix<F> {
+    fn clone(&self) -> Self {
+        Fix(self.0.clone())
+    }
+}
+impl<F: TFix + Clone + Debug> Debug for Fix<F> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Fix").field(&self.0).finish()
+    }
+}
+
+impl<F: Clone + Debug> TFix for ExprF<F> {
     type Unwrapped = F;
-    type Wrapped<A> = ExprF<A>;
+    type Wrapped<A: Clone + Debug> = ExprF<A>;
 }
 
 /*
@@ -105,7 +117,7 @@ pub fn eval_exprf(e: &ExprF<Int>) -> Int {
     }
 }
 
-fn eval_fixed_expr<T>(e: Fix<ExprF<T>>) -> Int {
+fn eval_fixed_expr<T: Debug + Clone>(e: Fix<ExprF<T>>) -> Int {
     use ExprF::*;
     match *e.0 {
         ValueF(i) => i,
@@ -147,13 +159,13 @@ fn main() {
     println!("exprf= {:?}", exprf);
 
     let ef1: Fix<ExprF<Int>> = Fix(ValueF(1).bx());
+    println!("ef1= {:?}", ef1);
     let vf1 = eval_fixed_expr(ef1);
     println!("valf= {:?}", vf1);
 
-    //println!("e1= {:?}", _e1);
     let ef2: Fix<ExprF<Int>> =
         Fix(AddF(Box::new(Fix(ValueF(1).bx())), Box::new(Fix(ValueF(2).bx()))).bx());
+    println!("e2= {:?}", ef2);
     let vf2 = eval_fixed_expr(ef2);
     println!("vf2= {:?}", vf2);
-    //println!("e2= {:?}", _e2);
 }
