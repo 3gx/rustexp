@@ -222,6 +222,7 @@ mod rvar_lang {
                 (tupleref (map_tu2 add1 (vector 0 41)) 1)
             };
             let v = 42;
+            //let v = interp_program(&p);
             (p, v)
         };
         println!("prog= {:?}", p);

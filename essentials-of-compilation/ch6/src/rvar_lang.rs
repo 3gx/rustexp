@@ -114,7 +114,7 @@ pub struct DefFun {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
     pub funs: Vec<DefFun>,
-    pub expr: Expr,
+    pub main: Expr,
 }
 
 // ---------------------------------------------------------------------------
@@ -130,7 +130,7 @@ pub macro bool($b:expr) {
 pub macro program($e:expr) {
     Program {
         funs: vec![],
-        expr: $e.into_term(),
+        main: $e.into_term(),
     }
 }
 pub macro mktype {
@@ -162,9 +162,9 @@ pub macro program1impl {
         program1impl!((@prog $($tail)*)
                       (@funs $($funs)* mkfun!($params, $retty, $funbody),))
     },
-    ((@prog $body:tt)
+    ((@prog $main:tt)
      (@funs $($funs:tt)*)) => {
-        Program { funs : vec![$($funs)*], expr: expr!{$body} }
+        Program { funs : vec![$($funs)*], main: expr!{$main} }
     },
 }
 pub macro program1 {
@@ -570,7 +570,8 @@ pub fn interp_texpr(e: &Expr) -> Value {
 }
 
 pub fn interp_program(p: &Program) -> Value {
-    interp_expr(&p.expr)
+    let Program { funs: _, main } = p;
+    interp_expr(main)
 }
 
 use std::collections::HashMap;
@@ -649,9 +650,9 @@ pub fn uniquify_expr(e: Expr) -> Expr {
     uniquify_expr_impl(&sym![], e)
 }
 pub fn uniquify(p: Program) -> Program {
-    let Program { funs, expr } = p;
-    let expr = uniquify_expr(expr);
-    Program { funs, expr }
+    let Program { funs, main } = p;
+    let main = uniquify_expr(main);
+    Program { funs, main }
 }
 
 pub type Ctx = SymTable<Type>;
