@@ -122,8 +122,9 @@ pub fn type_size_in_bytes(ty: &Type) -> Int {
     match ty {
         Type::Bool => 8,
         Type::Int => 8,
-        Type::Void => panic!("can't have type void"),
         Type::Tuple(tys) => 8 + tys.iter().map(|ty| type_size_in_bytes(ty)).sum::<Int>(),
+        Type::Void => unreachable!(),
+        Type::Fun(..) => unreachable!(),
     }
 }
 
@@ -227,6 +228,7 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
         RVarExprK::Allocate(num, ty1) => ExprK::Allocate(num, ty1).typ(ty),
         RVarExprK::GlobalVar(x) => ExprK::GlobalVar(x).typ(ty),
         RVarExprK::TupleLen(..) => unimplemented!(),
+        RVarExprK::Apply(_fun, _args) => unimplemented!(),
     }
 }
 

@@ -554,6 +554,7 @@ pub fn print_cprog(prog: &Program) -> String {
                             assert_eq!(name, "_");
                             format!("")
                         } //_ => panic!("unhandled typed {:?}", ty),
+                        Type::Fun(..) => unreachable!(),
                     };
                     s + "\n"
                 })

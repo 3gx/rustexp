@@ -32,6 +32,7 @@ pub enum Type {
     Int,
     Void,
     Tuple(Vec<Type>),
+    Fun(Vec<Type>, Box<Type>),
 }
 
 type Int = i64;
@@ -54,6 +55,8 @@ pub enum ExprK {
 
     UnaryOp(UnaryOpKind, Box<Expr>),
     BinaryOp(BinaryOpKind, Box<Expr>, Box<Expr>),
+
+    Apply(Box<Expr>, Vec<Expr>),
 
     Tuple(Vec<Expr>),
     TupleLen(Box<Expr>),
@@ -101,7 +104,16 @@ impl Expr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct FunDef {
+    pub name: String,
+    pub params: Vec<(String, Type)>,
+    pub ret: Type,
+    pub body: Expr,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Program {
+    pub funs: Vec<FunDef>,
     pub expr: Expr,
 }
 
@@ -117,6 +129,7 @@ pub macro bool($b:expr) {
 
 pub macro program($e:expr) {
     Program {
+        funs: vec![],
         expr: $e.into_term(),
     }
 }
@@ -500,6 +513,7 @@ pub fn interp_impl(env: &Env, Expr(e, _): &Expr) -> Value {
                 _ => panic!("internal error, expecting tuple but got {:?}", tu)
             }
         }
+        ExprK::Apply(_fun, _args) => unimplemented!(),
         ExprK::TupleLen(..) => unimplemented!(),
         ExprK::Allocate(..) => unimplemented!(),
         ExprK::Collect(..) => unimplemented!(),
@@ -577,6 +591,12 @@ pub fn uniquify_expr_impl(umap: &UMap, Expr(expr, ty): Expr) -> Expr {
             idx,
             uniquify_expr_impl(umap, *val).bx(),
         ),
+        Apply(fun, args) => Apply(
+            uniquify_expr_impl(umap, *fun).bx(),
+            args.into_iter()
+                .map(|x| uniquify_expr_impl(umap, x))
+                .collect(),
+        ),
         Void => unimplemented!(),
         Collect(..) => unimplemented!(),
         Allocate(..) => unimplemented!(),
@@ -589,9 +609,9 @@ pub fn uniquify_expr(e: Expr) -> Expr {
     uniquify_expr_impl(&sym![], e)
 }
 pub fn uniquify(p: Program) -> Program {
-    let Program { expr } = p;
+    let Program { funs, expr } = p;
     let expr = uniquify_expr(expr);
-    Program { expr }
+    Program { funs, expr }
 }
 
 pub type Ctx = SymTable<Type>;
@@ -734,6 +754,7 @@ pub fn typed_expr_ctx(ctx: &Ctx, Expr(expr, ty): Expr) -> Expr {
         x @ Allocate(..) => panic!("unimplemented {:?}", x),
         GlobalVar(x) => GlobalVar(x).typed(Type::Int),
         TupleLen(..) => unimplemented!(),
+        Apply(_fun, _args) => unimplemented!(),
     }
 }
 
