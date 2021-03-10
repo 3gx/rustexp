@@ -8,8 +8,8 @@ pub mod rvar_lang;
 use rvar_lang::texpr;
 
 use rvar_lang as RVar;
-use RVar::TExpr as RVarTExpr;
-use RVar::TypedExpr as RVarExpr;
+use RVar::Expr as RVarExpr;
+use RVar::ExprK as RVarExprK;
 pub use RVar::{gensym, sym_get, sym_set, Env, Type, UnaryOpKind, Value};
 
 #[derive(Debug, Clone, PartialEq, Copy)]
@@ -65,9 +65,9 @@ impl Expr {
 fn rco_atom(RVarExpr(e, ty): RVarExpr) -> (Atom, Option<Expr>) {
     match e {
         // atom's stay atoms
-        RVarTExpr::Int(i) => (Atom::Int(i), None),
-        RVarTExpr::Bool(b) => (Atom::Bool(b), None),
-        RVarTExpr::Var(x) => (Atom::Var(x), None),
+        RVarExprK::Int(i) => (Atom::Int(i), None),
+        RVarExprK::Bool(b) => (Atom::Bool(b), None),
+        RVarExprK::Var(x) => (Atom::Var(x), None),
         // if e is a complex expression, assing result to an atom var
         _ => (Atom::Var(gensym("tmp")), Some(rco_exp(RVarExpr(e, ty)))),
     }
@@ -129,19 +129,20 @@ pub fn type_size_in_bytes(ty: &Type) -> Int {
 
 // remove-complex-opera* {opera* = operations|operands}
 pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
+    let ty = ty.unwrap();
     match e {
-        RVarTExpr::Int(i) => ExprK::Atom(Atom::Int(i)).typ(ty),
-        RVarTExpr::Bool(b) => ExprK::Atom(Atom::Bool(b)).typ(ty),
-        RVarTExpr::Var(x) => ExprK::Atom(Atom::Var(x)).typ(ty),
-        RVarTExpr::Void => ExprK::Atom(Atom::Void).typ(ty),
-        RVarTExpr::Read => ExprK::Read.typ(ty),
-        RVarTExpr::BinaryOp(op, e1, e2) => simplify_and_rco_binop(op, *e1, *e2, ty),
-        RVarTExpr::UnaryOp(op, expr) => rco_op(rco_atom(*expr), |x| ExprK::UnaryOp(op, x).typ(ty)),
-        RVarTExpr::Let(x, e, body) => ExprK::Let(x, rco_exp(*e).bx(), rco_exp(*body).bx()).typ(ty),
-        RVarTExpr::If(e1, e2, e3) => {
+        RVarExprK::Int(i) => ExprK::Atom(Atom::Int(i)).typ(ty),
+        RVarExprK::Bool(b) => ExprK::Atom(Atom::Bool(b)).typ(ty),
+        RVarExprK::Var(x) => ExprK::Atom(Atom::Var(x)).typ(ty),
+        RVarExprK::Void => ExprK::Atom(Atom::Void).typ(ty),
+        RVarExprK::Read => ExprK::Read.typ(ty),
+        RVarExprK::BinaryOp(op, e1, e2) => simplify_and_rco_binop(op, *e1, *e2, ty),
+        RVarExprK::UnaryOp(op, expr) => rco_op(rco_atom(*expr), |x| ExprK::UnaryOp(op, x).typ(ty)),
+        RVarExprK::Let(x, e, body) => ExprK::Let(x, rco_exp(*e).bx(), rco_exp(*body).bx()).typ(ty),
+        RVarExprK::If(e1, e2, e3) => {
             ExprK::If(rco_exp(*e1).bx(), rco_exp(*e2).bx(), rco_exp(*e3).bx()).typ(ty)
         }
-        RVarTExpr::Tuple(es) => {
+        RVarExprK::Tuple(es) => {
             // compute size of the tuple
             let bytes = type_size_in_bytes(&ty);
 
@@ -154,7 +155,7 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                              (int {bytes}))
                         (gvar {Type::Int} "fromspace_end"))
                     void
-                    {RVarTExpr::Collect(bytes).texpr(Type::Void)})
+                    {RVarExprK::Collect(bytes).typed(Type::Void)})
             };
 
             // generate a symbol for each tuple element
@@ -163,7 +164,7 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
             // symbol for tuple expression
             let tusym = gensym("tmp");
             let tuty = ty;
-            let tuvar = RVarTExpr::Var(tusym.clone()).texpr(tuty.clone());
+            let tuvar = RVarExprK::Var(tusym.clone()).typed(tuty.clone());
 
             // get tuple element types
             let elty = match &tuty {
@@ -176,9 +177,9 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                 tuvar.clone(),
                 |RVarExpr(e, ety), (xidx, (xvar, xtype))| {
                     texpr! {
-                    (let {ety.clone()} [_ (tupleset! {tuvar.clone()}
+                    (let {ety.unwrap().clone()} [_ (tupleset! {tuvar.clone()}
                                                      {xidx as Int}
-                                                     {RVarTExpr::Var(xvar).texpr(xtype)})]
+                                                     {RVarExprK::Var(xvar).typed(xtype)})]
                          {RVarExpr(e,ety.clone())})}
                 },
             );
@@ -186,9 +187,9 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
             // call to allocate tuple on the heap
             let RVarExpr(expr, ety) = expr;
             let expr = texpr! {
-                (let {ety.clone()} [_ {collect_expr}]
+                (let {ety.unwrap().clone()} [_ {collect_expr}]
                      (let {tuty.clone()}
-                          [{tusym} {RVarTExpr::Allocate(1, tuty.clone()).texpr(tuty.clone())}]
+                          [{tusym} {RVarExprK::Allocate(1, tuty.clone()).typed(tuty.clone())}]
                           {RVarExpr(expr, ety.clone())}))
             };
 
@@ -198,7 +199,7 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                     .zip(es.into_iter())
                     .rfold(expr, |RVarExpr(e, ety), (x, xval)| {
                         texpr! {
-                            (let {ety.clone()} [{x} {xval}] {RVarExpr(e,ety.clone())})
+                            (let {ety.unwrap().clone()} [{x} {xval}] {RVarExpr(e,ety.clone())})
                         }
                     });
 
@@ -208,7 +209,7 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
                 (let [x0 {es[0]}]
                  (let [x1 {es[1]}]
                   (let [_ {collect_expr}]
-                   (let [v {RVarTExpr::Allocate(1,ty).expr()}]
+                   (let [v {RVarExprK::Allocate(1,ty).expr()}]
                     (let [_ (tupleset! v 0 x0)]
                      (let [_ (tupleset! v 1 x1)] v))))))
             };
@@ -216,16 +217,16 @@ pub fn rco_exp(RVarExpr(e, ty): RVarExpr) -> Expr {
 
             rco_exp(expr)
         }
-        RVarTExpr::TupleRef(tu, idx) => {
+        RVarExprK::TupleRef(tu, idx) => {
             rco_op(rco_atom(*tu), |tu| ExprK::TupleRef(tu, idx).typ(ty))
         }
-        RVarTExpr::TupleSet(tu, idx, val) => rco_op(rco_atom(*tu), |tu| {
+        RVarExprK::TupleSet(tu, idx, val) => rco_op(rco_atom(*tu), |tu| {
             rco_op(rco_atom(*val), |val| ExprK::TupleSet(tu, idx, val).typ(ty))
         }),
-        RVarTExpr::Collect(bytes) => ExprK::Collect(bytes).typ(ty),
-        RVarTExpr::Allocate(num, ty1) => ExprK::Allocate(num, ty1).typ(ty),
-        RVarTExpr::GlobalVar(x) => ExprK::GlobalVar(x).typ(ty),
-        RVarTExpr::TupleLen(..) => unimplemented!(),
+        RVarExprK::Collect(bytes) => ExprK::Collect(bytes).typ(ty),
+        RVarExprK::Allocate(num, ty1) => ExprK::Allocate(num, ty1).typ(ty),
+        RVarExprK::GlobalVar(x) => ExprK::GlobalVar(x).typ(ty),
+        RVarExprK::TupleLen(..) => unimplemented!(),
     }
 }
 

@@ -38,7 +38,7 @@ type Int = i64;
 type Bool = bool;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum TExpr<Expr: Clone> {
+pub enum ExprK {
     // atoms
     Int(Int),
     Bool(Bool),
@@ -67,135 +67,139 @@ pub enum TExpr<Expr: Clone> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TypedExpr(pub TExpr<TypedExpr>, pub Type);
+pub struct Expr(pub ExprK, pub Option<Type>);
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Expr(pub TExpr<Expr>);
-
-impl TExpr<Expr> {
+impl ExprK {
     pub fn expr(self) -> Expr {
-        Expr(self)
+        Expr(self, None)
     }
-}
-impl TExpr<TypedExpr> {
-    pub fn texpr(self, ty: Type) -> TypedExpr {
-        TypedExpr(self, ty)
+    pub fn typed(self, ty: Type) -> Expr {
+        Expr(self, Some(ty))
     }
 }
 
 impl Expr {
-    pub fn bx(&self) -> Box<Expr> {
+    pub fn rbx(&self) -> Box<Expr> {
         Box::new(self.clone())
     }
-    pub fn typed(self) -> TypedExpr {
-        typed_expr(self)
+    pub fn bx(self) -> Box<Expr> {
+        Box::new(self)
     }
-}
-impl TypedExpr {
-    pub fn bx(&self) -> Box<TypedExpr> {
-        Box::new(self.clone())
+    pub fn is_typed(&self) -> Bool {
+        !self.1.is_none()
     }
-    pub fn untyped(self) -> Expr {
-        untyped_expr(self)
+    pub fn typed(mut self, ty: Type) -> Expr {
+        assert!(!self.is_typed());
+        self.1 = Some(ty);
+        self
+    }
+    pub fn untyped(mut self) -> Expr {
+        assert!(self.is_typed());
+        self.1 = None;
+        self
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Program(pub Expr);
+pub struct Program {
+    pub expr: Expr,
+}
 
 // ---------------------------------------------------------------------------
 // macro-base DSL
 
 pub macro int($e:expr) {
-    Expr(TExpr::Int($e))
+    Expr(ExprK::Int($e), None)
 }
 pub macro bool($b:expr) {
-    Expr(TExpr::Bool($b))
+    Expr(ExprK::Bool($b), None)
 }
 
 pub macro program($e:expr) {
-    Program($e.into_term())
+    Program {
+        expr: $e.into_term(),
+    }
 }
 
 pub macro expr {
     ((let [$id:ident $body:tt] $tail:tt)) => {
-        Expr(TExpr::Let(
+        ExprK::Let(
             stringify!($id).to_string(),
             Box::new(expr!{$body}.into_term()),
             Box::new(expr!{$tail}.into_term()),
-        ))
+        ).expr()
     },
     ((let [_ $body:tt] $tail:tt)) => {
-        Expr(TExpr::Let(
+        ExprK::Let(
             stringify!(_).to_string(),
             Box::new(expr!{$body}.into_term()),
             Box::new(expr!{$tail}.into_term()),
-        ))
+        ).expr()
     },
     ((let [{ $($quote:tt)* } $body:tt] $tail:tt)) => {
-        Expr(TExpr::Let(
+        ExprK::Let(
             expr!{{ $($quote)* }},
             Box::new(expr!{$body}.into_term()),
             Box::new(expr!{$tail}.into_term()),
-        ))
+        ).expr()
     },
     ((tuple $($expr:tt)*)) => {
-        Expr(TExpr::Tuple(vec![$(expr!{$expr}.into_term()),*]))
+        ExprK::Tuple(vec![$(expr!{$expr}.into_term()),*]).expr()
     },
     ((tupleset! $tu:tt $idx:tt $val:tt)) => {
-        Expr(TExpr::TupleSet(Box::new(expr!{$tu}.into_term()), expr!{$idx},
-                       Box::new(expr!{$val}.into_term())))
+        ExprK::TupleSet(Box::new(expr!{$tu}.into_term()), expr!{$idx},
+                       Box::new(expr!{$val}.into_term())).expr()
     },
     ((tupleref $tu:tt $idx:tt)) => {
-        Expr(TExpr::TupleRef(Box::new(expr!{$tu}.into_term()), expr!{$idx}))
+        ExprK::TupleRef(Box::new(expr!{$tu}.into_term()), expr!{$idx}).expr()
     },
     ((neg $opnd:tt)) => {
-        Expr(TExpr::UnaryOp(UnaryOpKind::Neg, Box::new(expr!{$opnd}.into_term())))
+        ExprK::UnaryOp(UnaryOpKind::Neg, Box::new(expr!{$opnd}.into_term())).expr()
     },
     ((not $opnd:tt)) => {
-        Expr(TExpr::UnaryOp(UnaryOpKind::Not, Box::new(expr!{$opnd}.into_term())))
+        ExprK::UnaryOp(UnaryOpKind::Not, Box::new(expr!{$opnd}.into_term())).expr()
     },
     ((add $lhs:tt $rhs:tt)) => {
-        Expr(TExpr::BinaryOp(BinaryOpKind::Add,
+        ExprK::BinaryOp(BinaryOpKind::Add,
                        Box::new(expr!{$lhs}.into_term()),
-                       Box::new(expr!{$rhs}.into_term())))
+                       Box::new(expr!{$rhs}.into_term())).expr()
     },
     ((or $lhs:tt $rhs:tt)) => {
-        Expr(TExpr::BinaryOp(BinaryOpKind::Or,
+        ExprK::BinaryOp(BinaryOpKind::Or,
                        Box::new(expr!{$lhs}.into_term()),
-                       Box::new(expr!{$rhs}.into_term())))
+                       Box::new(expr!{$rhs}.into_term())).expr()
     },
     ((and $lhs:tt $rhs:tt)) => {
-        Expr(TExpr::BinaryOp(BinaryOpKind::And,
+        ExprK::BinaryOp(BinaryOpKind::And,
                        Box::new(expr!{$lhs}.into_term()),
-                       Box::new(expr!{$rhs}.into_term())))
+                       Box::new(expr!{$rhs}.into_term())).expr()
     },
     ((lt $lhs:tt $rhs:tt)) => {
-        Expr(TExpr::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Lt),
+        ExprK::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Lt),
                        Box::new(expr!{$lhs}.into_term()),
-                       Box::new(expr!{$rhs}.into_term())))
+                       Box::new(expr!{$rhs}.into_term())).expr()
     },
     ((eq $lhs:tt $rhs:tt)) => {
-        Expr(TExpr::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Eq),
+        ExprK::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Eq),
                        Box::new(expr!{$lhs}.into_term()),
-                       Box::new(expr!{$rhs}.into_term())))
+                       Box::new(expr!{$rhs}.into_term())).expr()
     },
     ((le $lhs:tt $rhs:tt)) => {
-        Expr(TExpr::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Le),
+        ExprK::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Le),
                        Box::new(expr!{$lhs}.into_term()),
-                       Box::new(expr!{$rhs}.into_term())))
+                       Box::new(expr!{$rhs}.into_term())).expr()
     },
     ((if $pred:tt $then:tt $else:tt)) => {
-        Expr(TExpr::If(Box::new(expr!{$pred}.into_term()),
+        ExprK::If(Box::new(expr!{$pred}.into_term()),
                  Box::new(expr!{$then}.into_term()),
-                 Box::new(expr!{$else}.into_term())))
+                 Box::new(expr!{$else}.into_term())).expr()
     },
     ({ $($tt:tt)* }) => {
         $($tt)*
     },
-    ((read)) => { Expr(TExpr::Read) },
-    (true) => { Expr(TExpr::Bool(true)) },
-    (false) => { Expr(TExpr::Bool(false)) },
+    ((read)) => { ExprK::Read.expr() },
+    (true) => { ExprK::Bool(true).expr() },
+    (false) => { ExprK::Bool(false).expr() },
     ($id:ident) => { stringify!($id) },
     ($e:expr) => { $e },
 }
@@ -211,88 +215,88 @@ pub macro texpr {
     },
     */
     ((let $type:tt [_ $body:tt] $tail:tt)) => {
-        TExpr::Let(
+        ExprK::Let(
             stringify!(_).to_string(),
             Box::new(texpr!{$body}),
             Box::new(texpr!{$tail}),
-        ).texpr(texpr!{$type})
+        ).typed(texpr!{$type})
     },
     ((let $type:tt [{ $($quote:tt)* } $body:tt] $tail:tt)) => {
-        TExpr::Let(
+        ExprK::Let(
             texpr!{{ $($quote)* }},
             Box::new(texpr!{$body}),
             Box::new(texpr!{$tail})
-        ).texpr(texpr!{$type})
+        ).typed(texpr!{$type})
     },
     /*
     ((tuple $($expr:tt)*)) => {
-        Expr(TExpr::Tuple(vec![$(expr!{$expr}.into_term()),*]))
+        Expr(ExprK::Tuple(vec![$(expr!{$expr}.into_term()),*]))
     },
     */
     ((tupleset! $tu:tt $idx:tt $val:tt)) => {
-        TExpr::TupleSet(Box::new(texpr!{$tu}), texpr!{$idx},
-                        Box::new(texpr!{$val})).texpr(Type::Void)
+        ExprK::TupleSet(Box::new(texpr!{$tu}), texpr!{$idx},
+                        Box::new(texpr!{$val})).typed(Type::Void)
     },
     /*
     ((tupleref $tu:tt $idx:tt)) => {
-        Expr(TExpr::TupleRef(Box::new(expr!{$tu}.into_term()), expr!{$idx}))
+        Expr(ExprK::TupleRef(Box::new(expr!{$tu}.into_term()), expr!{$idx}))
     },
     ((neg $opnd:tt)) => {
-        Expr(TExpr::UnaryOp(UnaryOpKind::Neg, Box::new(expr!{$opnd}.into_term())))
+        Expr(ExprK::UnaryOp(UnaryOpKind::Neg, Box::new(expr!{$opnd}.into_term())))
     },
     ((not $opnd:tt)) => {
-        Expr(TExpr::UnaryOp(UnaryOpKind::Not, Box::new(expr!{$opnd}.into_term())))
+        Expr(ExprK::UnaryOp(UnaryOpKind::Not, Box::new(expr!{$opnd}.into_term())))
     },
     */
     ((add $type:tt $lhs:tt $rhs:tt)) => {
-        TExpr::BinaryOp(BinaryOpKind::Add,
+        ExprK::BinaryOp(BinaryOpKind::Add,
                         Box::new(texpr!{$lhs}),
-                        Box::new(texpr!{$rhs})).texpr(texpr!{$type})
+                        Box::new(texpr!{$rhs})).typed(texpr!{$type})
     },
     /*
     ((or $lhs:tt $rhs:tt)) => {
-        Expr(TExpr::BinaryOp(BinaryOpKind::Or,
+        Expr(ExprK::BinaryOp(BinaryOpKind::Or,
                        Box::new(expr!{$lhs}.into_term()),
                        Box::new(expr!{$rhs}.into_term())))
     },
     ((and $lhs:tt $rhs:tt)) => {
-        Expr(TExpr::BinaryOp(BinaryOpKind::And,
+        Expr(ExprK::BinaryOp(BinaryOpKind::And,
                        Box::new(expr!{$lhs}.into_term()),
                        Box::new(expr!{$rhs}.into_term())))
     },
     */
     ((lt $type:tt $lhs:tt $rhs:tt)) => {
-        TExpr::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Lt),
+        ExprK::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Lt),
                         Box::new(texpr!{$lhs}),
-                        Box::new(texpr!{$rhs})).texpr(texpr!{$type})
+                        Box::new(texpr!{$rhs})).typed(texpr!{$type})
     },
     /*
     ((eq $lhs:tt $rhs:tt)) => {
-        Expr(TExpr::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Eq),
+        Expr(ExprK::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Eq),
                        Box::new(expr!{$lhs}.into_term()),
                        Box::new(expr!{$rhs}.into_term())))
     },
     ((le $lhs:tt $rhs:tt)) => {
-        Expr(TExpr::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Le),
+        Expr(ExprK::BinaryOp(BinaryOpKind::CmpOp(CmpOpKind::Le),
                        Box::new(expr!{$lhs}.into_term()),
                        Box::new(expr!{$rhs}.into_term())))
     },
     */
     ((if $type:tt $pred:tt $then:tt $else:tt)) => {
-        TExpr::If(Box::new(texpr!{$pred}),
+        ExprK::If(Box::new(texpr!{$pred}),
                   Box::new(texpr!{$then}),
-                  Box::new(texpr!{$else})).texpr(texpr!{$type})
+                  Box::new(texpr!{$else})).typed(texpr!{$type})
     },
-    ((int $val:tt)) => {TExpr::Int(texpr!{$val} as Int).texpr(Type::Int)},
-    ((var $type:tt $var:tt)) => {TExpr::Var(texpr!{$var}.to_string()).texpr(texpr!{$type})},
-    ((gvar $type:tt $var:tt)) => {TExpr::GlobalVar(texpr!{$var}.to_string()).texpr(texpr!{$type})},
+    ((int $val:tt)) => {ExprK::Int(texpr!{$val} as Int).typed(Type::Int)},
+    ((var $type:tt $var:tt)) => {ExprK::Var(texpr!{$var}.to_string()).typed(texpr!{$type})},
+    ((gvar $type:tt $var:tt)) => {ExprK::GlobalVar(texpr!{$var}.to_string()).typed(texpr!{$type})},
     ({ $($tt:tt)* }) => {
         $($tt)*
     },
-    ((read)) => { TExpr::Read.texpr(Type::Int) },
-    (void) => { TExpr::Void.texpr(Type::Void) },
-    (true) => { TExpr::Bool(true).texpr(Type::Bool) },
-    (false) => { TExpr::Bool(false).texpr(Type::Bool) },
+    ((read)) => { ExprK::Read.typed(Type::Int) },
+    (void) => { ExprK::Void.typed(Type::Void) },
+    (true) => { ExprK::Bool(true).typed(Type::Bool) },
+    (false) => { ExprK::Bool(false).typed(Type::Bool) },
     ($id:ident) => { stringify!($id) },
     ($e:expr) => { $e },
 }
@@ -320,7 +324,7 @@ impl IntoTerm for Expr {
 }
 impl IntoTerm for &str {
     fn into_term(&self) -> Expr {
-        Expr(TExpr::Var(self.to_string()))
+        ExprK::Var(self.to_string()).expr()
     }
 }
 
@@ -415,29 +419,29 @@ pub fn sym_set<T: Clone>(sym: &SymTable<T>, key: &str, val: &T) -> SymTable<T> {
     sym
 }
 
-pub fn interp_impl<T: Clone>(env: &Env, e: &TExpr<T>, f: &impl Fn(&T) -> &TExpr<T>) -> Value {
-    let interp = |env, e| interp_impl(env, f(e), f);
+pub fn interp_impl(env: &Env, Expr(e, _): &Expr) -> Value {
+    let interp = |env, e| interp_impl(env, e);
     use self::CmpOpKind as C;
     use {BinaryOpKind::*, UnaryOpKind::*};
     match e {
-        TExpr::Int(n) => Value::Int(*n),
-        TExpr::Bool(b) => Value::Bool(*b),
-        TExpr::Void => Value::Void,
-        TExpr::Read => {
+        ExprK::Int(n) => Value::Int(*n),
+        ExprK::Bool(b) => Value::Bool(*b),
+        ExprK::Void => Value::Void,
+        ExprK::Read => {
             let mut input = String::new();
             std::io::stdin().read_line(&mut input).unwrap();
             Value::Int(input.trim().parse().unwrap())
         }
-        TExpr::UnaryOp(Neg, e) => Value::Int(-interp(env, e).int().unwrap()),
-        TExpr::BinaryOp(Add, e1, e2) => {
+        ExprK::UnaryOp(Neg, e) => Value::Int(-interp(env, e).int().unwrap()),
+        ExprK::BinaryOp(Add, e1, e2) => {
             Value::Int(interp(env, e1).int().unwrap() + interp(env, e2).int().unwrap())
         }
-        TExpr::Var(x) => sym_get(env, &x).unwrap().clone(),
-        TExpr::Let(x, e, body) => {
+        ExprK::Var(x) => sym_get(env, &x).unwrap().clone(),
+        ExprK::Let(x, e, body) => {
             let new_env = sym_set(env, x, &interp(env, e));
             interp(&new_env, body)
         }
-        TExpr::If(cond, thn, els) => interp(
+        ExprK::If(cond, thn, els) => interp(
             env,
             if interp(env, cond).bool().unwrap() {
                 thn
@@ -445,22 +449,22 @@ pub fn interp_impl<T: Clone>(env: &Env, e: &TExpr<T>, f: &impl Fn(&T) -> &TExpr<
                 els
             },
         ),
-        TExpr::BinaryOp(And, e1, e2) => {
+        ExprK::BinaryOp(And, e1, e2) => {
             if interp(env, e1).bool().unwrap() {
                 Value::Bool(interp(env, e2).bool().unwrap())
             } else {
                 Value::Bool(false)
             }
         }
-        TExpr::BinaryOp(Or, e1, e2) => {
+        ExprK::BinaryOp(Or, e1, e2) => {
             if interp(env, e1).bool().unwrap() {
                 Value::Bool(true)
             } else {
                 Value::Bool(interp(env, e2).bool().unwrap())
             }
         }
-        TExpr::UnaryOp(Not, expr) => Value::Bool(!interp(env, expr).bool().unwrap()),
-        TExpr::BinaryOp(BinaryOpKind::CmpOp(op), e1, e2) => {
+        ExprK::UnaryOp(Not, expr) => Value::Bool(!interp(env, expr).bool().unwrap()),
+        ExprK::BinaryOp(BinaryOpKind::CmpOp(op), e1, e2) => {
             match (op, interp(env, e1), interp(env, e2)) {
                 (C::Eq, Value::Int(a), Value::Int(b)) => Value::Bool(a == b),
                 (C::Eq, Value::Bool(a), Value::Bool(b)) => Value::Bool(a == b),
@@ -471,14 +475,14 @@ pub fn interp_impl<T: Clone>(env: &Env, e: &TExpr<T>, f: &impl Fn(&T) -> &TExpr<
                 x @ _ => panic!("type mismatch: {:?}", x),
             }
         }
-        TExpr::Tuple(es) => {
+        ExprK::Tuple(es) => {
             let val = es
                 .into_iter()
                 .map(|e| interp(env, e))
                 .collect::<Vec<Value>>();
             Value::Heap(Rc::new(RefCell::new(Value::Tuple(val))))
         }
-        TExpr::TupleSet(tu, idx, val) => {
+        ExprK::TupleSet(tu, idx, val) => {
             let tu = interp(env, tu);
             let val = interp(env, val);
             r#match! { [tu]
@@ -488,7 +492,7 @@ pub fn interp_impl<T: Clone>(env: &Env, e: &TExpr<T>, f: &impl Fn(&T) -> &TExpr<
             }
             Value::Void
         }
-        TExpr::TupleRef(tu, idx) => {
+        ExprK::TupleRef(tu, idx) => {
             let tu = interp(env, tu);
             r#match! { [tu]
                 Value::Heap(tu) if @{let Value::Tuple(tu) = &*tu.borrow_mut()} =>
@@ -496,25 +500,23 @@ pub fn interp_impl<T: Clone>(env: &Env, e: &TExpr<T>, f: &impl Fn(&T) -> &TExpr<
                 _ => panic!("internal error, expecting tuple but got {:?}", tu)
             }
         }
-        TExpr::TupleLen(..) => unimplemented!(),
-        TExpr::Allocate(..) => unimplemented!(),
-        TExpr::Collect(..) => unimplemented!(),
-        TExpr::GlobalVar(..) => unimplemented!(),
+        ExprK::TupleLen(..) => unimplemented!(),
+        ExprK::Allocate(..) => unimplemented!(),
+        ExprK::Collect(..) => unimplemented!(),
+        ExprK::GlobalVar(..) => unimplemented!(),
     }
 }
 
-pub fn interp_expr(Expr(e): &Expr) -> Value {
-    interp_impl(&vec![], e, &|Expr(e)| e)
+pub fn interp_expr(e: &Expr) -> Value {
+    interp_impl(&vec![], e)
 }
-
-pub fn interp_texpr(TypedExpr(e, _): &TypedExpr) -> Value {
-    interp_impl(&vec![], e, &|TypedExpr(e, _)| e)
+pub fn interp_texpr(e: &Expr) -> Value {
+    assert!(e.is_typed());
+    interp_impl(&vec![], e)
 }
 
 pub fn interp_program(p: &Program) -> Value {
-    match p {
-        Program(e) => interp_expr(e),
-    }
+    interp_expr(&p.expr)
 }
 
 use std::collections::HashMap;
@@ -536,8 +538,8 @@ pub fn gensym(x: &str) -> String {
 }
 
 type UMap = SymTable<String>;
-pub fn uniquify_expr_impl(umap: &UMap, Expr(expr): Expr) -> Expr {
-    use TExpr::*;
+pub fn uniquify_expr_impl(umap: &UMap, Expr(expr, ty): Expr) -> Expr {
+    use ExprK::*;
     let e = match expr {
         Var(x) => Var(sym_get(umap, &x).unwrap().clone()),
         Int(n) => Int(n),
@@ -576,56 +578,59 @@ pub fn uniquify_expr_impl(umap: &UMap, Expr(expr): Expr) -> Expr {
             uniquify_expr_impl(umap, *val).bx(),
         ),
         Void => unimplemented!(),
-        TExpr::Collect(..) => unimplemented!(),
-        TExpr::Allocate(..) => unimplemented!(),
-        TExpr::GlobalVar(..) => unimplemented!(),
+        Collect(..) => unimplemented!(),
+        Allocate(..) => unimplemented!(),
+        GlobalVar(..) => unimplemented!(),
     };
-    Expr(e)
+    Expr(e, ty)
 }
 
 pub fn uniquify_expr(e: Expr) -> Expr {
     uniquify_expr_impl(&sym![], e)
 }
 pub fn uniquify(p: Program) -> Program {
-    match p {
-        Program(e) => Program(uniquify_expr(e)),
-    }
+    let Program { expr } = p;
+    let expr = uniquify_expr(expr);
+    Program { expr }
 }
 
 pub type Ctx = SymTable<Type>;
-pub fn typed_expr_ctx(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
+pub fn typed_expr_ctx(ctx: &Ctx, Expr(expr, ty): Expr) -> Expr {
+    assert!(ty.is_none());
+    use ExprK::*;
     //    r#match! { [expr]
     match expr {
-        TExpr::Int(i) => TExpr::Int(i).texpr(Type::Int),
-        TExpr::Bool(b) => TExpr::Bool(b).texpr(Type::Bool),
-        TExpr::Void => TExpr::Void.texpr(Type::Void),
-        TExpr::Var(x) => {
+        Int(i) => Int(i).typed(Type::Int),
+        Bool(b) => Bool(b).typed(Type::Bool),
+        Void => Void.typed(Type::Void),
+        Var(x) => {
             let ty = sym_get(ctx, &x);
             let ty = match ty {
                 Some(ty) => ty.clone(),
                 None => panic!("unknown var {}", x),
             };
-            TExpr::Var(x).texpr(ty)
+            Var(x).typed(ty)
         }
-        TExpr::Let(x, expr, body) => {
-            let TypedExpr(expr, expr_ty) = typed_expr_ctx(ctx, *expr);
-            let ctx = sym_set(ctx, &x, &expr_ty);
-            let TypedExpr(body, body_ty) = typed_expr_ctx(&ctx, *body);
-            TExpr::Let(
+        Let(x, expr, body) => {
+            let Expr(expr, expr_ty) = typed_expr_ctx(ctx, *expr);
+            let ctx = sym_set(ctx, &x, &expr_ty.as_ref().unwrap());
+            let Expr(body, body_ty) = typed_expr_ctx(&ctx, *body);
+            Let(
                 x,
-                TypedExpr(expr, expr_ty).bx(),
-                TypedExpr(body, body_ty.clone()).bx(),
+                Expr(expr, expr_ty).bx(),
+                Expr(body, body_ty.clone()).bx(),
             )
-            .texpr(body_ty)
+            .typed(body_ty.unwrap())
         }
-        TExpr::If(pred, then_, else_) => {
-            let TypedExpr(pred, pred_ty) = typed_expr_ctx(ctx, *pred);
+        If(pred, then_, else_) => {
+            let Expr(pred, pred_ty) = typed_expr_ctx(ctx, *pred);
+            let pred_ty = pred_ty.unwrap();
             match &pred_ty {
                 Type::Bool => (),
                 x @ _ => panic!("type({:?}) must be Bool, got {:?}", pred, x),
             };
-            let TypedExpr(then_, then_ty) = typed_expr_ctx(ctx, *then_);
-            let TypedExpr(else_, else_ty) = typed_expr_ctx(ctx, *else_);
+            let Expr(then_, then_ty) = typed_expr_ctx(ctx, *then_);
+            let Expr(else_, else_ty) = typed_expr_ctx(ctx, *else_);
             if then_ty != else_ty {
                 panic!(
                     "type({:?}) = {:?} != {:?} = type({:?})",
@@ -633,61 +638,60 @@ pub fn typed_expr_ctx(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
                 )
             }
             let if_ty = then_ty.clone();
-            TExpr::If(
-                pred.texpr(pred_ty).bx(),
-                then_.texpr(then_ty).bx(),
-                else_.texpr(else_ty).bx(),
+            If(
+                pred.typed(pred_ty).bx(),
+                then_.typed(then_ty.unwrap()).bx(),
+                else_.typed(else_ty.unwrap()).bx(),
             )
-            .texpr(if_ty)
+            .typed(if_ty.unwrap())
         }
-        TExpr::Read => TExpr::Read.texpr(Type::Int),
-        TExpr::UnaryOp(op, expr) => match (op, typed_expr_ctx(ctx, *expr)) {
-            (UnaryOpKind::Not, TypedExpr(e, Type::Bool)) => {
-                TExpr::UnaryOp(op, e.texpr(Type::Bool).bx()).texpr(Type::Bool)
+        Read => Read.typed(Type::Int),
+        UnaryOp(op, expr) => match (op, typed_expr_ctx(ctx, *expr)) {
+            (UnaryOpKind::Not, Expr(e, Some(Type::Bool))) => {
+                UnaryOp(op, e.typed(Type::Bool).bx()).typed(Type::Bool)
             }
-            (UnaryOpKind::Neg, TypedExpr(e, Type::Int)) => {
-                TExpr::UnaryOp(op, e.texpr(Type::Int).bx()).texpr(Type::Int)
+            (UnaryOpKind::Neg, Expr(e, Some(Type::Int))) => {
+                UnaryOp(op, e.typed(Type::Int).bx()).typed(Type::Int)
             }
             x @ _ => panic!("unsupported {:?}", x),
         },
-        TExpr::BinaryOp(op, e1, e2) => {
-            match (op, typed_expr_ctx(ctx, *e1), typed_expr_ctx(ctx, *e2)) {
-                (BinaryOpKind::Add, TypedExpr(e1, Type::Int), TypedExpr(e2, Type::Int)) => {
-                    TExpr::BinaryOp(op, e1.texpr(Type::Int).bx(), e2.texpr(Type::Int).bx())
-                        .texpr(Type::Int)
-                }
-                (
-                    BinaryOpKind::And | BinaryOpKind::Or,
-                    TypedExpr(e1, Type::Bool),
-                    TypedExpr(e2, Type::Bool),
-                ) => TExpr::BinaryOp(op, e1.texpr(Type::Bool).bx(), e2.texpr(Type::Bool).bx())
-                    .texpr(Type::Bool),
-                (
-                    BinaryOpKind::CmpOp(CmpOpKind::Eq),
-                    TypedExpr(e1, Type::Bool),
-                    TypedExpr(e2, Type::Bool),
-                ) => TExpr::BinaryOp(op, e1.texpr(Type::Bool).bx(), e2.texpr(Type::Bool).bx())
-                    .texpr(Type::Bool),
-                (BinaryOpKind::CmpOp(_), TypedExpr(e1, Type::Int), TypedExpr(e2, Type::Int)) => {
-                    TExpr::BinaryOp(op, e1.texpr(Type::Int).bx(), e2.texpr(Type::Int).bx())
-                        .texpr(Type::Bool)
-                }
-                x @ _ => panic!("type mismatch {:?}", x),
+        BinaryOp(op, e1, e2) => match (op, typed_expr_ctx(ctx, *e1), typed_expr_ctx(ctx, *e2)) {
+            (BinaryOpKind::Add, Expr(e1, Some(Type::Int)), Expr(e2, Some(Type::Int))) => {
+                BinaryOp(op, e1.typed(Type::Int).bx(), e2.typed(Type::Int).bx()).typed(Type::Int)
             }
-        }
-        TExpr::Tuple(es) => {
+            (
+                BinaryOpKind::And | BinaryOpKind::Or,
+                Expr(e1, Some(Type::Bool)),
+                Expr(e2, Some(Type::Bool)),
+            ) => {
+                BinaryOp(op, e1.typed(Type::Bool).bx(), e2.typed(Type::Bool).bx()).typed(Type::Bool)
+            }
+            (
+                BinaryOpKind::CmpOp(CmpOpKind::Eq),
+                Expr(e1, Some(Type::Bool)),
+                Expr(e2, Some(Type::Bool)),
+            ) => {
+                BinaryOp(op, e1.typed(Type::Bool).bx(), e2.typed(Type::Bool).bx()).typed(Type::Bool)
+            }
+            (BinaryOpKind::CmpOp(_), Expr(e1, Some(Type::Int)), Expr(e2, Some(Type::Int))) => {
+                BinaryOp(op, e1.typed(Type::Int).bx(), e2.typed(Type::Int).bx()).typed(Type::Bool)
+            }
+            x @ _ => panic!("type mismatch {:?}", x),
+        },
+        Tuple(es) => {
             let (es, ty) = es
                 .into_iter()
                 .map(|e| {
-                    let TypedExpr(e, ty) = typed_expr_ctx(ctx, e);
-                    (TypedExpr(e, ty.clone()), ty)
+                    let Expr(e, ty) = typed_expr_ctx(ctx, e);
+                    (Expr(e, ty.clone()), ty.unwrap())
                 })
                 .unzip();
-            TExpr::Tuple(es).texpr(Type::Tuple(ty))
+            Tuple(es).typed(Type::Tuple(ty))
         }
-        TExpr::TupleRef(tu, idx) => {
+        TupleRef(tu, idx) => {
             assert!(idx >= 0, "idx must be non-negative, got {}", idx);
-            let TypedExpr(tu, tuty) = typed_expr_ctx(ctx, *tu);
+            let Expr(tu, tuty) = typed_expr_ctx(ctx, *tu);
+            let tuty = tuty.unwrap();
             let elty = match &tuty {
                 Type::Tuple(tys) => {
                     let idx = idx as usize;
@@ -701,12 +705,14 @@ pub fn typed_expr_ctx(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
                 }
                 _ => panic!("type error, expecting tuple type, got {:?}", tuty),
             };
-            TExpr::TupleRef(tu.texpr(tuty).bx(), idx).texpr(elty)
+            TupleRef(tu.typed(tuty).bx(), idx).typed(elty)
         }
-        TExpr::TupleSet(tu, idx, val) => {
+        TupleSet(tu, idx, val) => {
             assert!(idx >= 0, "idx must be non-negative, got {}", idx);
-            let TypedExpr(tu, tuty) = typed_expr_ctx(ctx, *tu);
-            let TypedExpr(val, valty) = typed_expr_ctx(ctx, *val);
+            let Expr(tu, tuty) = typed_expr_ctx(ctx, *tu);
+            let Expr(val, valty) = typed_expr_ctx(ctx, *val);
+            let (tuty, valty) = (tuty.unwrap(), valty.unwrap());
+
             let elty = match &tuty {
                 Type::Tuple(tys) => {
                     let idx = idx as usize;
@@ -721,46 +727,46 @@ pub fn typed_expr_ctx(ctx: &Ctx, Expr(expr): Expr) -> TypedExpr {
                 _ => panic!("type error, expecting tuple type, got {:?}", tuty),
             };
             assert_eq!(elty, &valty);
-            TExpr::TupleSet(tu.texpr(tuty).bx(), idx, val.texpr(valty).bx()).texpr(Type::Void)
+            TupleSet(tu.typed(tuty).bx(), idx, val.typed(valty).bx()).typed(Type::Void)
         }
-        TExpr::Collect(bytes) => TExpr::Collect(bytes).texpr(Type::Void),
-        TExpr::Allocate(1, ty @ Type::Tuple(..)) => TExpr::Allocate(1, ty.clone()).texpr(ty),
-        x @ TExpr::Allocate(..) => panic!("unimplemented {:?}", x),
-        TExpr::GlobalVar(x) => TExpr::GlobalVar(x).texpr(Type::Int),
-        TExpr::TupleLen(..) => unimplemented!(),
+        Collect(bytes) => Collect(bytes).typed(Type::Void),
+        Allocate(1, ty @ Type::Tuple(..)) => Allocate(1, ty.clone()).typed(ty),
+        x @ Allocate(..) => panic!("unimplemented {:?}", x),
+        GlobalVar(x) => GlobalVar(x).typed(Type::Int),
+        TupleLen(..) => unimplemented!(),
     }
 }
 
-pub fn typed_expr(e: Expr) -> TypedExpr {
+pub fn typed_expr(e: Expr) -> Expr {
     typed_expr_ctx(&vec![], e)
 }
 
-fn untyped_expr(TypedExpr(expr, _): TypedExpr) -> Expr {
+/*
+fn untyped_expr(Expr(expr, ty): Expr) -> Expr {
+    assert!(!ty.is_none());
+    use ExprK::*;
     match expr {
-        TExpr::Int(i) => TExpr::Int(i).expr(),
-        TExpr::Bool(b) => TExpr::Bool(b).expr(),
-        TExpr::Void => TExpr::Void.expr(),
-        TExpr::Var(x) => TExpr::Var(x).expr(),
-        TExpr::Let(x, expr, body) => TExpr::Let(x, expr.untyped().bx(), body.untyped().bx()).expr(),
-        TExpr::If(pred, then_, else_) => TExpr::If(
+        Int(i) => Int(i).expr(),
+        Bool(b) => Bool(b).expr(),
+        Void => Void.expr(),
+        Var(x) => Var(x).expr(),
+        Let(x, expr, body) => Let(x, expr.untyped().bx(), body.untyped().bx()).expr(),
+        If(pred, then_, else_) => If(
             pred.untyped().bx(),
             then_.untyped().bx(),
             else_.untyped().bx(),
         )
         .expr(),
-        TExpr::Read => TExpr::Read.expr(),
-        TExpr::UnaryOp(op, expr) => TExpr::UnaryOp(op, expr.untyped().bx()).expr(),
-        TExpr::BinaryOp(op, e1, e2) => {
-            TExpr::BinaryOp(op, e1.untyped().bx(), e2.untyped().bx()).expr()
-        }
-        TExpr::Tuple(es) => TExpr::Tuple(es.into_iter().map(|e| e.untyped()).collect()).expr(),
-        TExpr::TupleRef(tu, idx) => TExpr::TupleRef(tu.untyped().bx(), idx).expr(),
-        TExpr::TupleSet(tu, idx, val) => {
-            TExpr::TupleSet(tu.untyped().bx(), idx, val.untyped().bx()).expr()
-        }
-        TExpr::TupleLen(..) => unimplemented!(),
-        TExpr::Collect(..) => unimplemented!(),
-        TExpr::Allocate(..) => unimplemented!(),
-        TExpr::GlobalVar(..) => unimplemented!(),
+        Read => Read.expr(),
+        UnaryOp(op, expr) => UnaryOp(op, expr.untyped().bx()).expr(),
+        BinaryOp(op, e1, e2) => BinaryOp(op, e1.untyped().bx(), e2.untyped().bx()).expr(),
+        Tuple(es) => Tuple(es.into_iter().map(|e| e.untyped()).collect()).expr(),
+        TupleRef(tu, idx) => TupleRef(tu.untyped().bx(), idx).expr(),
+        TupleSet(tu, idx, val) => TupleSet(tu.untyped().bx(), idx, val.untyped().bx()).expr(),
+        TupleLen(..) => unimplemented!(),
+        Collect(..) => unimplemented!(),
+        Allocate(..) => unimplemented!(),
+        GlobalVar(..) => unimplemented!(),
     }
 }
+*/

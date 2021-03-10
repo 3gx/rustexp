@@ -10,7 +10,7 @@ mod rvar_anf_tests {
                      (add (add 30 (neg 15)) x))
             };
             println!("p1= {:?} ", p1);
-            let TypedExpr(_, p1ty) = typed_expr(p1.clone());
+            let Expr(_, p1ty) = typed_expr(p1.clone());
             println!("type= {:?}", p1ty);
             let v1 = interp_expr(&p1);
             println!("v1= {:?} ", v1);

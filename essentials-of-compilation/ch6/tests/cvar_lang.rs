@@ -190,7 +190,7 @@ mod cvar_lang {
                               (add y 20)
                               (add y 30))))
             };
-            let TypedExpr(_, ety) = typed_expr(e1.clone());
+            let Expr(_, ety) = typed_expr(e1.clone());
             println!("ety= {:?}", ety);
 
             let v1 = interp_expr(&e1);

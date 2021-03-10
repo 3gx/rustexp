@@ -41,14 +41,14 @@ mod rvar_lang {
         let e2 = expr! { (let [x1 32] (add (let [x2 10] x2) x1)) };
         println!("e1= {:?}", e1);
         println!("e2= {:?}", e2);
-        let TypedExpr(_, e1ty) = typed_expr(e1.clone());
-        let TypedExpr(_, e2ty) = typed_expr(e2.clone());
+        let Expr(_, e1ty) = typed_expr(e1.clone());
+        let Expr(_, e2ty) = typed_expr(e2.clone());
         println!("e1ty= {:?}", e1ty);
         println!("e2ty= {:?}", e2ty);
         let e1u = uniquify_expr(e1);
         println!("e1u= {:?}", e1u);
         assert_eq!(e2, e1u);
-        let TypedExpr(_, e1u_ty) = typed_expr(e1u);
+        let Expr(_, e1u_ty) = typed_expr(e1u);
         assert_eq!(e1ty, e1u_ty);
 
         gensym_reset();
@@ -90,7 +90,7 @@ mod rvar_lang {
                           (add y 10))))
         };
         println!("expr= {:?}", expr);
-        let TypedExpr(_, ety) = typed_expr(expr.clone());
+        let Expr(_, ety) = typed_expr(expr.clone());
         println!("ety= {:?}", ety);
         let prog = program![expr];
         let val = interp_program(&prog);
@@ -104,7 +104,7 @@ mod rvar_lang {
                   (if (if (lt x 1) (eq x 0) (eq x 2))
                       (add y 2)
                       (add y 10)))) };
-        let TypedExpr(_, ety) = typed_expr(expr.clone());
+        let Expr(_, ety) = typed_expr(expr.clone());
         println!("ety= {:?}", ety);
         let uexpr = uniquify_expr(expr);
         println!("uexpr= {:?}", uexpr);
