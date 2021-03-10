@@ -137,9 +137,13 @@ pub macro mktype {
     (Int) => {Type::Int},
     (Bool) => {Type::Bool},
     (Void) => {Type::Void},
-    (($($argty:tt)*) -> $retty:tt) => {Type::Fun(vec![$(mktype!($argty)),*], Box::new(mktype!($retty)))},
+    ((-> $ty1:tt $($rest:tt)*)) => { {
+           let mut types = vec![mktype!($ty1), $(mktype!($rest)),*];
+           let retty = types.pop().unwrap();
+           Type::Fun(types,  Box::new(retty))
+        }
+    },
     ((Tuple $($types:tt)*)) => {Type::Tuple(vec![$(mktype!($types)),*])},
-    //($($tt:tt)*) => {Type::Void},
 }
 
 pub macro mkfun(($name:ident $([$var:ident : $($varty:tt)*])*), $retty:tt, $body:tt) {

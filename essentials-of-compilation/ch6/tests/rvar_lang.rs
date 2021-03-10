@@ -208,13 +208,13 @@ mod rvar_lang {
         let (p, v) = {
             use RVar::*;
             let p = program1! {
-                (fundef (f1 [f : (Int) -> Int] [g : (Tuple Int Int)]) -> (Tuple Int Int)
+                (fundef (f1 [f : (-> Int Int)] [g : (Tuple Int Int)]) -> (Tuple Int Int)
                         (add x 2)
                 )
-                (fundef (f2 [f : (Int) -> Int] [g : Int]) -> (Tuple Int Int)
+                (fundef (f2 [f : (-> Int Int)] [g : Int]) -> (Tuple Int Int)
                         (add x 2)
                 )
-                (fundef (map_tu2 [f: (Int) -> Int]
+                (fundef (map_tu2 [f: (-> Int Int)]
                                  [v: (Tuple Int Int)]) -> (Tuple Int Int)
                         (tuple (f (tupleref v 0) (tupleref v 1))))
                 (fundef (add1 [x : Int]) -> Int
