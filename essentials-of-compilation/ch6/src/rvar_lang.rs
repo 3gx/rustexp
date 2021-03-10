@@ -137,15 +137,17 @@ pub macro mktype {
     (Int) => {Type::Int},
     (Bool) => {Type::Bool},
     (Void) => {Type::Void},
-    ((Tuple $($types:tt)*)) => {Type::Tuple(vec![$(mktype!($types))*])},
+    (($($argty:tt)*) -> $retty:tt) => {Type::Fun(vec![$(mktype!($argty)),*], Box::new(mktype!($retty)))},
+    ((Tuple $($types:tt)*)) => {Type::Tuple(vec![$(mktype!($types)),*])},
+    //($($tt:tt)*) => {Type::Void},
 }
 
-pub macro mkfun(($name:ident $([$var:ident : $varty:tt])*)) { // : $retty:tt $expr:tt) {
+pub macro mkfun(($name:ident $([$var:ident : $($varty:tt)*])*) -> $retty:tt $expr:tt) {
     FunDef{
           name : stringify!($name).to_string(),
-          params: vec![$((stringify!($var).to_string(), mktype!($varty))),*],
-          ret: Type::Void, //mktype!($retty),
-          body: ExprK::Void.expr(), //expr!{$expr}
+          params: vec![$((stringify!($var).to_string(), mktype!($($varty)*))),*],
+          ret: mktype!($retty),
+          body: expr!{$expr}
     }
 }
 pub macro program1impl {
