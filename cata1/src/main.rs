@@ -100,14 +100,6 @@ fn eval_fixed_expr(e: &Fix<ExprF<Int>>) -> Int {
     }
 }
 
-/*
-trait Fix<T> {
-    fn unfix(&self, f: &dyn Fix<T>) -> T;
-}
-*/
-
-//impl<T, F: Fn(&Mu<T>) -> T> Mu<T> for ExprF
-
 fn main() {
     use Expr::*;
     let expr = Mul(Add(Value(1).bx(), Value(2).bx()).bx(), Value(3).bx());
