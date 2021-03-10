@@ -245,6 +245,7 @@ pub macro expr {
     (true) => { ExprK::Bool(true).expr() },
     (false) => { ExprK::Bool(false).expr() },
     ($id:ident) => { stringify!($id) },
+    (- $expr:tt) => { ExprK::Neg(Box::new(expr!{$expr})).expr() },
     (($expr:tt $($args:tt)*)) => {ExprK::Apply(Box::new(expr!{$expr}.into_term()),
                                                vec![$(expr!{$args}.into_term()),*]).expr()},
     ($e:expr) => { $e },
