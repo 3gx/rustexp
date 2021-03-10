@@ -71,6 +71,8 @@ pub trait FixTr {
 pub struct Fix<F: FixTr>(Box<F::DoFix<Fix<F>>>);
 */
 
+use std::fmt::Debug;
+
 trait TFix {
     type Unwrapped;
     type Wrapped<F>;
