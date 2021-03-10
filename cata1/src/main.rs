@@ -44,13 +44,13 @@ impl<A: Clone + Debug> ExprF<A> {
 
 trait Functor {
     type Unwrapped;
-    type Wrapped<B>: Functor;
-    fn fmap<F: Fn(&Self::Unwrapped) -> B, B>(&self, f: F) -> Self::Wrapped<B>;
+    type Wrapped<B: Clone + Debug>: Functor + FixTrait + Debug + Clone;
+    fn fmap<F: Fn(&Self::Unwrapped) -> B, B: Clone + Debug>(&self, f: F) -> Self::Wrapped<B>;
 }
 
 impl<A> Functor for ExprF<A> {
     type Unwrapped = A;
-    type Wrapped<B> = ExprF<B>;
+    type Wrapped<B: Clone + Debug> = ExprF<B>;
 
     fn fmap<F: Fn(&A) -> B, B>(&self, f: F) -> ExprF<B> {
         match self {
@@ -64,7 +64,7 @@ impl<A> Functor for ExprF<A> {
 use std::fmt::Debug;
 
 trait FixTrait {
-    type Fix<F: Clone + Debug>: Clone + Debug;
+    type Fix<F: Clone + Debug>: Clone + Debug + Functor;
 }
 
 struct Fix<F: FixTrait + Clone + Debug>(Box<F::Fix<Fix<F>>>);
@@ -109,6 +109,26 @@ fn eval_fixed_expr(e: &Fix<ExprF<Int>>) -> Int {
 fn almost_cata(eval: &impl Fn(&ExprF<Int>) -> Int, exprf: &Fix<ExprF<Int>>) -> Int {
     eval(&exprf.0.fmap(|x| almost_cata(eval, &x)))
 }
+
+/*
+fn int_cata<F: Functor + FixTrait>(
+    alg: &impl Fn(&F::Wrapped<Int>) -> Int,
+    expr: &Fix<F::Wrapped<Int>>,
+) -> Int {
+    let tmp = expr.0.fmap(|x| int_cata(alg, &x));
+    unimplemented!()
+    //alg(&expr.0.fmap(|x| int_cata(alg, &x)))
+}
+*/
+
+/*
+fn cata<F: Functor + FixTrait, A: FixTrait + Clone + Debug>(
+    alg: &impl Fn(&F::Wrapped<A>) -> A,
+    expr: &Fix<F::Wrapped<A>>,
+) -> A {
+    alg(&expr.0.fmap(|x| cata(alg, &x)))
+}
+*/
 
 fn main() {
     use Expr::*;
