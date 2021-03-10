@@ -1,6 +1,7 @@
 #![feature(generic_associated_types)]
 #![allow(incomplete_features)]
 #![feature(box_syntax)]
+#![feature(associated_type_defaults)]
 
 pub type Int = i64;
 
@@ -108,6 +109,10 @@ fn eval_fixed_expr(e: &Fix<ExprF<Int>>) -> Int {
 
 fn almost_cata(eval: &impl Fn(&ExprF<Int>) -> Int, exprf: &Fix<ExprF<Int>>) -> Int {
     eval(&exprf.0.fmap(|x| almost_cata(eval, &x)))
+}
+
+trait VecGAT {
+    type Applied<A> = Vec<A>;
 }
 
 /*
