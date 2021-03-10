@@ -66,9 +66,23 @@ pub trait FixTr {
     //    fn unfix(self) -> Self::UnFix;
 }
 
+/*
 #[derive(Debug, Clone)]
 pub struct Fix<F: FixTr>(Box<F::DoFix<Fix<F>>>);
+*/
 
+trait TFix {
+    type Unwrapped;
+    type Wrapped<F>;
+}
+#[derive(Debug, Clone)]
+struct Fix<F: TFix>(Box<F::Wrapped<Fix<F>>>);
+impl<F> TFix for ExprF<F> {
+    type Unwrapped = F;
+    type Wrapped<A> = ExprF<A>;
+}
+
+/*
 impl<F: FixTr> FixTr for Fix<F> {
     type UnFix = F;
     type DoFix<B: FixTr> = Self;
@@ -78,6 +92,7 @@ impl<A> FixTr for ExprF<A> {
     type UnFix = A;
     type DoFix<B: FixTr> = ExprF<B>;
 }
+*/
 
 pub fn eval_exprf(e: &ExprF<Int>) -> Int {
     use ExprF::*;
@@ -88,11 +103,14 @@ pub fn eval_exprf(e: &ExprF<Int>) -> Int {
     }
 }
 
-/*
-pub fn evalFixedExpr<T>(e: &Fix<ExprF<T>>) -> Int {
-    match e.unfix() {}
+fn eval_fixed_expr<T>(e: Fix<ExprF<T>>) -> Int {
+    use ExprF::*;
+    match *e.0 {
+        ValueF(i) => i,
+        AddF(e1, e2) => eval_fixed_expr(*e1) + eval_fixed_expr(*e2),
+        MulF(e1, e2) => eval_fixed_expr(*e1) * eval_fixed_expr(*e2),
+    }
 }
-*/
 
 /*
 trait Fix<T> {
@@ -126,14 +144,14 @@ fn main() {
         MulF(AddF(ValueF(1).bx(), ValueF(2).bx()).bx(), ValueF(3).bx());
     println!("exprf= {:?}", exprf);
 
-    let _e1: Fix<ExprF<Int>> = Fix(ValueF(1).bx());
-    //println!("e1= {:?}", _e1);
-    let _e2: Fix<ExprF<Int>> =
-        Fix(AddF(Box::new(Fix(ValueF(1).bx())), Box::new(Fix(ValueF(2).bx()))).bx());
-    //println!("e2= {:?}", _e2);
+    let ef1: Fix<ExprF<Int>> = Fix(ValueF(1).bx());
+    let vf1 = eval_fixed_expr(ef1);
+    println!("valf= {:?}", vf1);
 
-    /*
-    let valf = eval_exprf(&exprf);
-    println!("valf= {:?}", valf);
-    */
+    //println!("e1= {:?}", _e1);
+    let ef2: Fix<ExprF<Int>> =
+        Fix(AddF(Box::new(Fix(ValueF(1).bx())), Box::new(Fix(ValueF(2).bx()))).bx());
+    let vf2 = eval_fixed_expr(ef2);
+    println!("vf2= {:?}", vf2);
+    //println!("e2= {:?}", _e2);
 }
