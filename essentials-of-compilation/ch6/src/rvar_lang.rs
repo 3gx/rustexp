@@ -142,24 +142,27 @@ pub macro mktype {
     //($($tt:tt)*) => {Type::Void},
 }
 
-pub macro mkfun(($name:ident $([$var:ident : $($varty:tt)*])*) -> $retty:tt $expr:tt) {
+pub macro mkfun(($name:ident $([$var:ident : $($varty:tt)*])*), $retty:tt, $body:tt) {
     FunDef{
           name : stringify!($name).to_string(),
           params: vec![$((stringify!($var).to_string(), mktype!($($varty)*))),*],
           ret: mktype!($retty),
-          body: expr!{$expr}
+          body: expr!{$body}
     }
 }
 pub macro program1impl {
-    ((@prog) (@funs $($funs:expr),*) (@body $($body:tt)*)) => {
-        Program { funs : vec![$($funs)*,], expr: ExprK::Void.expr() }
+    ((@prog (fundef $params:tt -> $retty:tt $funbody:tt) $($tail:tt)*)
+     (@funs $($funs:tt)*)) => {
+        program1impl!((@prog $($tail)*)
+                      (@funs $($funs)* mkfun!($params, $retty, $funbody),))
     },
-    ((@prog (fundef $($fundef:tt)*) $($tail:tt)*) (@funs $($funs:expr),*) (@body $($body:tt)*)) => {
-       program1impl!((@prog $($tail)*) (@funs $($funs),* mkfun!($($fundef)*)) (@body $($body)*))
+    ((@prog $body:tt)
+     (@funs $($funs:tt)*)) => {
+        Program { funs : vec![$($funs)*], expr: expr!{$body} }
     },
 }
 pub macro program1 {
-    ($($tt:tt)*) => {program1impl!((@prog $($tt)*) (@funs) (@body))},
+    ($($tt:tt)*) => {program1impl!((@prog $($tt)*) (@funs))},
 }
 
 pub macro expr {
@@ -242,6 +245,8 @@ pub macro expr {
     (true) => { ExprK::Bool(true).expr() },
     (false) => { ExprK::Bool(false).expr() },
     ($id:ident) => { stringify!($id) },
+    (($expr:tt $($args:tt)*)) => {ExprK::Apply(Box::new(expr!{$expr}.into_term()),
+                                               vec![$(expr!{$args}.into_term()),*]).expr()},
     ($e:expr) => { $e },
 }
 

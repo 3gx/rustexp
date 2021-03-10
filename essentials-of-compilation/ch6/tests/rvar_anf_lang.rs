@@ -103,7 +103,7 @@ mod rvar_anf_tests {
             let e = expr! {
                 (let [v (tuple (tuple 44))]
                      (let [x (let [w (tuple 48)]
-                                   (let [_ (tupleset! v 0 w)] (-6)))]
+                                   (let [_ (tupleset! v 0 w)] {-6}))]
                           (add x (tupleref (tupleref v 0) 0))))
             };
             let v = interp_expr(&e);

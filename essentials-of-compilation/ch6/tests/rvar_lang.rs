@@ -144,7 +144,7 @@ mod rvar_lang {
             let e = expr! {
                 (let [v (tuple (tuple 44))]
                      (let [x (let [w (tuple 48)]
-                                   (let [_ (tupleset! v 0 w)] (-6)))]
+                                   (let [_ (tupleset! v 0 w)] {-6}))]
                           (add x (tupleref (tupleref v 0) 0))))
             };
             let v = interp_expr(&e);
@@ -211,14 +211,15 @@ mod rvar_lang {
                 (fundef (f1 [f : (Int) -> Int] [g : (Tuple Int Int)]) -> (Tuple Int Int)
                         (add x 2)
                 )
-                /*
-                (fundef (map_tu2 [f: (Int -> Int)]
+                (fundef (f2 [f : (Int) -> Int] [g : Int]) -> (Tuple Int Int)
+                        (add x 2)
+                )
+                (fundef (map_tu2 [f: (Int) -> Int]
                                  [v: (Tuple Int Int)]) -> (Tuple Int Int)
                         (tuple (f (tupleref v 0) (tupleref v 1))))
-                (fundef (add1 [x : Int]) : Int
+                (fundef (add1 [x : Int]) -> Int
                         (add x 1))
                 (tupleref (map_tu2 add1 (vector 0 41)) 1)
-                */
             };
             let v = 42;
             (p, v)
