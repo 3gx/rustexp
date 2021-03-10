@@ -62,23 +62,23 @@ impl<A> Functor for ExprF<A> {
 
 use std::fmt::Debug;
 
-trait TFix {
+trait FixTrait {
     type Fix<F: Clone + Debug>: Clone + Debug;
 }
 
-struct Fix<F: TFix + Clone + Debug>(Box<F::Fix<Fix<F>>>);
-impl<F: TFix + Clone + Debug> Clone for Fix<F> {
+struct Fix<F: FixTrait + Clone + Debug>(Box<F::Fix<Fix<F>>>);
+impl<F: FixTrait + Clone + Debug> Clone for Fix<F> {
     fn clone(&self) -> Self {
         Fix(self.0.clone())
     }
 }
-impl<F: TFix + Clone + Debug> Debug for Fix<F> {
+impl<F: FixTrait + Clone + Debug> Debug for Fix<F> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Fix").field(&self.0).finish()
     }
 }
 
-impl<F: Clone + Debug> TFix for ExprF<F> {
+impl<F: Clone + Debug> FixTrait for ExprF<F> {
     type Fix<A: Clone + Debug> = ExprF<A>;
 }
 
