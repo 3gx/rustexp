@@ -384,11 +384,7 @@ impl IntoTerm for &str {
 use std::cell::RefCell;
 use std::rc::Rc;
 #[derive(Debug, Clone, PartialEq)]
-pub struct VFun {
-    env: Env,
-    vars: Vec<String>,
-    body: Expr,
-}
+pub struct VFun(Env, Vec<String>, Expr);
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     None,
@@ -578,11 +574,7 @@ pub fn interp_impl(env: &Env, Expr(e, _): &Expr) -> Value {
             }
         }
         ExprK::Apply(fun, args) => {
-            let VFun {
-                env: fun_env,
-                vars,
-                body,
-            } = interp(env, fun).fun().unwrap();
+            let VFun(fun_env, vars, body) = interp(env, fun).fun().unwrap();
             if vars.len() != args.len() {
                 panic!(
                     "argument mismatch for fun {:?}, expecting {}, got {}",
@@ -631,12 +623,7 @@ pub fn interp_program(p: &Program) -> Value {
                  body,
              }| {
                 let vars = params.into_iter().map(|(name, _)| name).collect();
-                let vfun = VFun {
-                    env: Env::new(),
-                    vars,
-                    body,
-                };
-                (name, Value::Fun(vfun))
+                (name, Value::Fun(VFun(Env::new(), vars, body)))
             },
         )
         .collect();
@@ -646,8 +633,8 @@ pub fn interp_program(p: &Program) -> Value {
         let cloned_genv = genv.clone();
         let mut env = genv;
         for (_, val) in &mut env {
-            if let Value::Fun(vfun) = val {
-                vfun.env = cloned_genv.clone();
+            if let Value::Fun(VFun(env, _, _)) = val {
+                *env = cloned_genv.clone();
             }
         }
         env
