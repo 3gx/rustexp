@@ -107,7 +107,7 @@ impl Expr {
 pub struct DefFun {
     pub name: String,
     pub params: Vec<(String, Type)>,
-    pub ret: Type,
+    pub retty: Type,
     pub body: Expr,
 }
 
@@ -152,7 +152,7 @@ pub macro mkfun(($name:ident $([$var:ident : $($varty:tt)*])*), $retty:tt, $body
     DefFun{
           name : stringify!($name).to_string(),
           params: vec![$((stringify!($var).to_string(), mktype!($($varty)*))),*],
-          ret: mktype!($retty),
+          retty: mktype!($retty),
           body: expr!{$body}
     }
 }
@@ -591,8 +591,42 @@ pub fn interp_texpr(e: &Expr) -> Value {
 }
 
 pub fn interp_program(p: &Program) -> Value {
-    let Program { funs: _, main } = p;
-    interp_expr(main)
+    let Program { funs, main } = p;
+
+    // first pass: create a global environment with functions
+    let genv: Env = funs
+        .iter()
+        .cloned()
+        .map(
+            |DefFun {
+                 name,
+                 params,
+                 retty: _,
+                 body,
+             }| {
+                let vars = params.into_iter().map(|(name, _)| name).collect();
+                let vfun = VFun {
+                    env: Env::new(),
+                    vars,
+                    body,
+                };
+                (name, Value::Fun(vfun))
+            },
+        )
+        .collect();
+
+    // update each function environment with the created global env
+    let genv = {
+        let cloned_genv = genv.clone();
+        let mut env = genv;
+        for (_, val) in &mut env {
+            if let Value::Fun(vfun) = val {
+                vfun.env = cloned_genv.clone();
+            }
+        }
+        env
+    };
+    interp_impl(&genv, main)
 }
 
 use std::collections::HashMap;
