@@ -494,7 +494,7 @@ pub fn sym_set<T: Clone>(sym: &SymTable<T>, key: &str, val: &T) -> SymTable<T> {
 }
 
 pub fn interp_impl(env: &Env, Expr(e, _): &Expr) -> Value {
-    let interp = |env, e| interp_impl(env, e);
+    let interp = interp_impl;
     use self::CmpOpKind as C;
     use {BinaryOpKind::*, UnaryOpKind::*};
     match e {
@@ -510,7 +510,10 @@ pub fn interp_impl(env: &Env, Expr(e, _): &Expr) -> Value {
         ExprK::BinaryOp(Add, e1, e2) => {
             Value::Int(interp(env, e1).int().unwrap() + interp(env, e2).int().unwrap())
         }
-        ExprK::Var(x) => sym_get(env, &x).unwrap().clone(),
+        ExprK::Var(x) => match sym_get(env, &x) {
+            Some(val) => val.clone(),
+            _ => panic!("unknown variable {:?}", x),
+        },
         ExprK::Let(x, e, body) => {
             let new_env = sym_set(env, x, &interp(env, e));
             interp(&new_env, body)
@@ -574,7 +577,30 @@ pub fn interp_impl(env: &Env, Expr(e, _): &Expr) -> Value {
                 _ => panic!("internal error, expecting tuple but got {:?}", tu)
             }
         }
-        ExprK::Apply(_fun, _args) => unimplemented!(),
+        ExprK::Apply(fun, args) => {
+            let VFun {
+                env: fun_env,
+                vars,
+                body,
+            } = interp(env, fun).fun().unwrap();
+            if vars.len() != args.len() {
+                panic!(
+                    "argument mismatch for fun {:?}, expecting {}, got {}",
+                    fun,
+                    vars.len(),
+                    args.len()
+                );
+            }
+
+            let fun_env = {
+                let mut fun_env = fun_env;
+                for (var, arg) in vars.into_iter().zip(args.iter()) {
+                    fun_env = sym_set(&fun_env, &var, &interp_impl(&env, arg));
+                }
+                fun_env
+            };
+            interp_impl(&fun_env, &body)
+        }
         ExprK::TupleLen(..) => unimplemented!(),
         ExprK::Allocate(..) => unimplemented!(),
         ExprK::Collect(..) => unimplemented!(),
