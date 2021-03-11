@@ -104,12 +104,7 @@ impl Expr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct DefFun {
-    pub name: String,
-    pub params: Vec<(String, Type)>,
-    pub retty: Type,
-    pub body: Expr,
-}
+pub struct DefFun(pub String, pub Vec<(String, Type)>, pub Type, pub Expr);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
@@ -149,12 +144,10 @@ pub macro mktype {
 }
 
 pub macro mkfun(($name:ident $([$var:ident : $($varty:tt)*])*), $retty:tt, $body:tt) {
-    DefFun{
-          name : stringify!($name).to_string(),
-          params: vec![$((stringify!($var).to_string(), mktype!($($varty)*))),*],
-          retty: mktype!($retty),
-          body: expr!{$body}
-    }
+    DefFun(stringify!($name).to_string(),
+           vec![$((stringify!($var).to_string(), mktype!($($varty)*))),*],
+           mktype!($retty),
+           expr!{$body})
 }
 pub macro program1impl {
     ((@prog (defun $params:tt -> $retty:tt $funbody:tt) $($tail:tt)*)
@@ -615,17 +608,10 @@ pub fn interp_program(p: &Program) -> Value {
     let genv: Env = funs
         .iter()
         .cloned()
-        .map(
-            |DefFun {
-                 name,
-                 params,
-                 retty: _,
-                 body,
-             }| {
-                let vars = params.into_iter().map(|(name, _)| name).collect();
-                (name, Value::Fun(VFun(Env::new(), vars, body)))
-            },
-        )
+        .map(|DefFun(name, params, _, body)| {
+            let vars = params.into_iter().map(|(name, _)| name).collect();
+            (name, Value::Fun(VFun(Env::new(), vars, body)))
+        })
         .collect();
 
     // update each function environment with the created global env
@@ -869,6 +855,10 @@ pub fn typed_expr_ctx(ctx: &Ctx, Expr(expr, ty): Expr) -> Expr {
 
 pub fn typed_expr(e: Expr) -> Expr {
     typed_expr_ctx(&vec![], e)
+}
+
+pub fn typed_program(Program { funs, main }: Program) -> Program {
+    Program { funs, main }
 }
 
 /*
