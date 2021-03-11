@@ -383,7 +383,7 @@ impl IntoTerm for &str {
 
 use std::cell::RefCell;
 use std::rc::Rc;
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     None,
     Int(Int),
@@ -391,6 +391,7 @@ pub enum Value {
     Void,
     Tuple(Vec<Value>),
     Heap(Rc<RefCell<Value>>),
+    Fun(Env, Expr),
 }
 impl Default for Value {
     fn default() -> Self {
@@ -401,30 +402,44 @@ impl Value {
     pub fn int(self) -> Option<Int> {
         match self {
             Value::Int(n) => Some(n),
+            Value::Heap(what) => what.take().int(),
             Value::Bool(_) => None,
             Value::Void => None,
             Value::Tuple(..) => None,
-            Value::Heap(what) => what.take().int(),
             Value::None => None,
+            Value::Fun(..) => None,
         }
     }
     pub fn bool(self) -> Option<Bool> {
         match self {
-            Value::Int(_) => None,
             Value::Bool(b) => Some(b),
+            Value::Heap(what) => what.take().clone().bool(),
+            Value::Int(_) => None,
             Value::Void => None,
             Value::Tuple(..) => None,
-            Value::Heap(what) => what.take().clone().bool(),
             Value::None => None,
+            Value::Fun(..) => None,
         }
     }
     pub fn tuple(self) -> Option<Vec<Value>> {
         match self {
+            Value::Tuple(vec) => Some(vec),
+            Value::Heap(what) => what.take().clone().tuple(),
             Value::Int(_) => None,
             Value::Bool(_) => None,
             Value::Void => None,
-            Value::Tuple(vec) => Some(vec),
-            Value::Heap(what) => what.take().clone().tuple(),
+            Value::None => None,
+            Value::Fun(..) => None,
+        }
+    }
+    pub fn fun(self) -> Option<(Env, Expr)> {
+        match self {
+            Value::Fun(env, expr) => Some((env, expr)),
+            Value::Tuple(_) => None,
+            Value::Heap(_) => None,
+            Value::Int(_) => None,
+            Value::Bool(_) => None,
+            Value::Void => None,
             Value::None => None,
         }
     }
