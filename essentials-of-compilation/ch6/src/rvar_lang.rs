@@ -384,6 +384,12 @@ impl IntoTerm for &str {
 use std::cell::RefCell;
 use std::rc::Rc;
 #[derive(Debug, Clone, PartialEq)]
+pub struct VFun {
+    env: Env,
+    vars: Vec<String>,
+    body: Expr,
+}
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     None,
     Int(Int),
@@ -391,7 +397,7 @@ pub enum Value {
     Void,
     Tuple(Vec<Value>),
     Heap(Rc<RefCell<Value>>),
-    Fun(Env, Expr),
+    Fun(VFun),
 }
 impl Default for Value {
     fn default() -> Self {
@@ -432,9 +438,9 @@ impl Value {
             Value::Fun(..) => None,
         }
     }
-    pub fn fun(self) -> Option<(Env, Expr)> {
+    pub fn fun(self) -> Option<VFun> {
         match self {
-            Value::Fun(env, expr) => Some((env, expr)),
+            Value::Fun(vfun) => Some(vfun),
             Value::Tuple(_) => None,
             Value::Heap(_) => None,
             Value::Int(_) => None,
