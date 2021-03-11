@@ -107,10 +107,7 @@ impl Expr {
 pub struct DefFun(pub String, pub Vec<(String, Type)>, pub Type, pub Expr);
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Program {
-    pub funs: Vec<DefFun>,
-    pub main: Expr,
-}
+pub struct Program(pub Vec<DefFun>, pub Expr);
 
 // ---------------------------------------------------------------------------
 // macro-base DSL
@@ -123,10 +120,7 @@ pub macro bool($b:expr) {
 }
 
 pub macro program($e:expr) {
-    Program {
-        funs: vec![],
-        main: $e.into_term(),
-    }
+    Program(vec![], $e.into_term())
 }
 pub macro mktype {
     (Int) => {Type::Int},
@@ -157,7 +151,7 @@ pub macro program1impl {
     },
     ((@prog $main:tt)
      (@funs $($funs:tt)*)) => {
-        Program { funs : vec![$($funs)*], main: expr!{$main} }
+        Program(vec![$($funs)*], expr!{$main})
     },
 }
 pub macro program1 {
@@ -601,9 +595,7 @@ pub fn interp_texpr(e: &Expr) -> Value {
     interp_impl(&vec![], e)
 }
 
-pub fn interp_program(p: &Program) -> Value {
-    let Program { funs, main } = p;
-
+pub fn interp_program(Program(funs, main): &Program) -> Value {
     // first pass: create a global environment with functions
     let genv: Env = funs
         .iter()
@@ -703,10 +695,9 @@ pub fn uniquify_expr_impl(umap: &UMap, Expr(expr, ty): Expr) -> Expr {
 pub fn uniquify_expr(e: Expr) -> Expr {
     uniquify_expr_impl(&sym![], e)
 }
-pub fn uniquify(p: Program) -> Program {
-    let Program { funs, main } = p;
+pub fn uniquify(Program(funs, main): Program) -> Program {
     let main = uniquify_expr(main);
-    Program { funs, main }
+    Program(funs, main)
 }
 
 pub type Ctx = SymTable<Type>;
@@ -857,8 +848,32 @@ pub fn typed_expr(e: Expr) -> Expr {
     typed_expr_ctx(&vec![], e)
 }
 
-pub fn typed_program(Program { funs, main }: Program) -> Program {
-    Program { funs, main }
+fn typed_func(ctx: &Ctx, DefFun(name, params, retty, expr): DefFun) -> DefFun {
+    let mut ctx = ctx.clone();
+    for (name, ty) in &params {
+        ctx = sym_set(&ctx, &name, &ty);
+    }
+    let expr = typed_expr_ctx(&ctx, expr);
+
+    let Expr(_, ty) = &expr;
+    assert!(!ty.is_none());
+
+    DefFun(name, params, retty, expr)
+}
+pub fn typed_program(Program(funs, main): Program) -> Program {
+    let gctx: Ctx = funs
+        .iter()
+        .cloned()
+        .map(|DefFun(name, _, retty, _)| (name.clone(), retty.clone()))
+        .collect();
+
+    let funs: Vec<_> = funs.into_iter().map(|fun| typed_func(&gctx, fun)).collect();
+    let main = typed_expr_ctx(&gctx, main);
+
+    let Expr(_, ty) = &main;
+    assert!(!ty.is_none());
+
+    Program(funs, main)
 }
 
 /*

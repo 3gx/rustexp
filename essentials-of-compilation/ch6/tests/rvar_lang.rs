@@ -217,7 +217,7 @@ mod rvar_lang {
             };
             let v = interp_program(&p);
             assert_eq!(Value::from(42), v);
-            let p = typed_program(p);
+            //let p = typed_program(p);
             let v1 = interp_program(&p);
             assert_eq!(v1, v);
             (p, v)
