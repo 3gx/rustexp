@@ -15,6 +15,9 @@ impl Expr {
     pub fn new(item: ExprK) -> Self {
         Expr(Box::new(item))
     }
+    pub fn unbox(self) -> ExprK {
+        *self.0
+    }
 }
 
 impl From<ExprK> for Expr {
@@ -24,8 +27,11 @@ impl From<ExprK> for Expr {
 }
 
 fn whnf(ee: Expr) -> Expr {
-    fn doit(ee: Expr, r#as: Vec<Expr>) -> Expr {
-        todo!()
+    fn spine(ee: Expr, r#as: Vec<Expr>) -> Expr {
+        match ee.unbox() {
+            ExprK::App(f, a) => spine(f, r#as),
+            _ => todo!(),
+        }
     }
     todo!()
 }
