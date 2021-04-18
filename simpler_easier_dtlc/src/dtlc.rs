@@ -38,14 +38,24 @@ impl From<ExprK> for Expr {
 }
 
 use std::collections::BTreeSet;
-trait VecOps {
+trait SetOps {
     fn remove(self, el: Self) -> Self;
+    fn union(self, el: Self) -> Self;
 }
 
-impl<T: Ord> VecOps for Vec<T> {
-    fn remove(self, el: Self) -> Self {
-        let el: BTreeSet<T> = el.into_iter().collect();
-        self.into_iter().filter(|x| !el.get(x).is_none()).collect()
+impl<T: Ord> SetOps for Vec<T> {
+    fn remove(self, y: Self) -> Self {
+        let y: BTreeSet<T> = y.into_iter().collect();
+        self.into_iter().filter(|x| y.get(x).is_none()).collect()
+    }
+    fn union(self, y: Self) -> Self {
+        let x: BTreeSet<&T> = self.iter().collect();
+        let y: Self = y.into_iter().filter(|z| x.get(z).is_none()).collect();
+        let mut x = self;
+        for el in y.into_iter() {
+            x.push(el)
+        }
+        x
     }
 }
 
@@ -53,9 +63,9 @@ fn free_vars(expr: Expr) -> Vec<Sym> {
     use ExprK::*;
     match expr.unbox() {
         Var(s) => vec![s],
-        App(f, a) => [free_vars(f), free_vars(a)].concat(),
-        Lam(i, t, e) => [free_vars(t), free_vars(e).remove(vec![i])].concat(),
-        Pi(i, k, t) => [free_vars(k), free_vars(t).remove(vec![i])].concat(),
+        App(f, a) => free_vars(f).union(free_vars(a)),
+        Lam(i, t, e) => free_vars(t).union(free_vars(e).remove(vec![i])),
+        Pi(i, k, t) => free_vars(k).union(free_vars(t).remove(vec![i])),
         Kind(_) => vec![],
     }
 }
@@ -65,6 +75,28 @@ mod test {
     use super::*;
     #[test]
     fn test1() {
-        println!("hello world!");
+        let x: Vec<Sym> = vec!["x".into(), "y".into(), "z".into()];
+        let y: Vec<Sym> = vec!["u".into(), "v".into()];
+        let z = x.union(y);
+        let r: Vec<Sym> = vec!["x".into(), "y".into(), "z".into(), "u".into(), "v".into()];
+        assert_eq!(z, r);
+
+        let x: Vec<Sym> = vec!["x".into(), "u".into(), "z".into()];
+        let y: Vec<Sym> = vec!["u".into(), "v".into()];
+        let z = x.union(y);
+        let r: Vec<Sym> = vec!["x".into(), "u".into(), "z".into(), "v".into()];
+        assert_eq!(z, r);
+
+        let x: Vec<Sym> = vec!["x".into(), "u".into(), "z".into()];
+        let y: Vec<Sym> = vec!["u".into(), "v".into()];
+        let z = x.remove(y);
+        let r: Vec<Sym> = vec!["x".into(), "z".into()];
+        assert_eq!(z, r);
+
+        let x: Vec<Sym> = vec![];
+        let y: Vec<Sym> = vec!["u".into(), "v".into()];
+        let z = x.union(y);
+        let r: Vec<Sym> = vec!["u".into(), "v".into()];
+        assert_eq!(z, r);
     }
 }
