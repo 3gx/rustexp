@@ -28,12 +28,8 @@ mod test {
     fn test1() {
         use ExprK::*;
         let expr: Expr = App(
-            Lam(
-                "x".to_string(),
-                Lam("y".to_string(), Var("y".to_string()).into()).into(),
-            )
-            .into(),
-            Lam("z".to_string(), Var("z".to_string()).into()).into(),
+            Lam("x".into(), Lam("y".into(), Var("y".into()).into()).into()).into(),
+            Lam("z".into(), Var("z".into()).into()).into(),
         )
         .into();
         let fmt = format!("{:?}", expr);
