@@ -26,12 +26,27 @@ impl From<ExprK> for Expr {
     }
 }
 
+fn subst(v: Sym, x: Expr, b: Expr) -> Expr {
+    todo!()
+}
+
 fn whnf(ee: Expr) -> Expr {
     fn spine(ee: Expr, r#as: Vec<Expr>) -> Expr {
+        match (ee.unbox(), &r#as[..]) {
+            (ExprK::App(f, a), [rest @ ..]) => spine(f, [&[a], &rest[..]].concat()),
+            (ExprK::Lam(s, e), [a, rest @ ..]) => spine(subst(s, a.clone(), e), rest.to_vec()),
+            (f, r#as) => r#as
+                .iter()
+                .fold(Expr::new(f), |acc, x| Expr::new(ExprK::App(acc, x.clone()))),
+        }
+
+        /*
         match ee.unbox() {
-            ExprK::App(f, a) => spine(f, r#as),
+            ExprK::App(f, a) => spine(f, [&[a], &r#as[..]].concat()),
+            //            ExprK::Lam(s, e) => spine(subst(s, r#as[0], e), r#as[1..].to_vec()),
             _ => todo!(),
         }
+        */
     }
     todo!()
 }
