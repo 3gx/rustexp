@@ -48,14 +48,13 @@ impl<T: Ord> SetOps for Vec<T> {
         let y: BTreeSet<T> = y.into_iter().collect();
         self.into_iter().filter(|x| y.get(x).is_none()).collect()
     }
-    fn union(self, y: Self) -> Self {
+    fn union(mut self, y: Self) -> Self {
         let x: BTreeSet<&T> = self.iter().collect();
         let y: Self = y.into_iter().filter(|z| x.get(z).is_none()).collect();
-        let mut x = self;
         for el in y.into_iter() {
-            x.push(el)
+            self.push(el)
         }
-        x
+        self
     }
 }
 
