@@ -1,3 +1,5 @@
+#![allow(unused_variables)]
+#![allow(dead_code)]
 type Sym = String;
 
 #[derive(Debug, Clone)]
@@ -19,6 +21,13 @@ impl From<ExprK> for Expr {
     fn from(item: ExprK) -> Self {
         Expr::new(item)
     }
+}
+
+fn whnf(ee: Expr) -> Expr {
+    fn doit(ee: Expr, r#as: Vec<Expr>) -> Expr {
+        todo!()
+    }
+    todo!()
 }
 
 #[cfg(test)]
