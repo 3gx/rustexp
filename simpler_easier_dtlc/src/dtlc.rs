@@ -396,13 +396,13 @@ mod test {
 
         let plus = lam(
             "m",
-            star(),
+            pi("_m", star(), star()),
             lam(
-                "m",
-                star(),
+                "n",
+                pi("_n", star(), star()),
                 lam(
                     "s",
-                    star(),
+                    pi("_s", star(), star()),
                     lam(
                         "z",
                         star(),
