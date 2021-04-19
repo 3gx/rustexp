@@ -111,6 +111,13 @@ fn subst(v: &Sym, x: &Expr, e: &Expr) -> Expr {
     }
 }
 
+fn fix<T, R, F: Fn(&dyn Fn(T) -> R, T) -> R>(f: F) -> impl Fn(T) -> R {
+    fn fix_impl<T, R, F: Fn(&dyn Fn(T) -> R, T) -> R>(f: &F, t: T) -> R {
+        f(&|t| fix_impl(f, t), t)
+    }
+    move |t| fix_impl(&f, t)
+}
+
 fn nf(ee: &Expr) -> Expr {
     fn spine(e: &Expr, r#as: Vec<Expr>) -> Expr {
         use ExprK::*;
@@ -161,13 +168,6 @@ mod test {
 
     #[test]
     fn test2() {
-        fn fix<T, R, F: Fn(&dyn Fn(T) -> R, T) -> R>(f: F) -> impl Fn(T) -> R {
-            fn fix_impl<T, R, F: Fn(&dyn Fn(T) -> R, T) -> R>(f: &F, t: T) -> R {
-                f(&|t| fix_impl(f, t), t)
-            }
-            move |t| fix_impl(&f, t)
-        }
-
         #[derive(Clone)]
         struct Int(i32);
         let val = Int(1);
