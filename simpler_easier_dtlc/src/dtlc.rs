@@ -334,6 +334,27 @@ mod test {
             Lam("x".into(), Var("a".into()).into(), Var("x".into()).into()).into(),
         )
         .into();
-        println!("id= {:?}", id);
+        let id_str = format!("{:?}", id);
+        println!("id= {}", id_str);
+        assert_eq!(
+            id_str,
+            "Lam(\"a\", Kind(Star), Lam(\"x\", Var(\"a\"), Var(\"x\")))"
+        );
+    }
+
+    #[test]
+    fn test4() {
+        use ExprK::*;
+        use Kinds::*;
+        let var = |v: &str| -> Expr { Var(v.into()).into() };
+        let lam = |v: &str, typ: Expr, e: Expr| -> Expr { Lam(v.into(), typ, e).into() };
+        let app = |e1: Expr, e2: Expr| -> Expr { App(e1, e2).into() };
+        let star = || -> Expr { Kind(Star).into() };
+        let pi = |v: &str, t: Expr, e: Expr| -> Expr { Pi(v.into(), t, e).into() };
+        let r#box = || -> Expr { Kind(Box).into() };
+
+        let zero = lam("s", pi("_", r#box(), star()), lam("z", star(), var("z")));
+        //        let one = lam("s", lam("z", app(var("s"), var("z"))));
+        println!("zero= {:?}", zero);
     }
 }
