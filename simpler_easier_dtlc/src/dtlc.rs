@@ -396,10 +396,10 @@ mod test {
 
         let plus = lam(
             "m",
-            pi("_m", star(), star()),
+            pi("_m1", pi("_m1", star(), star()), pi("_m2", star(), star())),
             lam(
                 "n",
-                pi("_n", star(), star()),
+                pi("_n1", pi("_n1", star(), star()), pi("_n2", star(), star())),
                 lam(
                     "s",
                     pi("_s", star(), star()),
@@ -413,5 +413,16 @@ mod test {
         );
         println!("plus= {:?}", plus);
         println!("type(plus)= {:?}", tcheck(&Env::new(), &plus));
+
+        let three1 = app2(plus, one, two);
+        println!("three1= {:?}", three1);
+        println!("type(three1)= {:?}", tcheck(&Env::new(), &three1));
+
+        let three_ok = nf(&three1);
+        println!("three_ok= {:?}", three_ok);
+        println!("three   = {:?}", three);
+
+        let beta_eq_ok = beta_eq(&three, &three1);
+        println!("beta_eq_ok={}", beta_eq_ok);
     }
 }
