@@ -421,14 +421,14 @@ mod test {
         println!("plus= {:?}", plus);
         println!("type(plus)= {:?}", tcheck(&Env::new(), &plus));
 
-        let three1 = app2(plus, one, two);
-        println!("three1= {:?}", three1);
-        println!("type(three1)= {:?}", tcheck(&Env::new(), &three1));
+        let three_add = app2(plus, one, two);
+        println!("three_add= {:?}", three_add);
+        println!("type(three_add)= {:?}", tcheck(&Env::new(), &three_add));
 
-        let three_ok = nf(&three1);
-        println!("three_ok= {:?}", three_ok);
+        let three_nf = nf(&three_add);
+        println!("three_nf= {:?}", three_nf);
         println!("three   = {:?}", three);
 
-        assert!(beta_eq(&three, &three1));
+        assert!(beta_eq(&three, &three_add));
     }
 }
