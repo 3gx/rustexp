@@ -158,4 +158,19 @@ mod test {
         let r: Vec<Sym> = vec!["u".into(), "v".into()];
         assert_eq!(z, r);
     }
+
+    #[test]
+    fn test2() {
+        fn fix<T, R, F: Fn(&dyn Fn(T) -> R, T) -> R>(f: &F, t: T) -> R {
+            f(&|t| fix(f, t), t)
+        }
+
+        println!(
+            "{}",
+            fix(
+                &|f: &dyn Fn(i32) -> i32, n| if n == 1 { 1 } else { n * f(n - 1) },
+                5
+            )
+        )
+    }
 }
