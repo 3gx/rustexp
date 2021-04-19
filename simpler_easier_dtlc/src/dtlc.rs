@@ -125,6 +125,7 @@ fn fix2<T1, T2, R, F: Fn(&dyn Fn(T1, T2) -> R, T1, T2) -> R>(f: F) -> impl Fn(T1
 }
 
 fn nf(ee: &Expr) -> Expr {
+    /*
     let spine = fix2(|spine, e: Expr, r#as: Vec<Expr>| {
         use ExprK::*;
         let app = |f, r#as: Vec<Expr>| {
@@ -139,7 +140,8 @@ fn nf(ee: &Expr) -> Expr {
             (f, r#as) => app(f.clone(), r#as.to_vec()),
         }
     });
-    /*
+    spine(ee.clone(), vec![])
+    */
     fn spine(e: &Expr, r#as: Vec<Expr>) -> Expr {
         use ExprK::*;
         let app = |f, r#as: Vec<Expr>| {
@@ -154,8 +156,71 @@ fn nf(ee: &Expr) -> Expr {
             (f, r#as) => app(f.clone(), r#as.to_vec()),
         }
     }
-        */
-    spine(ee.clone(), vec![])
+    spine(ee, vec![])
+}
+
+fn whnf(ee: &Expr) -> Expr {
+    fn spine(e: &Expr, r#as: Vec<Expr>) -> Expr {
+        use ExprK::*;
+        let app = |f, r#as: Vec<Expr>| {
+            r#as.iter()
+                .fold(Expr::new(f), |acc, x| Expr::new(ExprK::App(acc, x.clone())))
+        };
+        match (e.deref(), &r#as[..]) {
+            (App(f, e), [r#as @ ..]) => spine(f, [&[e.clone()], &r#as[..]].concat()),
+            (Lam(s, t, e), []) => Lam(s.clone(), whnf(t), whnf(e)).into(),
+            (Lam(s, _, e), [a, r#as @ ..]) => spine(&subst(&s, a, e), r#as.to_vec()),
+            (Pi(s, k, t), [r#as @ ..]) => app(Pi(s.clone(), whnf(k), whnf(t)), r#as.to_vec()),
+            (f, r#as) => app(f.clone(), r#as.to_vec()),
+        }
+    }
+    spine(ee, vec![])
+}
+
+fn alpha_eq(e1: &Expr, e2: &Expr) -> bool {
+    todo!()
+}
+fn beta_eq(e1: &Expr, e2: &Expr) -> bool {
+    alpha_eq(&nf(e1), &nf(e2))
+}
+
+#[derive(Debug, Clone)]
+pub struct Env(pub Vec<(Sym, Type)>);
+
+type SafeType = Result<Type, String>;
+
+fn find_var(r: &Env, s: &Sym) -> SafeType {
+    for (sym, typ) in r.0.iter() {
+        if sym == s {
+            return Ok(typ.clone());
+        }
+    }
+    Err(format!("symbol {:?} not found", s))
+}
+
+fn tcheck_red(r: &Env, e: &Expr) -> SafeType {
+    Ok(whnf(&tcheck(r, e)?))
+}
+
+fn tcheck(r: &Env, e: &Expr) -> SafeType {
+    use ExprK::*;
+    match e.deref() {
+        Var(s) => find_var(r, s),
+        App(f, a) => {
+            let tf = tcheck_red(r, f).ok().unwrap();
+            match tf.unbox() {
+                Pi(x, at, rt) => {
+                    let ta = tcheck_red(r, a).ok().unwrap();
+                    match beta_eq(&ta, &at) {
+                        false => Err(format!("bad func argument: {:?} != {:?}", ta, at)),
+                        true => Ok(subst(&x, a, &rt)),
+                    }
+                }
+                _ => todo!(),
+            }
+        }
+        _ => todo!(),
+    }
 }
 
 #[cfg(test)]
