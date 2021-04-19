@@ -119,6 +119,26 @@ fn fix<T, R, F: Fn(&dyn Fn(T) -> R, T) -> R>(f: F) -> impl Fn(T) -> R {
 }
 
 fn nf(ee: &Expr) -> Expr {
+    let spine = fix(|spine, (e, r#as): &(&Expr, Vec<Expr>)| {
+        use ExprK::*;
+        let app = |f, r#as: Vec<Expr>| {
+            r#as.iter()
+                .fold(Expr::new(f), |acc, x| Expr::new(ExprK::App(acc, x.clone())))
+        };
+        match (e.deref(), &r#as[..]) {
+            /*
+            (App(f, e), [r#as @ ..]) => spine(&(f, [&[e.clone()], &r#as[..]].concat())),
+            */
+            (Lam(s, t, e), []) => Lam(s.clone(), nf(t), nf(e)).into(),
+            /*
+            (Lam(s, _, e), [a, r#as @ ..]) => spine(&(&subst(&s, a, e), r#as.to_vec())),
+            (Pi(s, k, t), [r#as @ ..]) => app(Pi(s.clone(), nf(k), nf(t)), r#as.to_vec()),
+            (f, r#as) => app(f.clone(), r#as.to_vec()),
+            */
+            _ => todo!(),
+        }
+    });
+    /*
     fn spine(e: &Expr, r#as: Vec<Expr>) -> Expr {
         use ExprK::*;
         let app = |f, r#as: Vec<Expr>| {
@@ -133,7 +153,8 @@ fn nf(ee: &Expr) -> Expr {
             (f, r#as) => app(f.clone(), r#as.to_vec()),
         }
     }
-    spine(ee, vec![])
+    */
+    spine(&(ee, vec![]))
 }
 
 #[cfg(test)]
