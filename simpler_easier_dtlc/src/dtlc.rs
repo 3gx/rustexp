@@ -389,6 +389,10 @@ mod test {
         println!("three= {:?}", three);
 
         println!("type(zero) => {:?}", tcheck(&Env::new(), &zero));
+        println!(
+            "type(type(zero)) => {:?}",
+            tcheck(&Env::new(), &tcheck(&Env::new(), &zero).ok().unwrap())
+        );
         println!("type(one) => {:?}", tcheck(&Env::new(), &one));
         println!("type(two) => {:?}", tcheck(&Env::new(), &two));
         println!("type(three) => {:?}", tcheck(&Env::new(), &three));
