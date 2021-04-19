@@ -161,18 +161,13 @@ mod test {
 
     #[test]
     fn test2() {
-        fn fix_impl<T, R, F: Fn(&dyn Fn(T) -> R, T) -> R>(f: &F, t: T) -> R {
-            f(&|t| fix_impl(f, t), t)
-        }
-
         fn fix<T, R, F: Fn(&dyn Fn(T) -> R, T) -> R>(f: F) -> impl Fn(T) -> R {
+            fn fix_impl<T, R, F: Fn(&dyn Fn(T) -> R, T) -> R>(f: &F, t: T) -> R {
+                f(&|t| fix_impl(f, t), t)
+            }
             move |t| fix_impl(&f, t)
         }
 
-        println!(
-            "{}",
-            fix_impl(&|f, n| if n == 1 { 1 } else { n * f(n - 1) }, 5)
-        );
         #[derive(Clone)]
         struct Int(i32);
         let val = Int(1);
