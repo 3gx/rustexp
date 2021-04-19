@@ -111,41 +111,35 @@ fn subst(v: &Sym, x: &Expr, e: &Expr) -> Expr {
     }
 }
 
-fn fix<T, R, F: Fn(&dyn Fn(T) -> R, T) -> R>(f: F) -> impl Fn(T) -> R {
+fn fix1<T, R, F: Fn(&dyn Fn(T) -> R, T) -> R>(f: F) -> impl Fn(T) -> R {
     fn fix_impl<T, R, F: Fn(&dyn Fn(T) -> R, T) -> R>(f: &F, t: T) -> R {
         f(&|t| fix_impl(f, t), t)
     }
     move |t| fix_impl(&f, t)
 }
-
-/*
-macro_rules! fix {
-    ((id:$ident ..
-};
-*/
+fn fix2<T1, T2, R, F: Fn(&dyn Fn(T1, T2) -> R, T1, T2) -> R>(f: F) -> impl Fn(T1, T2) -> R {
+    fn fix_impl<T1, T2, R, F: Fn(&dyn Fn(T1, T2) -> R, T1, T2) -> R>(f: &F, t1: T1, t2: T2) -> R {
+        f(&|t1, t2| fix_impl(f, t1, t2), t1, t2)
+    }
+    move |t1, t2| fix_impl(&f, t1, t2)
+}
 
 fn nf(ee: &Expr) -> Expr {
-    /*
-    let spine = fix(|spine, (e, r#as): &(&Expr, Vec<Expr>)| {
+    let spine = fix2(|spine, e: Expr, r#as: Vec<Expr>| {
         use ExprK::*;
         let app = |f, r#as: Vec<Expr>| {
             r#as.iter()
                 .fold(Expr::new(f), |acc, x| Expr::new(ExprK::App(acc, x.clone())))
         };
         match (e.deref(), &r#as[..]) {
-            /*
-            (App(f, e), [r#as @ ..]) => spine(&(f, [&[e.clone()], &r#as[..]].concat())),
-            */
+            (App(f, e), [r#as @ ..]) => spine(f.clone(), [&[e.clone()], &r#as[..]].concat()),
             (Lam(s, t, e), []) => Lam(s.clone(), nf(t), nf(e)).into(),
-            /*
-            (Lam(s, _, e), [a, r#as @ ..]) => spine(&(&subst(&s, a, e), r#as.to_vec())),
+            (Lam(s, _, e), [a, r#as @ ..]) => spine(subst(&s, a, e), r#as.to_vec()),
             (Pi(s, k, t), [r#as @ ..]) => app(Pi(s.clone(), nf(k), nf(t)), r#as.to_vec()),
             (f, r#as) => app(f.clone(), r#as.to_vec()),
-            */
-            _ => todo!(),
         }
     });
-    */
+    /*
     fn spine(e: &Expr, r#as: Vec<Expr>) -> Expr {
         use ExprK::*;
         let app = |f, r#as: Vec<Expr>| {
@@ -160,7 +154,8 @@ fn nf(ee: &Expr) -> Expr {
             (f, r#as) => app(f.clone(), r#as.to_vec()),
         }
     }
-    spine(ee, vec![])
+        */
+    spine(ee.clone(), vec![])
 }
 
 #[cfg(test)]
@@ -200,12 +195,15 @@ mod test {
         let val = Int(1);
         let f = {
             let val = val.clone();
-            fix(move |f, n| if n == 1 { val.0 } else { n * f(n - 1) })
+            fix1(move |f, n| if n == 1 { val.0 } else { n * f(n - 1) })
         };
         let v: i32 = f(5);
-        let f1 = fix(|f, n| if n == 1 { val.0 } else { n * f(n - 1) });
-        //        let f2 = fix![f, {n}, if n == 1 { val.0 } else { n * f(n - 1) });
-        let v1: i32 = f1(5);
         println!("{}", v);
+        let f1 = fix1(|f, n| if n == 1 { val.0 } else { n * f(n - 1) });
+        let v1: i32 = f1(5);
+        println!("{}", v1);
+        let f2 = fix2(|f, n, m| if n == 1 { m } else { n * f(n - 1, m) });
+        let v2: i32 = f2(5, 1);
+        println!("{}", v2);
     }
 }
