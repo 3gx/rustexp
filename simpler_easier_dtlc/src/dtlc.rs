@@ -165,12 +165,6 @@ mod test {
             f(&|t| fix(f, t), t)
         }
 
-        println!(
-            "{}",
-            fix(
-                &|f: &dyn Fn(i32) -> i32, n| if n == 1 { 1 } else { n * f(n - 1) },
-                5
-            )
-        )
+        println!("{}", fix(&|f, n| if n == 1 { 1 } else { n * f(n - 1) }, 5))
     }
 }
