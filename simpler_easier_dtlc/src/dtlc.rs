@@ -36,7 +36,12 @@ impl Expr {
 
 impl std::fmt::Debug for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.deref().fmt(f)
+        match self.deref() {
+            ExprK::Kind(Kinds::Star) => f.write_fmt(format_args!("*")),
+            ExprK::Kind(Kinds::Box) => f.write_fmt(format_args!("[]")),
+            ExprK::Var(sym) => f.write_fmt(format_args!("{:?}", sym)),
+            x @ _ => x.fmt(f),
+        }
     }
 }
 
@@ -346,10 +351,7 @@ mod test {
         .into();
         let id_str = format!("{:?}", id);
         println!("id= {}", id_str);
-        assert_eq!(
-            id_str,
-            "Lam(\"a\", Kind(Star), Lam(\"x\", Var(\"a\"), Var(\"x\")))"
-        );
+        assert_eq!(id_str, "Lam(\"a\", *, Lam(\"x\", \"a\", \"x\"))");
     }
 
     #[test]
