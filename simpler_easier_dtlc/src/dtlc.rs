@@ -169,14 +169,20 @@ mod test {
             move |t| fix_impl(&f, t)
         }
 
-        let val = 1;
-
         println!(
             "{}",
-            fix_impl(&|f, n| if n == 1 { val } else { n * f(n - 1) }, 5)
+            fix_impl(&|f, n| if n == 1 { 1 } else { n * f(n - 1) }, 5)
         );
-        let f = fix(|f, n| if n == 1 { val } else { n * f(n - 1) });
+        #[derive(Clone)]
+        struct Int(i32);
+        let val = Int(1);
+        let f = {
+            let val = val.clone();
+            fix(move |f, n| if n == 1 { val.0 } else { n * f(n - 1) })
+        };
         let v: i32 = f(5);
+        let f1 = fix(|f, n| if n == 1 { val.0 } else { n * f(n - 1) });
+        let v1: i32 = f1(5);
         println!("{}", v);
     }
 }
