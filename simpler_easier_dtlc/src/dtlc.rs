@@ -118,7 +118,14 @@ fn fix<T, R, F: Fn(&dyn Fn(T) -> R, T) -> R>(f: F) -> impl Fn(T) -> R {
     move |t| fix_impl(&f, t)
 }
 
+/*
+macro_rules! fix {
+    ((id:$ident ..
+};
+*/
+
 fn nf(ee: &Expr) -> Expr {
+    /*
     let spine = fix(|spine, (e, r#as): &(&Expr, Vec<Expr>)| {
         use ExprK::*;
         let app = |f, r#as: Vec<Expr>| {
@@ -138,7 +145,7 @@ fn nf(ee: &Expr) -> Expr {
             _ => todo!(),
         }
     });
-    /*
+    */
     fn spine(e: &Expr, r#as: Vec<Expr>) -> Expr {
         use ExprK::*;
         let app = |f, r#as: Vec<Expr>| {
@@ -153,8 +160,7 @@ fn nf(ee: &Expr) -> Expr {
             (f, r#as) => app(f.clone(), r#as.to_vec()),
         }
     }
-    */
-    spine(&(ee, vec![]))
+    spine(ee, vec![])
 }
 
 #[cfg(test)]
@@ -198,6 +204,7 @@ mod test {
         };
         let v: i32 = f(5);
         let f1 = fix(|f, n| if n == 1 { val.0 } else { n * f(n - 1) });
+        //        let f2 = fix![f, {n}, if n == 1 { val.0 } else { n * f(n - 1) });
         let v1: i32 = f1(5);
         println!("{}", v);
     }
