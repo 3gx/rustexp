@@ -202,24 +202,59 @@ fn tcheck_red(r: &Env, e: &Expr) -> SafeType {
     Ok(whnf(&tcheck(r, e)?))
 }
 
+fn extend(s: &Sym, t: &Type, Env(r): &Env) -> Env {
+    Env([&[(s.clone(), t.clone())], &r[..]].concat())
+}
+
+fn valid_kind(s: &Type, t: &Type) -> bool {
+    use ExprK::Kind;
+    use Kinds::*;
+    match (s.deref(), t.deref()) {
+        (Kind(Star), Kind(Star)) => true,
+        (Kind(Box), Kind(Star)) => true,
+        (Kind(Star), Kind(Box)) => true,
+        (Kind(Box), Kind(Box)) => true,
+        _ => false,
+    }
+}
+
 fn tcheck(r: &Env, e: &Expr) -> SafeType {
     use ExprK::*;
     match e.deref() {
         Var(s) => find_var(r, s),
         App(f, a) => {
-            let tf = tcheck_red(r, f).ok().unwrap();
+            let tf = tcheck_red(r, f)?;
             match tf.unbox() {
                 Pi(x, at, rt) => {
-                    let ta = tcheck_red(r, a).ok().unwrap();
+                    let ta = tcheck_red(r, a)?;
                     match beta_eq(&ta, &at) {
                         false => Err(format!("bad func argument: {:?} != {:?}", ta, at)),
                         true => Ok(subst(&x, a, &rt)),
                     }
                 }
-                _ => todo!(),
+                x @ _ => Err(format!("non-function application: {:?}", x)),
             }
         }
-        _ => todo!(),
+        Lam(s, t, e) => {
+            tcheck(r, t)?;
+            let r1 = extend(s, t, r);
+            let te = tcheck(&r1, e)?;
+            let lt = Pi(s.clone(), t.clone(), te).into();
+            tcheck(r, &lt)?;
+            Ok(lt)
+        }
+        Kind(Kinds::Star) => Ok(Kind(Kinds::Box).into()),
+        Kind(Kinds::Box) => Err("found a box".into()),
+        Pi(x, a, b) => {
+            let s = tcheck_red(r, a)?;
+            let r1 = extend(x, a, r);
+            let t = tcheck_red(&r1, b)?;
+            if !valid_kind(&s, &t) {
+                Err(format!("bad abstraction: {:?}", (s, t)))
+            } else {
+                Ok(t)
+            }
+        }
     }
 }
 
