@@ -161,10 +161,22 @@ mod test {
 
     #[test]
     fn test2() {
-        fn fix<T, R, F: Fn(&dyn Fn(T) -> R, T) -> R>(f: &F, t: T) -> R {
-            f(&|t| fix(f, t), t)
+        fn fix_impl<T, R, F: Fn(&dyn Fn(T) -> R, T) -> R>(f: &F, t: T) -> R {
+            f(&|t| fix_impl(f, t), t)
         }
 
-        println!("{}", fix(&|f, n| if n == 1 { 1 } else { n * f(n - 1) }, 5))
+        fn fix<T, R, F: Fn(&dyn Fn(T) -> R, T) -> R>(f: F) -> impl Fn(T) -> R {
+            move |t| fix_impl(&f, t)
+        }
+
+        let val = 1;
+
+        println!(
+            "{}",
+            fix_impl(&|f, n| if n == 1 { val } else { n * f(n - 1) }, 5)
+        );
+        let f = fix(|f, n| if n == 1 { val } else { n * f(n - 1) });
+        let v: i32 = f(5);
+        println!("{}", v);
     }
 }
