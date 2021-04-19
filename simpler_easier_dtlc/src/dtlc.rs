@@ -152,6 +152,7 @@ fn nf(ee: &Expr) -> Expr {
         use ExprK::*;
         let app = |f, r#as: Vec<Expr>| {
             r#as.iter()
+                .map(|x| nf(x))
                 .fold(Expr::new(f), |acc, x| Expr::new(ExprK::App(acc, x.clone())))
         };
         match (e.deref(), &r#as[..]) {
@@ -422,7 +423,6 @@ mod test {
         println!("three_ok= {:?}", three_ok);
         println!("three   = {:?}", three);
 
-        let beta_eq_ok = beta_eq(&three, &three1);
-        println!("beta_eq_ok={}", beta_eq_ok);
+        assert!(beta_eq(&three, &three1));
     }
 }
