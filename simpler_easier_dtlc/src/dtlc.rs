@@ -84,25 +84,18 @@ fn subst(v: &Sym, x: &Expr, e: &Expr) -> Expr {
     fn clone_sym(e: &Expr, i: &Sym) -> Sym {
         todo!()
     }
-    fn abstr(
-        v: &Sym,
-        x: &Expr,
-        i: &Sym,
-        t: &Expr,
-        e: &Expr,
-        f: impl Fn(&Sym, &Expr, &Expr) -> ExprK,
-    ) -> ExprK {
+    let abstr = |i: &Sym, t: &Expr, e: &Expr, f: &dyn Fn(Sym, Expr, Expr) -> ExprK| {
         let fvx: BTreeSet<Sym> = free_vars(&x).iter().cloned().collect();
         if v == i {
-            f(i, &subst(v, x, t), e)
+            f(i.clone(), subst(v, x, t), e.clone())
         } else if !fvx.get(i).is_none() {
             let i1 = clone_sym(&e, &i);
             let e1 = subst_var(&i, &i1, e);
-            f(&i1, &subst(v, x, t), &subst(v, x, &e1))
+            f(i1, subst(v, x, t), subst(v, x, &e1))
         } else {
-            f(i, &subst(v, x, t), &subst(v, x, e))
+            f(i.clone(), subst(v, x, t), subst(v, x, e))
         }
-    }
+    };
     match e.deref() {
         e @ Var(i) => {
             if v == i {
@@ -112,36 +105,29 @@ fn subst(v: &Sym, x: &Expr, e: &Expr) -> Expr {
             }
         }
         App(f, a) => App(subst(v, x, f), subst(v, x, a)).into(),
-        Lam(i, t, e) => abstr(v, x, i, t, e, |x, y, z| {
-            Lam(x.clone(), y.clone(), z.clone())
-        })
-        .into(),
-        Pi(i, t, e) => abstr(v, x, i, t, e, |x, y, z| Pi(x.clone(), y.clone(), z.clone())).into(),
+        Lam(i, t, e) => abstr(i, t, e, &|x, y, z| Lam(x, y, z)).into(),
+        Pi(i, t, e) => abstr(i, t, e, &|x, y, z| Pi(x, y, z)).into(),
         Kind(k) => Kind(k.clone()).into(),
     }
 }
 
-/*
-// normal-form
 fn nf(ee: &Expr) -> Expr {
     fn spine(e: &Expr, r#as: &Vec<Expr>) -> Expr {
         use ExprK::*;
-        fn app(f: &ExprK, r#as: &Vec<Expr>) -> Expr {
-            r#as.iter().fold(Expr::new(f.clone()), |acc, x| {
-                Expr::new(ExprK::App(acc, x.clone()))
-            })
-        }
+        let app = |f, r#as: Vec<Expr>| {
+            r#as.iter()
+                .fold(Expr::new(f), |acc, x| Expr::new(ExprK::App(acc, x.clone())))
+        };
         match (e.deref(), &r#as[..]) {
-            (App(f, e), [r#as @ ..]) => spine(f, [&[e], &r#as[..]].concat()),
-            (Lam(s, t, e), []) => Lam(s, nf(t), nf(e)).into(),
-            (Lam(s, _, e), [a, r#as @ ..]) => spine(subst(&s, a, e), r#as.to_vec()),
-            (Pi(s, k, t), [r#as @ ..]) => app(Pi(s, nf(k), nf(t)), r#as.to_vec()),
-            (f, r#as) => app(f, r#as.to_vec()),
+            (App(f, e), [r#as @ ..]) => spine(f, &[&[e.clone()], &r#as[..]].concat()),
+            (Lam(s, t, e), []) => Lam(s.clone(), nf(t), nf(e)).into(),
+            (Lam(s, _, e), [a, r#as @ ..]) => spine(&subst(&s, a, e), &r#as.to_vec()),
+            (Pi(s, k, t), [r#as @ ..]) => app(Pi(s.clone(), nf(k), nf(t)), r#as.to_vec()),
+            (f, r#as) => app(f.clone(), r#as.to_vec()),
         }
     }
-    spine(ee, vec![])
+    spine(ee, &vec![])
 }
-*/
 
 #[cfg(test)]
 mod test {
