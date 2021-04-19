@@ -20,7 +20,7 @@ pub enum Kinds {
     Box,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Expr(pub Box<ExprK>);
 impl Expr {
     pub fn new(item: ExprK) -> Self {
@@ -31,6 +31,12 @@ impl Expr {
     }
     pub fn deref(&self) -> &ExprK {
         &self.0
+    }
+}
+
+impl std::fmt::Debug for Expr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.deref().fmt(f)
     }
 }
 
@@ -159,7 +165,9 @@ fn nf(ee: &Expr) -> Expr {
     spine(ee, vec![])
 }
 
+/*
 fn whnf(ee: &Expr) -> Expr {
+    todo!();
     fn spine(e: &Expr, r#as: Vec<Expr>) -> Expr {
         use ExprK::*;
         let app = |f, r#as: Vec<Expr>| {
@@ -176,9 +184,18 @@ fn whnf(ee: &Expr) -> Expr {
     }
     spine(ee, vec![])
 }
+*/
 
 fn alpha_eq(e1: &Expr, e2: &Expr) -> bool {
-    todo!()
+    use ExprK::*;
+    match (e1.deref(), e2.deref()) {
+        (Var(v1), Var(v2)) => v1 == v2,
+        (App(f1, a1), App(f2, a2)) => alpha_eq(f1, f2) && alpha_eq(a1, a2),
+        (Lam(s1, t1, e1), Lam(s2, t2, e2)) => {
+            alpha_eq(e1, &subst_var(s2, s1, e2)) && alpha_eq(t1, &subst_var(s2, s1, t2))
+        }
+        _ => false,
+    }
 }
 fn beta_eq(e1: &Expr, e2: &Expr) -> bool {
     alpha_eq(&nf(e1), &nf(e2))
@@ -199,7 +216,7 @@ fn find_var(r: &Env, s: &Sym) -> SafeType {
 }
 
 fn tcheck_red(r: &Env, e: &Expr) -> SafeType {
-    Ok(whnf(&tcheck(r, e)?))
+    Ok(nf(&tcheck(r, e)?))
 }
 
 fn extend(s: &Sym, t: &Type, Env(r): &Env) -> Env {
@@ -305,5 +322,18 @@ mod test {
         let f2 = fix2(|f, n, m| if n == 1 { m } else { n * f(n - 1, m) });
         let v2: i32 = f2(5, 1);
         println!("{}", v2);
+    }
+
+    #[test]
+    fn test3() {
+        use ExprK::*;
+        use Kinds::*;
+        let id: Expr = Lam(
+            "a".into(),
+            Kind(Star).into(),
+            Lam("x".into(), Var("a".into()).into(), Var("x".into()).into()).into(),
+        )
+        .into();
+        println!("id= {:?}", id);
     }
 }
