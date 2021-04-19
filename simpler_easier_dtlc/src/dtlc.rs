@@ -14,7 +14,7 @@ pub enum ExprK {
     Kind(Kinds),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Kinds {
     Star,
     Box,
@@ -194,6 +194,10 @@ fn alpha_eq(e1: &Expr, e2: &Expr) -> bool {
         (Lam(s1, t1, e1), Lam(s2, t2, e2)) => {
             alpha_eq(e1, &subst_var(s2, s1, e2)) && alpha_eq(t1, &subst_var(s2, s1, t2))
         }
+        (Pi(s1, t1, e1), Pi(s2, t2, e2)) => {
+            alpha_eq(e1, &subst_var(s2, s1, e2)) && alpha_eq(t1, &subst_var(s2, s1, t2))
+        }
+        (Kind(k1), Kind(k2)) => k1 == k2,
         _ => false,
     }
 }
@@ -203,6 +207,11 @@ fn beta_eq(e1: &Expr, e2: &Expr) -> bool {
 
 #[derive(Debug, Clone)]
 pub struct Env(pub Vec<(Sym, Type)>);
+impl Env {
+    fn new() -> Self {
+        Env(vec![])
+    }
+}
 
 type SafeType = Result<Type, String>;
 
@@ -353,8 +362,56 @@ mod test {
         let pi = |v: &str, t: Expr, e: Expr| -> Expr { Pi(v.into(), t, e).into() };
         let r#box = || -> Expr { Kind(Box).into() };
 
-        let zero = lam("s", pi("_", r#box(), star()), lam("z", star(), var("z")));
-        //        let one = lam("s", lam("z", app(var("s"), var("z"))));
+        let zero = lam("s", pi("_1", star(), star()), lam("z", star(), var("z")));
+        let one = lam(
+            "s",
+            pi("_2", star(), star()),
+            lam("z", star(), app(var("s"), var("z"))),
+        );
+        let two = lam(
+            "s",
+            pi("_2", star(), star()),
+            lam("z", star(), app(var("s"), app(var("s"), var("z")))),
+        );
+        let three = lam(
+            "s",
+            pi("_2", star(), star()),
+            lam(
+                "z",
+                star(),
+                app(var("s"), app(var("s"), app(var("s"), var("z")))),
+            ),
+        );
         println!("zero= {:?}", zero);
+        println!("one= {:?}", one);
+        println!("two= {:?}", two);
+        println!("three= {:?}", three);
+
+        println!("type(zero) => {:?}", tcheck(&Env::new(), &zero));
+        println!("type(one) => {:?}", tcheck(&Env::new(), &one));
+        println!("type(two) => {:?}", tcheck(&Env::new(), &two));
+        println!("type(three) => {:?}", tcheck(&Env::new(), &three));
+
+        let app2 = |f: Expr, x: Expr, y: Expr| -> Expr { App(App(f, x).into(), y).into() };
+
+        let plus = lam(
+            "m",
+            star(),
+            lam(
+                "m",
+                star(),
+                lam(
+                    "s",
+                    star(),
+                    lam(
+                        "z",
+                        star(),
+                        app2(var("m"), var("s"), app2(var("n"), var("s"), var("z"))),
+                    ),
+                ),
+            ),
+        );
+        println!("plus= {:?}", plus);
+        println!("type(plus)= {:?}", tcheck(&Env::new(), &plus));
     }
 }
