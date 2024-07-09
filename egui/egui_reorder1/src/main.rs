@@ -17,6 +17,8 @@ struct MyApp {
     items: Vec<String>,
     selected: HashSet<usize>,
     dragged_item: Option<usize>,
+    drag_started: Option<usize>,
+    drag_stopped: Option<usize>,
 }
 
 impl Default for MyApp {
@@ -30,6 +32,8 @@ impl Default for MyApp {
             ],
             selected: HashSet::new(),
             dragged_item: None,
+            drag_started: None,
+            drag_stopped: None,
         }
     }
 }
@@ -41,8 +45,6 @@ impl eframe::App for MyApp {
             ui.label("Hold Ctrl to reorder items");
 
             let ctrl_pressed = ui.input(|i| i.modifiers.ctrl);
-            let mut drag_started = None;
-            let mut drag_stopped = None;
 
             for index in 0..self.items.len() {
                 let item = self.items[index].clone();
@@ -70,7 +72,7 @@ impl eframe::App for MyApp {
 
                     if ctrl_pressed {
                         if response.drag_started() {
-                            drag_started = Some(index);
+                            self.drag_started = Some(index);
                         }
 
                         if response.dragged() {
@@ -79,14 +81,14 @@ impl eframe::App for MyApp {
                         }
 
                         if response.drag_released() {
-                            drag_stopped = Some(index);
+                            self.drag_stopped = Some(index);
                         }
                     }
                 });
             }
 
             // Handle drag and drop outside the loop
-            if let (Some(start), Some(stop)) = (drag_started, drag_stopped) {
+            if let (Some(start), Some(stop)) = (self.drag_started, self.drag_stopped) {
                 if start != stop {
                     let item = self.items.remove(start);
                     self.items.insert(stop, item);
