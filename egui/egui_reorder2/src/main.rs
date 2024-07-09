@@ -157,6 +157,7 @@ fn main() -> Result<(), eframe::Error> {
 
 struct MyApp {
     columns: Vec<Vec<String>>,
+    selected: Option<Location>,
 }
 
 impl Default for MyApp {
@@ -170,6 +171,7 @@ impl Default for MyApp {
             .into_iter()
             .map(|v| v.into_iter().map(ToString::to_string).collect())
             .collect(),
+            selected: None,
         }
     }
 }
@@ -191,6 +193,7 @@ impl eframe::App for MyApp {
             let mut from = None;
             let mut to = None;
 
+            let ctrl_pressed = ui.input(|i| i.modifiers.ctrl);
             ui.columns(self.columns.len(), |uis| {
                 for (col_idx, column) in self.columns.clone().into_iter().enumerate() {
                     let ui = &mut uis[col_idx];
@@ -205,11 +208,20 @@ impl eframe::App for MyApp {
                                 col: col_idx,
                                 row: row_idx,
                             };
-                            let response = ui
-                                .dnd_drag_source(item_id, item_location, |ui| {
-                                    ui.label(item);
+                            let is_selected = Some(item_location) == self.selected;
+                            let response = if ctrl_pressed {
+                                ui.dnd_drag_source(item_id, item_location, |ui| {
+                                    ui.selectable_label(is_selected, format!("- {item}"));
                                 })
-                                .response;
+                                .response
+                            } else {
+                                let response =
+                                    ui.selectable_label(is_selected, format!("- {item}"));
+                                if response.clicked() {
+                                    self.selected = Some(item_location);
+                                }
+                                response
+                            };
 
                             // Detect drops onto this item:
                             if let (Some(pointer), Some(hovered_payload)) = (
@@ -264,11 +276,32 @@ impl eframe::App for MyApp {
                     to.row -= (from.row < to.row) as usize;
                 }
 
+                let selected_item = if let Some(loc) = &self.selected {
+                    Some(self.columns[loc.col][loc.row].clone())
+                } else {
+                    None
+                };
                 let item = self.columns[from.col].remove(from.row);
 
                 let column = &mut self.columns[to.col];
                 to.row = to.row.min(column.len());
                 column.insert(to.row, item);
+                if let Some(mut loc) = self.selected {
+                    if loc == *from {
+                        self.selected = Some(to);
+                    } else {
+                        let item = selected_item.unwrap();
+                        println!("selected_item= {item}");
+                        let index = self.columns[loc.col]
+                            .iter()
+                            .position(|x| x == &item)
+                            .unwrap();
+                        loc.row = index;
+                        self.selected = Some(loc);
+                        let item = &self.columns[loc.col][loc.row];
+                        println!("item= {item}");
+                    }
+                }
             }
 
             ui.vertical_centered(|ui| {
