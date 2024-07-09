@@ -273,35 +273,51 @@ impl eframe::App for MyApp {
                 if from.col == to.col {
                     // Dragging within the same column.
                     // Adjust row index if we are re-ordering:
-                    to.row -= (from.row < to.row) as usize;
+                    let target_to =
+                        (to.row - (from.row < to.row) as usize).min(self.columns[to.col].len());
+                    if let Some(mut loc) = self.selected {
+                        let to_row = to.row;
+                        let loc_row = loc.row;
+                        let from_row = from.row;
+                        println!("to= {to_row}/{target_to},  loc= {loc_row}  rfom= {from_row}");
+                        if from.row == loc.row {
+                            loc.row = target_to;
+                        } else if to.row <= loc.row && loc.row < from.row {
+                            loc.row += 1;
+                        } else if from.row < loc.row && loc.row <= to.row {
+                            loc.row -= 1;
+                        }
+                        self.selected = Some(loc);
+                    }
+                    to.row = target_to;
                 }
 
-                let selected_item = if let Some(loc) = &self.selected {
-                    Some(self.columns[loc.col][loc.row].clone())
-                } else {
-                    None
-                };
+                // let selected_item = if let Some(loc) = &self.selected {
+                //     Some(self.columns[loc.col][loc.row].clone())
+                // } else {
+                //     None
+                // };
                 let item = self.columns[from.col].remove(from.row);
 
                 let column = &mut self.columns[to.col];
                 to.row = to.row.min(column.len());
                 column.insert(to.row, item);
-                if let Some(mut loc) = self.selected {
-                    if loc == *from {
-                        self.selected = Some(to);
-                    } else {
-                        let item = selected_item.unwrap();
-                        println!("selected_item= {item}");
-                        let index = self.columns[loc.col]
-                            .iter()
-                            .position(|x| x == &item)
-                            .unwrap();
-                        loc.row = index;
-                        self.selected = Some(loc);
-                        let item = &self.columns[loc.col][loc.row];
-                        println!("item= {item}");
-                    }
-                }
+                // if let Some(mut loc) = self.selected {
+                //     if loc == *from {
+                //         self.selected = Some(to);
+                //     } else {
+                //         let item = selected_item.unwrap();
+                //         println!("selected_item= {item}");
+                //         let index = self.columns[loc.col]
+                //             .iter()
+                //             .position(|x| x == &item)
+                //             .unwrap();
+                //         loc.row = index;
+                //         self.selected = Some(loc);
+                //         let item = &self.columns[loc.col][loc.row];
+                //         println!("item= {item}");
+                //     }
+                // }
             }
 
             ui.vertical_centered(|ui| {
