@@ -62,7 +62,7 @@ enum StructV {
     V2(StructV2),
 }
 
-fn toV2(v: StructV) -> StructV2 {
+fn to_V2(v: StructV) -> StructV2 {
     match v {
         StructV::V0(v0) => StructV2::from(v0),
         StructV::V1(v1) => StructV2::from(v1),
@@ -96,9 +96,9 @@ fn main() {
 
     let struct_v2_from_v0: StructV0 = serde_json::from_str(v0_json).unwrap();
     println!("StructV2 from V0: {:?}", struct_v2_from_v0);
-    let struct_v2_from_v0a = toV2(serde_json::from_str(v0_json).unwrap());
+    let struct_v2_from_v0a = to_V2(serde_json::from_str(v0_json).unwrap());
     println!("StructV2 from V0a: {:?}", struct_v2_from_v0a);
-    let struct_v2_from_v1: StructV2 = toV2(serde_json::from_str(v1_json).unwrap());
+    let struct_v2_from_v1: StructV2 = to_V2(serde_json::from_str(v1_json).unwrap());
     println!("StructV2 from V1: {:?}", struct_v2_from_v1);
 
     let struct_v2_from_v2: StructV2 = serde_json::from_str(v2_json).unwrap();
