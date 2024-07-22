@@ -298,7 +298,6 @@ impl eframe::App for MyApp {
                 //     None
                 // };
                 let item = self.columns[from.col].remove(from.row);
-
                 let column = &mut self.columns[to.col];
                 to.row = to.row.min(column.len());
                 column.insert(to.row, item);
